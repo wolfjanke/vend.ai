@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Custom Properties ────────────────────────────────────────────────── */
+:root {
+  --bg:           #08080F;
+  --surface:      #11111C;
+  --surface2:     #1A1A2E;
+  --surface3:     #22223A;
+  --border:       #2A2A45;
+  --primary:      #7B6EFF;
+  --primary-dim:  #7B6EFF22;
+  --primary-glow: #7B6EFF55;
+  --accent:       #00E5A0;
+  --accent-dim:   #00E5A015;
+  --accent-glow:  #00E5A044;
+  --warm:         #FF6B6B;
+  --warm-dim:     #FF6B6B22;
+  --text:         #EEEEFF;
+  --muted:        #7777AA;
+  --faint:        #33334A;
+}
+
+/* ─── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Background grid pattern ──────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--faint) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ─── Ambient glow ─────────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  top: -200px;
+  right: -200px;
+  background: radial-gradient(circle, #7B6EFF18 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 3px; }
+
+/* ─── Gradient text util ────────────────────────────────────────────────────── */
+.text-grad {
+  background: linear-gradient(135deg, #7B6EFF, #00E5A0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Glassmorphism util ─────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(17, 17, 28, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
