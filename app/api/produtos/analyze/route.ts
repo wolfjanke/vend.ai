@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic, PRODUCT_ANALYSIS_PROMPT } from '@/lib/anthropic'
+import type Anthropic from '@anthropic-ai/sdk'
 
 export const runtime = 'edge'
 
@@ -21,12 +22,12 @@ export async function POST(req: NextRequest) {
     // Limita a 10 imagens por requisição
     const sliced = images.slice(0, 10)
 
-    const content: Array<{ type: 'image' | 'text'; source?: unknown; text?: string }> = [
+    const content: Anthropic.MessageParam['content'] = [
       ...sliced.map(base64 => ({
         type: 'image' as const,
         source: {
-          type:       'base64',
-          media_type: 'image/jpeg',
+          type:       'base64' as const,
+          media_type: 'image/jpeg' as const,
           data:       base64.replace(/^data:image\/\w+;base64,/, ''),
         },
       })),

@@ -16,14 +16,14 @@ export default function ProdutoCard({ product, onAddToCart, onInteract }: Props)
 
   const variant  = product.variants_json[selectedVariantIdx]
   const allSizes = variant
-    ? Object.entries(variant.stock).filter(([, q]) => q > 0).map(([s]) => s)
+    ? Object.entries(variant.stock).filter(([, q]) => Number(q) > 0).map(([s]) => s)
     : []
 
   const isSoldOut = product.variants_json.every(v =>
-    Object.values(v.stock).every(q => q === 0)
+    Object.values(v.stock).every(q => Number(q) === 0)
   )
   const totalStock = product.variants_json.reduce(
-    (sum, v) => sum + Object.values(v.stock).reduce((a, b) => a + b, 0), 0
+    (sum, v) => sum + Object.values(v.stock).reduce((a, b) => Number(a) + Number(b), 0), 0
   )
   const isLowStock = totalStock > 0 && totalStock <= 3
 
@@ -39,7 +39,7 @@ export default function ProdutoCard({ product, onAddToCart, onInteract }: Props)
       size,
       color:      variant.color,
       qty:        1,
-      price:      product.promo_price ?? product.price,
+      price:      Number(product.promo_price ?? product.price),
       photo:      variant.photos[0],
     })
 
@@ -82,11 +82,11 @@ export default function ProdutoCard({ product, onAddToCart, onInteract }: Props)
 
         <div className="flex items-center gap-2 mb-3">
           <span className="text-accent font-bold text-base">
-            R${(product.promo_price ?? product.price).toFixed(2).replace('.', ',')}
+            R${Number(product.promo_price ?? product.price).toFixed(2).replace('.', ',')}
           </span>
           {product.promo_price && (
             <span className="text-muted text-xs line-through">
-              R${product.price.toFixed(2).replace('.', ',')}
+              R${Number(product.price).toFixed(2).replace('.', ',')}
             </span>
           )}
         </div>

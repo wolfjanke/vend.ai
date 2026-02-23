@@ -6,13 +6,6 @@ import Catalogo    from '@/components/loja/Catalogo'
 import Carrinho    from '@/components/loja/Carrinho'
 import ViChat      from '@/components/loja/ViChat'
 import { buildWhatsAppUrl, formatOrderMessage, generateOrderNumber } from '@/lib/whatsapp'
-import { createClient } from '@supabase/supabase-js'
-
-// Browser-side Supabase (sem SSR cookies)
-const supabaseBrowser = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 interface Props {
   store:    Store
@@ -34,10 +27,10 @@ export default function StoreClient({ store, products }: Props) {
     products: products.map(p => ({
       name:     p.name,
       category: p.category,
-      price:    p.price,
-      sizes:    p.variants_json.flatMap(v => Object.entries(v.stock).filter(([,q]) => q > 0).map(([s]) => s)),
+      price:    Number(p.price),
+      sizes:    p.variants_json.flatMap(v => Object.entries(v.stock).filter(([,q]) => Number(q) > 0).map(([s]) => s)),
       colors:   p.variants_json.map(v => v.color),
-      inStock:  p.variants_json.some(v => Object.values(v.stock).some(q => q > 0)),
+      inStock:  p.variants_json.some(v => Object.values(v.stock).some(q => Number(q) > 0)),
     })),
   }
 
@@ -92,37 +85,32 @@ export default function StoreClient({ store, products }: Props) {
 
   // ── Checkout ──────────────────────────────────────────────────────────────────
   const checkout = useCallback(async (name: string, phone: string, notes: string) => {
-    const orderNum = generateOrderNumber()
-    const total    = cart.reduce((s, c) => s + c.price * c.qty, 0)
+    try {
+      const res = await fetch('/api/pedidos', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          storeId:          store.id,
+          items:            cart,
+          customerName:     name,
+          customerWhatsapp: phone,
+          notes,
+        }),
+      })
 
-    const items = cart.map(c => ({
-      product_id: c.product_id,
-      name:       c.name,
-      size:       c.size,
-      color:      c.color,
-      qty:        c.qty,
-      price:      c.price,
-    }))
+      const data = await res.json()
+      const orderNum = data.orderNumber ?? generateOrderNumber()
 
-    // Salva no Supabase
-    await supabaseBrowser.from('orders').insert({
-      store_id:          store.id,
-      order_number:      orderNum,
-      customer_name:     name,
-      customer_whatsapp: phone.replace(/\D/g, ''),
-      items_json:        items,
-      total,
-      notes,
-      status:            'NOVO',
-    })
+      const msg = formatOrderMessage({ store, items: cart, name, phone, notes, orderNum })
+      const url = buildWhatsAppUrl(store.whatsapp, msg)
+      window.open(url, '_blank')
 
-    const msg = formatOrderMessage({ store, items: cart, name, phone, notes, orderNum })
-    const url = buildWhatsAppUrl(store.whatsapp, msg)
-    window.open(url, '_blank')
-
-    setCart([])
-    setCartOpen(false)
-    showToast('🎉 Pedido enviado com sucesso!')
+      setCart([])
+      setCartOpen(false)
+      showToast('🎉 Pedido enviado com sucesso!')
+    } catch {
+      showToast('⚠️ Erro ao registrar pedido')
+    }
   }, [cart, store, showToast])
 
   const totalQty = cart.reduce((s, c) => s + c.qty, 0)

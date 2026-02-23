@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
-import type { CartItem } from '@/types'
+import { sql } from '@/lib/db'
 import { generateOrderNumber } from '@/lib/whatsapp'
-
-// Usa service role para criar pedidos de usuários não autenticados
-const supabase = createAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import type { CartItem } from '@/types'
 
 export async function POST(req: NextRequest) {
   try {
     const { storeId, items, customerName, customerWhatsapp, notes }: {
-      storeId:           string
-      items:             CartItem[]
-      customerName:      string
-      customerWhatsapp:  string
-      notes?:            string
+      storeId:          string
+      items:            CartItem[]
+      customerName:     string
+      customerWhatsapp: string
+      notes?:           string
     } = await req.json()
 
     if (!storeId || !items?.length || !customerName || !customerWhatsapp) {
@@ -26,29 +20,42 @@ export async function POST(req: NextRequest) {
     const total    = items.reduce((s, c) => s + c.price * c.qty, 0)
     const orderNum = generateOrderNumber()
 
-    const { data, error } = await supabase.from('orders').insert({
-      store_id:          storeId,
-      order_number:      orderNum,
-      customer_name:     customerName,
-      customer_whatsapp: customerWhatsapp.replace(/\D/g, ''),
-      items_json:        items.map(i => ({
-        product_id: i.product_id,
-        name:       i.name,
-        size:       i.size,
-        color:      i.color,
-        qty:        i.qty,
-        price:      i.price,
-      })),
-      total,
-      notes: notes ?? '',
-      status: 'NOVO',
-    }).select().single()
+    const itemsJson = JSON.stringify(items.map(i => ({
+      product_id: i.product_id,
+      name:       i.name,
+      size:       i.size,
+      color:      i.color,
+      qty:        i.qty,
+      price:      i.price,
+    })))
 
-    if (error) throw new Error(error.message)
+    const [order] = await sql`
+      INSERT INTO orders (store_id, order_number, customer_name, customer_whatsapp, items_json, total, notes, status)
+      VALUES (
+        ${storeId}, ${orderNum}, ${customerName},
+        ${customerWhatsapp.replace(/\D/g, '')},
+        ${itemsJson}::jsonb, ${total}, ${notes ?? ''}, 'NOVO'
+      )
+      RETURNING id
+    `
 
-    return NextResponse.json({ orderNumber: orderNum, orderId: data.id })
+    return NextResponse.json({ orderNumber: orderNum, orderId: order.id })
   } catch (error) {
     console.error('[/api/pedidos]', error)
     return NextResponse.json({ error: 'Erro ao criar pedido' }, { status: 500 })
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const storeId = searchParams.get('storeId')
+    if (!storeId) return NextResponse.json({ error: 'storeId required' }, { status: 400 })
+
+    const orders = await sql`SELECT * FROM orders WHERE store_id = ${storeId} ORDER BY created_at DESC`
+    return NextResponse.json(orders)
+  } catch (error) {
+    console.error('[GET /api/pedidos]', error)
+    return NextResponse.json({ error: 'Erro ao buscar pedidos' }, { status: 500 })
   }
 }

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter }         from 'next/navigation'
-import { createBrowser }     from '@/lib/supabase'
+import { useRouter }        from 'next/navigation'
 import type { ProductVariant } from '@/types'
 import { PRODUCT_CATEGORIES, SIZES } from '@/types'
 
@@ -17,24 +16,23 @@ interface VariantState {
 }
 
 export default function ProdutoForm({ storeId }: Props) {
-  const router   = useRouter()
-  const supabase = createBrowser()
-  const fileRef  = useRef<HTMLInputElement>(null)
+  const router  = useRouter()
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  const [files,       setFiles]       = useState<File[]>([])
-  const [previews,    setPreviews]    = useState<string[]>([])
-  const [analyzing,   setAnalyzing]   = useState(false)
-  const [aiStatus,    setAiStatus]    = useState('')
-  const [analyzed,    setAnalyzed]    = useState(false)
-  const [saving,      setSaving]      = useState(false)
-  const [active,      setActive]      = useState(true)
+  const [files,     setFiles]     = useState<File[]>([])
+  const [previews,  setPreviews]  = useState<string[]>([])
+  const [analyzing, setAnalyzing] = useState(false)
+  const [aiStatus,  setAiStatus]  = useState('')
+  const [analyzed,  setAnalyzed]  = useState(false)
+  const [saving,    setSaving]    = useState(false)
+  const [active,    setActive]    = useState(true)
 
-  const [prodName,    setProdName]    = useState('')
-  const [prodDesc,    setProdDesc]    = useState('')
-  const [prodCat,     setProdCat]     = useState('')
-  const [prodPrice,   setProdPrice]   = useState('')
-  const [prodPromo,   setProdPromo]   = useState('')
-  const [variants,    setVariants]    = useState<VariantState[]>([])
+  const [prodName,  setProdName]  = useState('')
+  const [prodDesc,  setProdDesc]  = useState('')
+  const [prodCat,   setProdCat]   = useState('')
+  const [prodPrice, setProdPrice] = useState('')
+  const [prodPromo, setProdPromo] = useState('')
+  const [variants,  setVariants]  = useState<VariantState[]>([])
 
   const [aiBadges, setAiBadges] = useState({ name: false, desc: false, cat: false })
 
@@ -54,12 +52,12 @@ export default function ProdutoForm({ storeId }: Props) {
     setAnalyzing(true)
     setAiStatus('Carregando imagens…')
 
-    const steps = [
+    const steps: Array<[number, string]> = [
       [600,  'Identificando a peça…'],
       [1500, 'Detectando variações de cor…'],
       [2500, 'Gerando nome e descrição…'],
     ]
-    steps.forEach(([t, msg]) => setTimeout(() => setAiStatus(msg as string), t as number))
+    steps.forEach(([t, msg]) => setTimeout(() => setAiStatus(msg), t))
 
     try {
       const res = await fetch('/api/produtos/analyze', {
@@ -74,13 +72,17 @@ export default function ProdutoForm({ storeId }: Props) {
       setProdCat(data.categoria ?? '')
       setAiBadges({ name: true, desc: true, cat: true })
 
-      const generatedVariants: VariantState[] = (data.variantes ?? []).map((v: { cor: string; corHex: string }, i: number) => ({
-        id:       crypto.randomUUID(),
-        color:    v.cor,
-        colorHex: v.corHex ?? '#888888',
-        photos:   i === 0 ? files.slice(0, Math.ceil(files.length / (data.variantes?.length ?? 1))) : [],
-        stock:    Object.fromEntries(SIZES.map(s => [s, 0])),
-      }))
+      const generatedVariants: VariantState[] = (data.variantes ?? []).map(
+        (v: { cor: string; corHex: string }, i: number) => ({
+          id:       crypto.randomUUID(),
+          color:    v.cor,
+          colorHex: v.corHex ?? '#888888',
+          photos:   i === 0
+            ? files.slice(0, Math.ceil(files.length / (data.variantes?.length ?? 1)))
+            : [],
+          stock: Object.fromEntries(SIZES.map(s => [s, 0])),
+        })
+      )
 
       if (generatedVariants.length === 0) {
         generatedVariants.push({
@@ -122,14 +124,29 @@ export default function ProdutoForm({ storeId }: Props) {
   }
 
   function updateStock(variantId: string, size: string, qty: number) {
-    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, stock: { ...v.stock, [size]: qty } } : v))
+    setVariants(prev => prev.map(v =>
+      v.id === variantId ? { ...v, stock: { ...v.stock, [size]: qty } } : v
+    ))
   }
 
-  async function uploadPhoto(file: File, path: string) {
-    const { data, error } = await supabase.storage.from('product-photos').upload(path, file, { upsert: true })
-    if (error) throw error
-    const { data: urlData } = supabase.storage.from('product-photos').getPublicUrl(data.path)
-    return urlData.publicUrl
+  async function uploadPhoto(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = async ev => {
+        try {
+          const base64 = ev.target?.result as string
+          const res = await fetch('/api/upload', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ base64 }),
+          })
+          const data = await res.json()
+          if (data.url) resolve(data.url)
+          else reject(new Error('Upload failed'))
+        } catch (e) { reject(e) }
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   async function handleSave() {
@@ -141,11 +158,7 @@ export default function ProdutoForm({ storeId }: Props) {
     try {
       const finalVariants: ProductVariant[] = await Promise.all(
         variants.map(async v => {
-          const photoUrls = await Promise.all(
-            v.photos.map((file, i) =>
-              uploadPhoto(file, `${storeId}/${Date.now()}_${i}_${file.name}`)
-            )
-          )
+          const photoUrls = await Promise.all(v.photos.map(uploadPhoto))
           return {
             id:       v.id,
             color:    v.color,
@@ -156,18 +169,21 @@ export default function ProdutoForm({ storeId }: Props) {
         })
       )
 
-      const { error } = await supabase.from('products').insert({
-        store_id:      storeId,
-        name:          prodName.trim(),
-        description:   prodDesc.trim(),
-        category:      prodCat,
-        price:         parseFloat(prodPrice),
-        promo_price:   prodPromo ? parseFloat(prodPromo) : null,
-        variants_json: finalVariants,
-        active,
+      const res = await fetch('/api/produtos', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          name:          prodName.trim(),
+          description:   prodDesc.trim(),
+          category:      prodCat,
+          price:         parseFloat(prodPrice),
+          promo_price:   prodPromo ? parseFloat(prodPromo) : null,
+          variants_json: finalVariants,
+          active,
+        }),
       })
 
-      if (error) throw error
+      if (!res.ok) throw new Error('Erro ao salvar produto')
       router.push('/admin/produtos')
       router.refresh()
     } catch (e) {
@@ -181,7 +197,9 @@ export default function ProdutoForm({ storeId }: Props) {
     <div>
       {/* Upload Zone */}
       <div
-        className={`border-2 border-dashed rounded-2xl transition-all cursor-pointer mb-4 ${files.length ? 'border-border' : 'border-border hover:border-primary hover:bg-primary/5'}`}
+        className={`border-2 border-dashed rounded-2xl transition-all cursor-pointer mb-4 ${
+          files.length ? 'border-border' : 'border-border hover:border-primary hover:bg-primary/5'
+        }`}
         onClick={() => !files.length && fileRef.current?.click()}
       >
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
@@ -190,7 +208,9 @@ export default function ProdutoForm({ storeId }: Props) {
             <div className="text-5xl mb-3">🖼️</div>
             <div className="font-syne font-semibold text-sm mb-1">Selecionar fotos da galeria</div>
             <div className="text-xs text-muted mb-4">Selecione várias fotos — a IA vai agrupar por cor</div>
-            <div className="px-4 py-2 bg-primary/10 border border-primary rounded-xl text-primary text-xs font-semibold">📂 Abrir galeria</div>
+            <div className="px-4 py-2 bg-primary/10 border border-primary rounded-xl text-primary text-xs font-semibold">
+              📂 Abrir galeria
+            </div>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2.5 p-4 cursor-default">
@@ -207,14 +227,25 @@ export default function ProdutoForm({ storeId }: Props) {
       {files.length > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-3 p-4 bg-surface border border-border rounded-2xl mb-4">
           <div>
-            <div className="font-semibold text-sm">{files.length} foto{files.length > 1 ? 's' : ''} selecionada{files.length > 1 ? 's' : ''}</div>
+            <div className="font-semibold text-sm">
+              {files.length} foto{files.length > 1 ? 's' : ''} selecionada{files.length > 1 ? 's' : ''}
+            </div>
             {aiStatus && (
               <div className={`text-xs mt-0.5 ${analyzed ? 'text-accent' : 'text-primary'}`}>{aiStatus}</div>
             )}
           </div>
           <div className="flex gap-2">
-            <button onClick={() => fileRef.current?.click()} className="px-3.5 py-2 border border-border rounded-xl text-muted text-xs hover:text-foreground transition-all">+ Adicionar</button>
-            <button onClick={analyzeWithAI} disabled={analyzing} className="flex items-center gap-1.5 px-4 py-2 bg-grad text-bg font-syne font-bold text-xs rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-70 disabled:cursor-wait">
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="px-3.5 py-2 border border-border rounded-xl text-muted text-xs hover:text-foreground transition-all"
+            >
+              + Adicionar
+            </button>
+            <button
+              onClick={analyzeWithAI}
+              disabled={analyzing}
+              className="flex items-center gap-1.5 px-4 py-2 bg-grad text-bg font-syne font-bold text-xs rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-70 disabled:cursor-wait"
+            >
               {analyzing ? '⏳ Analisando…' : '✦ Analisar com IA'}
             </button>
           </div>
@@ -228,26 +259,40 @@ export default function ProdutoForm({ storeId }: Props) {
           <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
             <div className="flex items-center gap-2 mb-4 font-syne font-bold text-sm">
               Informações do Produto
-              <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">✦ Preenchido pela IA</span>
+              <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                ✦ Preenchido pela IA
+              </span>
             </div>
 
             <div className="flex flex-col gap-3">
               <div>
                 <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Nome</label>
-                <input className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all" value={prodName} onChange={e => { setProdName(e.target.value); setAiBadges(p => ({ ...p, name: false })) }} />
+                <input
+                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
+                  value={prodName}
+                  onChange={e => { setProdName(e.target.value); setAiBadges(p => ({ ...p, name: false })) }}
+                />
                 {aiBadges.name && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
 
               <div>
                 <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Descrição</label>
-                <textarea className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all min-h-[80px] resize-y" value={prodDesc} onChange={e => { setProdDesc(e.target.value); setAiBadges(p => ({ ...p, desc: false })) }} />
+                <textarea
+                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all min-h-[80px] resize-y"
+                  value={prodDesc}
+                  onChange={e => { setProdDesc(e.target.value); setAiBadges(p => ({ ...p, desc: false })) }}
+                />
                 {aiBadges.desc && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Categoria</label>
-                  <select className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all appearance-none" value={prodCat} onChange={e => { setProdCat(e.target.value); setAiBadges(p => ({ ...p, cat: false })) }}>
+                  <select
+                    className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all appearance-none"
+                    value={prodCat}
+                    onChange={e => { setProdCat(e.target.value); setAiBadges(p => ({ ...p, cat: false })) }}
+                  >
                     <option value="">Selecionar…</option>
                     {PRODUCT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
@@ -256,12 +301,24 @@ export default function ProdutoForm({ storeId }: Props) {
 
                 <div>
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Preço (R$)</label>
-                  <input type="number" className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all" placeholder="0,00" value={prodPrice} onChange={e => setProdPrice(e.target.value)} />
+                  <input
+                    type="number"
+                    className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
+                    placeholder="0,00"
+                    value={prodPrice}
+                    onChange={e => setProdPrice(e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Preço Promo (opcional)</label>
-                  <input type="number" className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all" placeholder="Deixe vazio" value={prodPromo} onChange={e => setProdPromo(e.target.value)} />
+                  <input
+                    type="number"
+                    className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
+                    placeholder="Deixe vazio"
+                    value={prodPromo}
+                    onChange={e => setProdPromo(e.target.value)}
+                  />
                 </div>
 
                 <div className="flex items-center">
@@ -270,7 +327,9 @@ export default function ProdutoForm({ storeId }: Props) {
                     <div className={`w-10 h-[22px] rounded-full relative transition-colors ${active ? 'bg-accent' : 'bg-border'}`}>
                       <div className={`absolute top-[3px] w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-[22px]' : 'left-[3px]'}`} />
                     </div>
-                    <span className={`text-xs font-medium ${active ? 'text-accent' : 'text-muted'}`}>{active ? 'Ativo' : 'Inativo'}</span>
+                    <span className={`text-xs font-medium ${active ? 'text-accent' : 'text-muted'}`}>
+                      {active ? 'Ativo' : 'Inativo'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -285,9 +344,24 @@ export default function ProdutoForm({ storeId }: Props) {
               <div key={v.id} className="bg-surface2 border border-border rounded-2xl p-4 mb-3">
                 <div className="flex items-center gap-2.5 mb-3">
                   <div className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0" style={{ background: v.colorHex }} />
-                  <input className="flex-1 px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground font-syne font-bold text-xs outline-none focus:border-primary transition-all" value={v.color} onChange={e => updateVariant(v.id, { color: e.target.value })} placeholder="Nome da cor" />
-                  <input type="color" value={v.colorHex} onChange={e => updateVariant(v.id, { colorHex: e.target.value })} className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent p-0" />
-                  <button onClick={() => removeVariant(v.id)} className="px-2.5 py-1.5 bg-warm/10 border border-warm/30 rounded-lg text-warm text-xs">✕</button>
+                  <input
+                    className="flex-1 px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground font-syne font-bold text-xs outline-none focus:border-primary transition-all"
+                    value={v.color}
+                    onChange={e => updateVariant(v.id, { color: e.target.value })}
+                    placeholder="Nome da cor"
+                  />
+                  <input
+                    type="color"
+                    value={v.colorHex}
+                    onChange={e => updateVariant(v.id, { colorHex: e.target.value })}
+                    className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent p-0"
+                  />
+                  <button
+                    onClick={() => removeVariant(v.id)}
+                    className="px-2.5 py-1.5 bg-warm/10 border border-warm/30 rounded-lg text-warm text-xs"
+                  >
+                    ✕
+                  </button>
                 </div>
 
                 <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Estoque por tamanho</div>
@@ -308,17 +382,27 @@ export default function ProdutoForm({ storeId }: Props) {
               </div>
             ))}
 
-            <button onClick={addVariant} className="w-full py-2.5 border-2 border-dashed border-border rounded-xl text-muted text-xs hover:border-primary hover:text-primary transition-all">
+            <button
+              onClick={addVariant}
+              className="w-full py-2.5 border-2 border-dashed border-border rounded-xl text-muted text-xs hover:border-primary hover:text-primary transition-all"
+            >
               + Adicionar variação manualmente
             </button>
           </div>
 
           {/* Save buttons */}
           <div className="flex gap-3">
-            <button onClick={() => router.back()} className="flex-1 py-3 border border-border rounded-xl text-muted text-sm hover:border-muted hover:text-foreground transition-all">
+            <button
+              onClick={() => router.back()}
+              className="flex-1 py-3 border border-border rounded-xl text-muted text-sm hover:border-muted hover:text-foreground transition-all"
+            >
               Cancelar
             </button>
-            <button onClick={handleSave} disabled={saving} className="flex-[2] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-[2] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait"
+            >
               {saving ? 'Publicando…' : '✓ Publicar produto'}
             </button>
           </div>

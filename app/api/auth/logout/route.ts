@@ -1,8 +1,9 @@
-import { createClient }  from '@/lib/supabase'
-import { NextResponse }  from 'next/server'
+import { NextResponse } from 'next/server'
 
+// Redireciona para o signout do NextAuth
 export async function POST() {
-  const supabase = createClient()
-  await supabase.auth.signOut()
-  return NextResponse.redirect(new URL('/admin', process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'))
+  return NextResponse.redirect(
+    new URL('/api/auth/signout', process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
+    { status: 302 }
+  )
 }

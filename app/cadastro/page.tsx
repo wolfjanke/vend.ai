@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createBrowser } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 
 type Step = 1 | 2 | 3
 
@@ -18,12 +17,9 @@ function slugify(str: string) {
 }
 
 export default function CadastroPage() {
-  const router  = useRouter()
-  const supabase = createBrowser()
-
-  const [step,     setStep]     = useState<Step>(1)
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState('')
+  const [step,      setStep]      = useState<Step>(1)
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState('')
   const [finalSlug, setFinalSlug] = useState('')
 
   // Step 1
@@ -36,7 +32,7 @@ export default function CadastroPage() {
   const [wpp,       setWpp]       = useState('')
   const [slug,      setSlug]      = useState('sua-loja')
 
-  async function handleStep1() {
+  function handleStep1() {
     if (!name || !email || !pass) { setError('Preencha todos os campos.'); return }
     if (pass.length < 6)          { setError('Senha deve ter ao menos 6 caracteres.'); return }
     setError('')
@@ -48,23 +44,24 @@ export default function CadastroPage() {
     setLoading(true)
     setError('')
     try {
-      const { error: signUpError } = await supabase.auth.signUp({ email, password: pass })
-      if (signUpError) throw signUpError
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Usuário não encontrado após cadastro.')
-
-      const generatedSlug = slugify(storeName)
-      const { error: storeError } = await supabase.from('stores').insert({
-        user_id:       user.id,
-        slug:          generatedSlug,
-        name:          storeName,
-        whatsapp:      wpp.replace(/\D/g, ''),
-        settings_json: {},
+      const res = await fetch('/api/auth/register', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          email,
+          password:  pass,
+          storeName: storeName.trim(),
+          whatsapp:  wpp,
+        }),
       })
-      if (storeError) throw storeError
 
-      setFinalSlug(generatedSlug)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao criar conta.')
+
+      // Auto-login after registration
+      await signIn('credentials', { email, password: pass, redirect: false })
+
+      setFinalSlug(data.slug)
       setStep(3)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao criar conta.')
@@ -114,11 +111,32 @@ export default function CadastroPage() {
             <h2 className="font-syne font-extrabold text-2xl mb-1">Crie sua conta</h2>
             <p className="text-sm text-muted mb-6">Rápido, gratuito e sem cartão de crédito</p>
             <div className="flex flex-col gap-3 mb-5">
-              <input className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted" placeholder="👤 Seu nome completo" value={name} onChange={e => setName(e.target.value)} />
-              <input type="email" className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted" placeholder="📧 Seu e-mail" value={email} onChange={e => setEmail(e.target.value)} />
-              <input type="password" className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted" placeholder="🔒 Crie uma senha" value={pass} onChange={e => setPass(e.target.value)} />
+              <input
+                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+                placeholder="👤 Seu nome completo"
+                value={name}
+                onChange={e => setName(e.target.value)}
+              />
+              <input
+                type="email"
+                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+                placeholder="📧 Seu e-mail"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+              <input
+                type="password"
+                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+                placeholder="🔒 Crie uma senha"
+                value={pass}
+                onChange={e => setPass(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleStep1()}
+              />
             </div>
-            <button onClick={handleStep1} className="w-full py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all">
+            <button
+              onClick={handleStep1}
+              className="w-full py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all"
+            >
               Continuar →
             </button>
             <p className="text-center text-sm text-muted mt-4">
@@ -134,18 +152,36 @@ export default function CadastroPage() {
             <h2 className="font-syne font-extrabold text-2xl mb-1">Configure sua loja</h2>
             <p className="text-sm text-muted mb-6">Essas informações aparecem para seus clientes</p>
             <div className="flex flex-col gap-3 mb-5">
-              <input className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted" placeholder="🏪 Nome da sua loja" value={storeName} onChange={e => { setStoreName(e.target.value); setSlug(slugify(e.target.value) || 'sua-loja') }} />
+              <input
+                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+                placeholder="🏪 Nome da sua loja"
+                value={storeName}
+                onChange={e => { setStoreName(e.target.value); setSlug(slugify(e.target.value) || 'sua-loja') }}
+              />
               <div className="flex items-center gap-2 px-3.5 py-2.5 bg-accent/10 border border-accent/30 rounded-[10px]">
                 <span className="text-xs text-muted">Seu link será:</span>
                 <span className="font-mono text-sm text-accent font-semibold">vend.ai/{slug}</span>
               </div>
-              <input type="tel" className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted" placeholder="📱 WhatsApp (11) 99999-9999" value={wpp} onChange={e => setWpp(e.target.value)} />
+              <input
+                type="tel"
+                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+                placeholder="📱 WhatsApp (11) 99999-9999"
+                value={wpp}
+                onChange={e => setWpp(e.target.value)}
+              />
             </div>
             <div className="flex gap-2.5">
-              <button onClick={() => setStep(1)} className="px-5 py-3.5 rounded-[14px] border border-border text-muted text-sm hover:border-muted hover:text-foreground transition-all">
+              <button
+                onClick={() => setStep(1)}
+                className="px-5 py-3.5 rounded-[14px] border border-border text-muted text-sm hover:border-muted hover:text-foreground transition-all"
+              >
                 ← Voltar
               </button>
-              <button onClick={handleStep2} disabled={loading} className="flex-1 py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait">
+              <button
+                onClick={handleStep2}
+                disabled={loading}
+                className="flex-1 py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait"
+              >
                 {loading ? 'Criando…' : 'Continuar →'}
               </button>
             </div>
@@ -160,17 +196,24 @@ export default function CadastroPage() {
             <p className="text-sm text-muted text-center mb-5">Tudo pronto para começar a vender</p>
             <div className="flex items-center justify-between px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl mb-5">
               <span className="font-mono text-sm text-accent font-semibold">vend.ai/{finalSlug}</span>
-              <button onClick={() => navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL}/${finalSlug}`)} className="px-3 py-1.5 bg-accent rounded-lg text-bg text-xs font-bold">
+              <button
+                onClick={() => navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL}/${finalSlug}`)}
+                className="px-3 py-1.5 bg-accent rounded-lg text-bg text-xs font-bold"
+              >
                 Copiar
               </button>
             </div>
             <div className="flex flex-col gap-2">
               {[
-                { icon: '📸', title: 'Cadastrar primeiro produto', sub: 'Tire uma foto e a IA faz o resto', href: '/admin/produtos/novo' },
-                { icon: '📊', title: 'Ir para o painel',           sub: 'Ver pedidos e gerenciar sua loja', href: '/admin/dashboard' },
-                { icon: '🛍️', title: 'Ver minha loja',             sub: 'Como seus clientes vão ver', href: `/${finalSlug}` },
+                { icon: '📸', title: 'Cadastrar primeiro produto', sub: 'Tire uma foto e a IA faz o resto',    href: '/admin/produtos/novo' },
+                { icon: '📊', title: 'Ir para o painel',           sub: 'Ver pedidos e gerenciar sua loja',    href: '/admin/dashboard' },
+                { icon: '🛍️', title: 'Ver minha loja',             sub: 'Como seus clientes vão ver',          href: `/${finalSlug}` },
               ].map(item => (
-                <Link key={item.href} href={item.href} className="flex items-center gap-3 p-3.5 bg-surface2 border border-border rounded-[14px] hover:border-primary transition-all group">
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 p-3.5 bg-surface2 border border-border rounded-[14px] hover:border-primary transition-all group"
+                >
                   <span className="text-xl">{item.icon}</span>
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{item.title}</div>

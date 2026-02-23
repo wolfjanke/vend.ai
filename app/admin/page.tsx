@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { createBrowser } from '@/lib/supabase'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 export default function AdminLoginPage() {
-  const router   = useRouter()
-  const supabase = createBrowser()
+  const router = useRouter()
 
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
@@ -17,12 +16,19 @@ export default function AdminLoginPage() {
     if (!email || !pass) { setError('Preencha e-mail e senha.'); return }
     setLoading(true)
     setError('')
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password: pass })
-    if (authError) {
+
+    const res = await signIn('credentials', {
+      email,
+      password: pass,
+      redirect: false,
+    })
+
+    if (res?.error) {
       setError('E-mail ou senha inválidos.')
       setLoading(false)
       return
     }
+
     router.push('/admin/dashboard')
   }
 
@@ -40,11 +46,29 @@ export default function AdminLoginPage() {
         )}
 
         <div className="flex flex-col gap-3 mb-5">
-          <input type="email" className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted" placeholder="📧 E-mail" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-          <input type="password" className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted" placeholder="🔒 Senha" value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+          <input
+            type="email"
+            className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+            placeholder="📧 E-mail"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+          />
+          <input
+            type="password"
+            className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+            placeholder="🔒 Senha"
+            value={pass}
+            onChange={e => setPass(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+          />
         </div>
 
-        <button onClick={handleLogin} disabled={loading} className="w-full py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait">
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait"
+        >
           {loading ? 'Entrando…' : 'Entrar →'}
         </button>
 
