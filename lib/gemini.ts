@@ -1,9 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { StoreContext } from '@/types'
 
-export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
+
+const MODEL = 'gemini-1.5-flash'
 
 // ─── Vi System Prompt ─────────────────────────────────────────────────────────
 export function buildViSystemPrompt(ctx: StoreContext): string {
@@ -12,7 +12,7 @@ export function buildViSystemPrompt(ctx: StoreContext): string {
       const sizes  = p.sizes.join(', ') || 'indisponível'
       const colors = p.colors.join(', ') || '-'
       const stock  = p.inStock ? '✓ em estoque' : '✗ esgotado'
-      return `- ${p.name} (${p.category}) | R$${p.price.toFixed(2)} | Cores: ${colors} | Tamanhos: ${sizes} | ${stock}`
+      return `- ${p.name} (${p.category}) | R$${Number(p.price).toFixed(2)} | Cores: ${colors} | Tamanhos: ${sizes} | ${stock}`
     })
     .join('\n')
 
@@ -50,3 +50,5 @@ export const PRODUCT_ANALYSIS_PROMPT = `Você é um especialista em moda feminin
 
 Se houver múltiplas fotos com cores diferentes, liste cada cor como uma variante separada.
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`
+
+export { genAI, MODEL }

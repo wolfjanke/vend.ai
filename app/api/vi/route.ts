@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { anthropic, buildViSystemPrompt } from '@/lib/anthropic'
+import { genAI, MODEL, buildViSystemPrompt } from '@/lib/gemini'
 import type { ViMessage, StoreContext } from '@/types'
 
 export const runtime = 'edge'
@@ -12,26 +12,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 })
     }
 
-    const stream = await anthropic.messages.stream({
-      model:      'claude-sonnet-4-6',
-      max_tokens: 512,
-      system:     buildViSystemPrompt(storeContext),
-      messages:   messages.map(m => ({ role: m.role, content: m.content })),
+    const model = genAI.getGenerativeModel({
+      model: MODEL,
+      systemInstruction: buildViSystemPrompt(storeContext),
     })
+
+    const contents = messages.map(m => ({
+      role: m.role === 'user' ? ('user' as const) : ('model' as const),
+      parts: [{ text: m.content }],
+    }))
+
+    const result = await model.generateContentStream({ contents })
 
     const encoder = new TextEncoder()
 
     const readable = new ReadableStream({
       async start(controller) {
-        for await (const chunk of stream) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
-            controller.enqueue(encoder.encode(chunk.delta.text))
+        try {
+          for await (const chunk of result.stream) {
+            const text =
+              (typeof (chunk as { text?: () => string }).text === 'function'
+                ? (chunk as { text: () => string }).text()
+                : (chunk as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }).candidates?.[0]?.content?.parts?.[0]?.text) ?? ''
+            if (text) controller.enqueue(encoder.encode(text))
           }
+        } finally {
+          controller.close()
         }
-        controller.close()
       },
     })
 

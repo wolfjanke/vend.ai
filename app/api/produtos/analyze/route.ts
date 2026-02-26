@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { anthropic, PRODUCT_ANALYSIS_PROMPT } from '@/lib/anthropic'
-import type Anthropic from '@anthropic-ai/sdk'
+import { genAI, MODEL, PRODUCT_ANALYSIS_PROMPT } from '@/lib/gemini'
 
 export const runtime = 'edge'
 
@@ -19,40 +18,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'images required' }, { status: 400 })
     }
 
-    // Limita a 10 imagens por requisição
     const sliced = images.slice(0, 10)
 
-    const content: Anthropic.MessageParam['content'] = [
+    const parts: Array<{ inlineData: { mimeType: string; data: string } } | { text: string }> = [
       ...sliced.map(base64 => ({
-        type: 'image' as const,
-        source: {
-          type:       'base64' as const,
-          media_type: 'image/jpeg' as const,
-          data:       base64.replace(/^data:image\/\w+;base64,/, ''),
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64.replace(/^data:image\/\w+;base64,/, ''),
         },
       })),
-      { type: 'text' as const, text: PRODUCT_ANALYSIS_PROMPT },
+      { text: PRODUCT_ANALYSIS_PROMPT },
     ]
 
-    const response = await anthropic.messages.create({
-      model:      'claude-sonnet-4-6',
-      max_tokens: 512,
-      messages:   [{ role: 'user', content }],
+    const model = genAI.getGenerativeModel({ model: MODEL })
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts }],
     })
 
-    const raw = response.content[0].type === 'text' ? response.content[0].text : ''
+    const response = result.response
+    const raw = response.text?.() ?? ''
 
-    let result: AnalysisResult
+    let analysisResult: AnalysisResult
     try {
-      result = JSON.parse(raw)
+      analysisResult = JSON.parse(raw)
     } catch {
-      // Tenta extrair JSON do texto
       const match = raw.match(/\{[\s\S]*\}/)
       if (!match) throw new Error('IA não retornou JSON válido')
-      result = JSON.parse(match[0])
+      analysisResult = JSON.parse(match[0])
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json(analysisResult)
   } catch (error) {
     console.error('[/api/produtos/analyze]', error)
     return NextResponse.json({ error: 'Erro na análise' }, { status: 500 })
