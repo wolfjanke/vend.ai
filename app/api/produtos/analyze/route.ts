@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { sql } from '@/lib/db'
 import { genAI, MODEL, PRODUCT_ANALYSIS_PROMPT } from '@/lib/gemini'
-
-export const runtime = 'edge'
 
 interface AnalysisResult {
   nome:       string
@@ -12,6 +13,18 @@ interface AnalysisResult {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const planRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const plan = planRows[0]?.plan ?? 'free'
+    if (plan === 'free') {
+      return NextResponse.json(
+        { error: 'IA no cadastro de produto está disponível nos planos pagos. Faça upgrade para usar.' },
+        { status: 403 }
+      )
+    }
+
     const { images }: { images: string[] } = await req.json()
 
     if (!images?.length) {

@@ -14,19 +14,30 @@ const STATUS_FILTERS: Array<{ value: OrderStatus | 'TODOS'; label: string }> = [
 ]
 
 interface Props {
-  searchParams: { status?: string }
+  searchParams: Promise<{ status?: string; search?: string }>
 }
 
 export default async function PedidosPage({ searchParams }: Props) {
   const session = await getSession()
   if (!session) redirect('/admin')
 
+  const params = await searchParams
   const storeId      = session.storeId
-  const statusFilter = searchParams.status as OrderStatus | 'TODOS' | undefined
+  const statusFilter = params.status as OrderStatus | 'TODOS' | undefined
+  const searchTerm   = params.search?.trim() ?? ''
 
-  const orders = statusFilter && statusFilter !== 'TODOS'
+  let orders = statusFilter && statusFilter !== 'TODOS'
     ? await sql`SELECT * FROM orders WHERE store_id = ${storeId} AND status = ${statusFilter}::order_status ORDER BY created_at DESC`
     : await sql`SELECT * FROM orders WHERE store_id = ${storeId} ORDER BY created_at DESC`
+
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase()
+    orders = (orders as Order[]).filter(
+      o => o.customer_name?.toLowerCase().includes(term) || o.order_number?.toLowerCase().includes(term)
+    )
+  }
+
+  const baseUrl = '/admin/pedidos'
 
   return (
     <div className="animate-fade-up">
@@ -35,21 +46,41 @@ export default async function PedidosPage({ searchParams }: Props) {
         <p className="text-sm text-muted">Acompanhe e gerencie todos os pedidos da sua loja</p>
       </div>
 
-      {/* Status filter */}
-      <div className="flex gap-2 flex-wrap mb-6">
-        {STATUS_FILTERS.map(f => (
-          <a
-            key={f.value}
-            href={f.value === 'TODOS' ? '/admin/pedidos' : `/admin/pedidos?status=${f.value}`}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
-              (statusFilter ?? 'TODOS') === f.value
-                ? 'bg-primary/20 border-primary text-primary'
-                : 'bg-surface border-border text-muted hover:text-foreground'
-            }`}
-          >
-            {f.label}
-          </a>
-        ))}
+      {/* Search + Status filter */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <form action={baseUrl} method="GET" className="flex gap-2 flex-1">
+          {statusFilter && statusFilter !== 'TODOS' && (
+            <input type="hidden" name="status" value={statusFilter} />
+          )}
+          <input
+            type="search"
+            name="search"
+            defaultValue={searchTerm}
+            placeholder="Buscar por cliente ou número do pedido"
+            className="flex-1 min-w-0 px-4 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary placeholder:text-muted"
+          />
+          <button type="submit" className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
+            Buscar
+          </button>
+        </form>
+        <div className="flex gap-2 flex-wrap">
+          {STATUS_FILTERS.map(f => {
+            const href = f.value === 'TODOS' ? (searchTerm ? `${baseUrl}?search=${encodeURIComponent(searchTerm)}` : baseUrl) : searchTerm ? `${baseUrl}?status=${f.value}&search=${encodeURIComponent(searchTerm)}` : `${baseUrl}?status=${f.value}`
+            return (
+              <a
+                key={f.value}
+                href={href}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
+                  (statusFilter ?? 'TODOS') === f.value
+                    ? 'bg-primary/20 border-primary text-primary'
+                    : 'bg-surface border-border text-muted hover:text-foreground'
+                }`}
+              >
+                {f.label}
+              </a>
+            )
+          })}
+        </div>
       </div>
 
       {orders.length > 0 ? (

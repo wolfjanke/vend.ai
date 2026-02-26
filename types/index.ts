@@ -17,11 +17,33 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   CANCELADO:  'text-warm bg-warm/10 border-warm/30',
 }
 
+// ─── Plan ─────────────────────────────────────────────────────────────────────
+export type PlanSlug = 'free' | 'starter' | 'pro' | 'loja'
+
+export const PLAN_PRODUCT_LIMITS: Record<PlanSlug, number | null> = {
+  free:    10,
+  starter: 25,
+  pro:     50,
+  loja:    null, // ilimitado
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
+export interface BannerMessage {
+  id:        string
+  title:     string
+  text:      string
+  startDate?: string
+  endDate?:  string
+  theme?:    string
+}
+
 export interface StoreSettings {
   theme?:            'dark' | 'light'
   welcomeMessage?:   string
   inactivityDelay?:  number
+  freteInfo?:        string
+  pagamentoInfo?:    string
+  bannerMessages?:   BannerMessage[]
 }
 
 export interface Store {
@@ -33,6 +55,7 @@ export interface Store {
   settings_json: StoreSettings
   created_at:    string
   user_id:       string
+  plan?:         PlanSlug
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────────
@@ -90,6 +113,7 @@ export interface Order {
   notes:              string
   status:             OrderStatus
   created_at:         string
+  recovery_sent_at?:  string | null
 }
 
 // ─── Vi Chat ──────────────────────────────────────────────────────────────────
@@ -99,7 +123,9 @@ export interface ViMessage {
 }
 
 export interface StoreContext {
-  name:     string
+  name:           string
+  freteInfo?:     string
+  pagamentoInfo?: string
   products: Array<{
     name:     string
     category: string

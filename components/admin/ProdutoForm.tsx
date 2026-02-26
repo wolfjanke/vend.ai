@@ -1,29 +1,35 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter }        from 'next/navigation'
-import type { ProductVariant } from '@/types'
+import type { Product, ProductVariant } from '@/types'
 import { PRODUCT_CATEGORIES, SIZES } from '@/types'
 
-interface Props { storeId: string }
-
-interface VariantState {
-  id:       string
-  color:    string
-  colorHex: string
-  photos:   File[]
-  stock:    Record<string, number>
+interface Props {
+  storeId:        string
+  productId?:     string
+  initialProduct?: Product
 }
 
-export default function ProdutoForm({ storeId }: Props) {
+interface VariantState {
+  id:                string
+  color:             string
+  colorHex:          string
+  photos:            File[]
+  existingPhotoUrls?: string[]
+  stock:             Record<string, number>
+}
+
+export default function ProdutoForm({ storeId, productId, initialProduct }: Props) {
   const router  = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
+  const isEdit  = Boolean(productId && initialProduct)
 
   const [files,     setFiles]     = useState<File[]>([])
   const [previews,  setPreviews]  = useState<string[]>([])
   const [analyzing, setAnalyzing] = useState(false)
   const [aiStatus,  setAiStatus]  = useState('')
-  const [analyzed,  setAnalyzed]  = useState(false)
+  const [analyzed,  setAnalyzed]  = useState(!!initialProduct)
   const [saving,    setSaving]    = useState(false)
   const [active,    setActive]    = useState(true)
 
@@ -35,6 +41,26 @@ export default function ProdutoForm({ storeId }: Props) {
   const [variants,  setVariants]  = useState<VariantState[]>([])
 
   const [aiBadges, setAiBadges] = useState({ name: false, desc: false, cat: false })
+
+  useEffect(() => {
+    if (!initialProduct) return
+    setProdName(initialProduct.name)
+    setProdDesc(initialProduct.description ?? '')
+    setProdCat(initialProduct.category ?? 'outro')
+    setProdPrice(String(initialProduct.price ?? ''))
+    setProdPromo(initialProduct.promo_price != null ? String(initialProduct.promo_price) : '')
+    setActive(initialProduct.active ?? true)
+    setVariants(
+      (initialProduct.variants_json ?? []).map((v: ProductVariant) => ({
+        id:                v.id,
+        color:             v.color,
+        colorHex:          v.colorHex ?? '#888888',
+        photos:            [],
+        existingPhotoUrls: v.photos ?? [],
+        stock:             v.stock ?? Object.fromEntries(SIZES.map(s => [s, 0])),
+      }))
+    )
+  }, [initialProduct])
 
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.length) return
@@ -158,7 +184,8 @@ export default function ProdutoForm({ storeId }: Props) {
     try {
       const finalVariants: ProductVariant[] = await Promise.all(
         variants.map(async v => {
-          const photoUrls = await Promise.all(v.photos.map(uploadPhoto))
+          const newUrls = await Promise.all(v.photos.map(uploadPhoto))
+          const photoUrls = [...(v.existingPhotoUrls ?? []), ...newUrls]
           return {
             id:       v.id,
             color:    v.color,
@@ -169,21 +196,28 @@ export default function ProdutoForm({ storeId }: Props) {
         })
       )
 
-      const res = await fetch('/api/produtos', {
-        method:  'POST',
+      const payload = {
+        name:          prodName.trim(),
+        description:   prodDesc.trim(),
+        category:      prodCat,
+        price:         parseFloat(prodPrice),
+        promo_price:   prodPromo ? parseFloat(prodPromo) : null,
+        variants_json: finalVariants,
+        active,
+      }
+
+      const url = productId ? `/api/produtos/${productId}` : '/api/produtos'
+      const method = productId ? 'PUT' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          name:          prodName.trim(),
-          description:   prodDesc.trim(),
-          category:      prodCat,
-          price:         parseFloat(prodPrice),
-          promo_price:   prodPromo ? parseFloat(prodPromo) : null,
-          variants_json: finalVariants,
-          active,
-        }),
+        body:   JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error('Erro ao salvar produto')
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Erro ao salvar produto')
+      }
       router.push('/admin/produtos')
       router.refresh()
     } catch (e) {
@@ -195,7 +229,8 @@ export default function ProdutoForm({ storeId }: Props) {
 
   return (
     <div>
-      {/* Upload Zone */}
+      {/* Upload Zone - oculto em edição */}
+      {!isEdit && (
       <div
         className={`border-2 border-dashed rounded-2xl transition-all cursor-pointer mb-4 ${
           files.length ? 'border-border' : 'border-border hover:border-primary hover:bg-primary/5'
@@ -222,9 +257,10 @@ export default function ProdutoForm({ storeId }: Props) {
           </div>
         )}
       </div>
+      )}
 
       {/* Analyze bar */}
-      {files.length > 0 && (
+      {!isEdit && files.length > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-3 p-4 bg-surface border border-border rounded-2xl mb-4">
           <div>
             <div className="font-semibold text-sm">
@@ -252,16 +288,32 @@ export default function ProdutoForm({ storeId }: Props) {
         </div>
       )}
 
+      {/* Variant photos: show existing in edit mode */}
+      {isEdit && variants.some(v => (v.existingPhotoUrls?.length ?? 0) > 0) && (
+        <div className="mb-4 p-4 bg-surface2 border border-border rounded-2xl">
+          <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Fotos atuais (por variação)</div>
+          <div className="flex flex-wrap gap-2">
+            {variants.flatMap(v => (v.existingPhotoUrls ?? []).map((url, i) => (
+              <div key={`${v.id}-${i}`} className="w-16 h-16 rounded-xl overflow-hidden border border-border">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+              </div>
+            )))}
+          </div>
+        </div>
+      )}
+
       {/* Result */}
-      {analyzed && (
+      {(analyzed || isEdit) && (
         <>
           {/* Product info */}
           <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
             <div className="flex items-center gap-2 mb-4 font-syne font-bold text-sm">
               Informações do Produto
-              <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                ✦ Preenchido pela IA
-              </span>
+              {!isEdit && (
+                <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                  ✦ Preenchido pela IA
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col gap-3">
@@ -403,7 +455,7 @@ export default function ProdutoForm({ storeId }: Props) {
               disabled={saving}
               className="flex-[2] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait"
             >
-              {saving ? 'Publicando…' : '✓ Publicar produto'}
+              {saving ? (isEdit ? 'Salvando…' : 'Publicando…') : (isEdit ? '✓ Salvar alterações' : '✓ Publicar produto')}
             </button>
           </div>
         </>

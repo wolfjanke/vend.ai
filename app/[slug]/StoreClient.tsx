@@ -1,11 +1,23 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import type { Product, Store, CartItem, StoreContext } from '@/types'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import type { Product, Store, CartItem, StoreContext, BannerMessage } from '@/types'
 import Catalogo    from '@/components/loja/Catalogo'
 import Carrinho    from '@/components/loja/Carrinho'
 import ViChat      from '@/components/loja/ViChat'
 import { buildWhatsAppUrl, formatOrderMessage, generateOrderNumber } from '@/lib/whatsapp'
+
+const BANNER_ROTATE_MS = 6000
+
+function filterActiveBanners(messages: BannerMessage[] | undefined): BannerMessage[] {
+  if (!messages?.length) return []
+  const now = new Date().toISOString().slice(0, 10)
+  return messages.filter(m => {
+    if (m.startDate && m.startDate > now) return false
+    if (m.endDate && m.endDate < now) return false
+    return true
+  })
+}
 
 interface Props {
   store:    Store
@@ -20,10 +32,23 @@ export default function StoreClient({ store, products }: Props) {
   const [toastVisible,  setToastVisible]  = useState(false)
   const [dialogVisible, setDialogVisible] = useState(false)
   const inactivityRef = useRef<ReturnType<typeof setTimeout>>()
+  const settings      = store.settings_json ?? {}
+  const activeBanners = useMemo(() => filterActiveBanners(settings.bannerMessages), [store.settings_json])
+  const [bannerIndex, setBannerIndex] = useState(0)
+
+  useEffect(() => {
+    if (activeBanners.length <= 1) return
+    const t = setInterval(() => {
+      setBannerIndex(i => (i + 1) % activeBanners.length)
+    }, BANNER_ROTATE_MS)
+    return () => clearInterval(t)
+  }, [activeBanners.length])
 
   // Build store context for Vi
   const storeContext: StoreContext = {
-    name: store.name,
+    name:           store.name,
+    freteInfo:      settings.freteInfo,
+    pagamentoInfo:  settings.pagamentoInfo,
     products: products.map(p => ({
       name:     p.name,
       category: p.category,
@@ -136,6 +161,28 @@ export default function StoreClient({ store, products }: Props) {
           </button>
         </div>
       </header>
+
+      {/* Banner rotativo */}
+      {activeBanners.length > 0 && (
+        <div className="px-4 py-3 bg-primary/10 border-b border-primary/20">
+          <p className="text-sm text-foreground text-center">
+            {activeBanners[bannerIndex]?.text}
+          </p>
+          {activeBanners.length > 1 && (
+            <div className="flex justify-center gap-1.5 mt-2">
+              {activeBanners.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Mensagem ${i + 1}`}
+                  onClick={() => setBannerIndex(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === bannerIndex ? 'bg-primary' : 'bg-primary/30'}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Catalog */}
       <Catalogo products={products} onAddToCart={addToCart} onInteract={resetInactivity} />

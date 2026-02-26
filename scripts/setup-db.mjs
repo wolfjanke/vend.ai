@@ -89,6 +89,15 @@ async function setup() {
   await sql`CREATE INDEX IF NOT EXISTS orders_status_idx   ON orders(store_id, status)`
   await sql`CREATE INDEX IF NOT EXISTS orders_created_idx  ON orders(store_id, created_at DESC)`
 
+  // Migrations: plan + recovery_sent_at (idempotent)
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free'`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS recovery_sent_at TIMESTAMPTZ NULL`
+  try {
+    await sql`ALTER TABLE stores ADD CONSTRAINT stores_plan_check CHECK (plan IN ('free','starter','pro','loja'))`
+  } catch (e) {
+    if (e?.code !== '42710') throw e // duplicate_object
+  }
+
   console.log('✓ Tabelas criadas!')
 
   // ─── Seed: Loja ────────────────────────────────────────────────────────────

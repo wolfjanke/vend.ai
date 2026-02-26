@@ -10,14 +10,15 @@ export default function LandingPage() {
           <a href="#como-funciona" className="hover:text-foreground transition-colors">Como funciona</a>
           <a href="#funcionalidades"  className="hover:text-foreground transition-colors">Funcionalidades</a>
           <a href="#planos"           className="hover:text-foreground transition-colors">Planos</a>
+          <a href="#faq"              className="hover:text-foreground transition-colors">FAQ</a>
         </nav>
         <div className="flex gap-3">
-          <Link href="/admin" className="text-sm font-medium text-muted hover:text-foreground transition-colors px-3 py-2">
+          <a href="/admin" className="text-sm font-medium text-muted hover:text-foreground transition-colors px-3 py-2">
             Entrar
-          </Link>
-          <Link href="/cadastro" className="text-sm font-bold px-4 py-2 rounded-xl bg-grad text-bg hover:opacity-90 transition-opacity">
+          </a>
+          <a href="/cadastro" className="text-sm font-bold px-4 py-2 rounded-xl bg-grad text-bg hover:opacity-90 transition-opacity">
             Criar loja grátis
-          </Link>
+          </a>
         </div>
       </header>
 
@@ -41,8 +42,8 @@ export default function LandingPage() {
             <Link href="/cadastro" className="font-syne font-bold px-6 py-3.5 rounded-xl bg-grad text-bg hover:opacity-90 hover:-translate-y-0.5 transition-all">
               Criar minha loja grátis →
             </Link>
-            <Link href="/bella-moda" className="font-medium px-6 py-3.5 rounded-xl border border-border text-foreground hover:border-primary hover:text-primary transition-all">
-              Ver demonstração
+            <Link href="/bella-moda" className="font-medium px-6 py-3.5 rounded-xl border border-border text-foreground hover:border-primary hover:text-primary transition-all" title="Ver loja de exemplo com a Vi em ação">
+              Ver demonstração — loja de exemplo com a Vi
             </Link>
           </div>
           <div className="flex items-center gap-3">
@@ -80,6 +81,34 @@ export default function LandingPage() {
               <div className="bg-accent text-bg text-[10px] font-bold text-center py-1.5 rounded-lg font-syne">Finalizar pelo WhatsApp</div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Prova social + Para quem é + Comparação */}
+      <section className="px-6 md:px-16 py-20 border-t border-border">
+        <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Prova social</p>
+        <h2 className="font-syne font-extrabold text-3xl md:text-4xl mb-8">+1.200 lojistas já vendem com o vend.ai</h2>
+        <div className="grid md:grid-cols-2 gap-6 mb-12">
+          <div className="bg-surface border border-border rounded-2xl p-6">
+            <p className="text-sm text-muted italic mb-3">&ldquo;Montei minha loja em um dia. A Vi atende meus clientes e os pedidos chegam certinhos no WhatsApp.&rdquo;</p>
+            <p className="font-syne font-bold text-sm">Maria, Brechó da Maria</p>
+          </div>
+          <div className="bg-surface border border-border rounded-2xl p-6">
+            <p className="text-sm text-muted italic mb-3">&ldquo;A IA no cadastro salvou horas. Foto da peça e já tenho nome e descrição.&rdquo;</p>
+            <p className="font-syne font-bold text-sm">Ana, Moda &amp; Você</p>
+          </div>
+        </div>
+        <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Para quem é</p>
+        <h2 className="font-syne font-extrabold text-2xl md:text-3xl mb-6">Feito para quem vende moda</h2>
+        <div className="flex flex-wrap gap-3 mb-10">
+          {['Revendedoras', 'Brechós', 'Pequenas marcas', 'Lojas de roupas', 'Quem vende no Instagram'].map(label => (
+            <span key={label} className="px-4 py-2 bg-surface2 border border-border rounded-full text-sm text-foreground">{label}</span>
+          ))}
+        </div>
+        <div className="bg-primary/10 border border-primary/30 rounded-2xl p-6 max-w-2xl">
+          <p className="text-sm text-foreground">
+            <strong>Por que não só link no bio?</strong> Porque no vend.ai você tem catálogo inteligente, IA que sugere produtos ao cliente e pedido formatado direto no seu WhatsApp — sem planilha, sem confusão.
+          </p>
         </div>
       </section>
 
@@ -129,16 +158,16 @@ export default function LandingPage() {
         <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Planos</p>
         <h2 className="font-syne font-extrabold text-3xl md:text-4xl mb-12">Comece grátis.<br />Cresça quando quiser.</h2>
         <div className="flex flex-wrap gap-5 justify-center">
-          {/* Free */}
-          <div className="bg-surface border border-border rounded-2xl p-8 flex-1 min-w-[240px] max-w-xs">
+          {/* Grátis */}
+          <div className="bg-surface border border-border rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px]">
             <h3 className="font-syne font-bold text-lg mb-2">Grátis</h3>
             <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 0<span className="text-base text-muted">/mês</span></div>
             <p className="text-xs text-muted mb-5">Para começar e testar</p>
             <ul className="flex flex-col gap-2 mb-6 text-sm">
-              {['Até 20 produtos', 'Vi assistente básica', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
+              {['Até 10 produtos', 'Vi assistente básica', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
                 <li key={f} className="text-foreground">✓ {f}</li>
               ))}
-              {['IA no cadastro de produto', 'Recuperação de carrinho'].map(f => (
+              {['IA no cadastro de produto', 'Recuperação de pedido'].map(f => (
                 <li key={f} className="text-muted">✗ {f}</li>
               ))}
             </ul>
@@ -146,14 +175,31 @@ export default function LandingPage() {
               Começar grátis
             </Link>
           </div>
-          {/* Pro */}
-          <div className="relative bg-surface border border-primary rounded-2xl p-8 flex-1 min-w-[240px] max-w-xs shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]">
+          {/* Starter */}
+          <div className="bg-surface border border-border rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px]">
+            <h3 className="font-syne font-bold text-lg mb-2">Starter</h3>
+            <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 39,90<span className="text-base text-muted">/mês</span></div>
+            <p className="text-xs text-muted mb-5">Para começar a vender</p>
+            <ul className="flex flex-col gap-2 mb-6 text-sm">
+              {['Até 25 produtos', 'Vi com IA real', 'IA no cadastro de produto', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
+                <li key={f} className="text-foreground">✓ {f}</li>
+              ))}
+              {['Recuperação de pedido'].map(f => (
+                <li key={f} className="text-muted">✗ {f}</li>
+              ))}
+            </ul>
+            <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10 transition-all">
+              Assinar Starter
+            </Link>
+          </div>
+          {/* Pro - Mais popular */}
+          <div className="relative bg-surface border border-primary rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px] shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]">
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap">Mais popular</span>
             <h3 className="font-syne font-bold text-lg mb-2">Pro</h3>
-            <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 49<span className="text-base text-muted">/mês</span></div>
+            <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 49,90<span className="text-base text-muted">/mês</span></div>
             <p className="text-xs text-muted mb-5">Para lojas em crescimento</p>
             <ul className="flex flex-col gap-2 mb-6 text-sm">
-              {['Produtos ilimitados', 'Vi completa com IA real', 'IA no cadastro de produto', 'Recuperação de carrinho', 'Métricas avançadas', 'Suporte prioritário'].map(f => (
+              {['Até 50 produtos', 'Vi com IA real', 'IA no cadastro de produto', 'Recuperação de pedido', 'Métricas melhores', 'Suporte prioritário'].map(f => (
                 <li key={f} className="text-foreground">✓ {f}</li>
               ))}
             </ul>
@@ -161,6 +207,56 @@ export default function LandingPage() {
               Assinar Pro
             </Link>
           </div>
+          {/* Loja */}
+          <div className="bg-surface border border-border rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px]">
+            <h3 className="font-syne font-bold text-lg mb-2">Loja</h3>
+            <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 99,90<span className="text-base text-muted">/mês</span></div>
+            <p className="text-xs text-muted mb-5">Para quem já vende muito</p>
+            <ul className="flex flex-col gap-2 mb-6 text-sm">
+              {['Produtos ilimitados', 'Vi com IA real', 'IA no cadastro', 'Recuperação de pedido', 'Métricas completas', 'Suporte prioritário'].map(f => (
+                <li key={f} className="text-foreground">✓ {f}</li>
+              ))}
+            </ul>
+            <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl border border-border text-foreground text-sm font-semibold hover:border-primary hover:text-primary transition-all">
+              Assinar Loja
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="px-6 md:px-16 py-20 border-t border-border">
+        <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">FAQ</p>
+        <h2 className="font-syne font-extrabold text-3xl md:text-4xl mb-10">Perguntas frequentes</h2>
+        <div className="max-w-2xl space-y-2">
+          <details className="bg-surface border border-border rounded-xl overflow-hidden group">
+            <summary className="px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between">
+              Posso cancelar quando quiser?
+              <span className="text-muted group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <p className="px-5 pb-4 text-sm text-muted">Sim. Nos planos pagos você pode cancelar a qualquer momento. Não há fidelidade.</p>
+          </details>
+          <details className="bg-surface border border-border rounded-xl overflow-hidden group">
+            <summary className="px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between">
+              O que a Vi faz exatamente?
+              <span className="text-muted group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <p className="px-5 pb-4 text-sm text-muted">A Vi é uma assistente com IA que atende seus clientes na loja: sugere produtos por estilo, cor ou tamanho, responde dúvidas e indica como finalizar o pedido pelo WhatsApp.</p>
+          </details>
+          <details className="bg-surface border border-border rounded-xl overflow-hidden group">
+            <summary className="px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between">
+              Qual o limite de produtos no plano grátis?
+              <span className="text-muted group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <p className="px-5 pb-4 text-sm text-muted">No plano Grátis você pode cadastrar até 10 produtos. Nos planos Starter (25), Pro (50) e Loja (ilimitado) o limite aumenta.</p>
+          </details>
+          <details className="bg-surface border border-border rounded-xl overflow-hidden group">
+            <summary className="px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between">
+              Onde ficam meus dados?
+              <span className="text-muted group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <p className="px-5 pb-4 text-sm text-muted">Seus dados e da sua loja são armazenados de forma segura. Trabalhamos em conformidade com a LGPD.</p>
+          </details>
         </div>
       </section>
 
@@ -168,6 +264,7 @@ export default function LandingPage() {
       <footer className="px-6 py-10 border-t border-border text-center">
         <div className="font-syne font-extrabold text-2xl text-grad mb-2">vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai</div>
         <p className="text-sm text-muted">Feito com ✦ para lojistas que querem vender mais</p>
+        <p className="text-xs text-muted mt-3">Seus dados protegidos. Em conformidade com a LGPD.</p>
       </footer>
     </main>
   )

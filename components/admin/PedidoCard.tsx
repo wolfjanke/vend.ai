@@ -68,6 +68,10 @@ export default function PedidoCard({ order }: Props) {
         ))}
       </div>
 
+      {order.notes?.trim() && (
+        <div className="text-muted text-xs mb-3 italic">Obs: {order.notes.trim()}</div>
+      )}
+
       {/* Bottom */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-accent font-bold text-base">R${order.total.toFixed(2).replace('.', ',')}</span>
