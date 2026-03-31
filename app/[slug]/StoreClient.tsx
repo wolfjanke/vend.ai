@@ -13,9 +13,15 @@ function filterActiveBanners(messages: BannerMessage[] | undefined): BannerMessa
   if (!messages?.length) return []
   const now = new Date().toISOString().slice(0, 10)
   return messages.filter(m => {
+    if (!m.text?.trim()) return false
+    if (m.startDate && m.endDate && m.startDate > m.endDate) return false
     if (m.startDate && m.startDate > now) return false
     if (m.endDate && m.endDate < now) return false
     return true
+  }).sort((a, b) => {
+    const ad = a.startDate || ''
+    const bd = b.startDate || ''
+    return bd.localeCompare(ad)
   })
 }
 
@@ -109,7 +115,7 @@ export default function StoreClient({ store, products }: Props) {
   }, [])
 
   // ── Checkout ──────────────────────────────────────────────────────────────────
-  const checkout = useCallback(async (name: string, phone: string, notes: string, delivery: DeliveryAddress) => {
+  const checkout = useCallback(async (name: string, phone: string, notes: string, delivery: DeliveryAddress, paymentMethod: 'PIX' | 'OUTRO', couponCode?: string) => {
     try {
       const res = await fetch('/api/pedidos', {
         method:  'POST',
@@ -120,14 +126,17 @@ export default function StoreClient({ store, products }: Props) {
           customerName:     name,
           customerWhatsapp: phone,
           notes,
+          paymentMethod,
+          couponCode,
           deliveryAddress:  delivery,
         }),
       })
 
       const data = await res.json()
       const orderNum = data.orderNumber ?? generateOrderNumber()
+      const pricing = data.pricing
 
-      const msg = formatOrderMessage({ store, items: cart, name, phone, notes, orderNum, deliveryAddress: delivery })
+      const msg = formatOrderMessage({ store, items: cart, name, phone, notes, orderNum, deliveryAddress: delivery, pricing })
       const url = buildWhatsAppUrl(store.whatsapp, msg)
       window.open(url, '_blank')
 
@@ -196,6 +205,8 @@ export default function StoreClient({ store, products }: Props) {
         onChangeQty={changeQty}
         onRemove={removeItem}
         onCheckout={checkout}
+        pixDiscountPercent={Number(settings.pixDiscountPercent ?? 0)}
+        couponRules={settings.couponRules ?? []}
       />
 
       {/* Vi chat */}

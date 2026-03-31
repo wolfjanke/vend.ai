@@ -92,6 +92,13 @@ async function setup() {
   // Migrations: plan + recovery_sent_at (idempotent)
   await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free'`
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS recovery_sent_at TIMESTAMPTZ NULL`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal NUMERIC(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_pix NUMERIC(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_coupon NUMERIC(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_total NUMERIC(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS total_final NUMERIC(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code_applied TEXT`
   try {
     await sql`ALTER TABLE stores ADD CONSTRAINT stores_plan_check CHECK (plan IN ('free','starter','pro','loja'))`
   } catch (e) {

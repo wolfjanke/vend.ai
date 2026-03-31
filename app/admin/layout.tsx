@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { getSession } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { redirect } from 'next/navigation'
 
 const navItems = [
   { href: '/admin/dashboard',     label: 'Dashboard', icon: '📊' },
@@ -12,7 +11,7 @@ const navItems = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
-  if (!session) redirect('/admin')
+  if (!session) return <>{children}</>
 
   const rows = await sql`SELECT name, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
   const store = rows[0] as { name: string; slug: string } | undefined

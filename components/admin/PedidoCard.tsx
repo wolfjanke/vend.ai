@@ -92,9 +92,32 @@ export default function PedidoCard({ order }: Props) {
         <div className="text-muted text-xs mb-3 italic">Obs: {order.notes.trim()}</div>
       )}
 
+      <div className="text-xs text-muted mb-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <span>Subtotal</span>
+          <span>R${Number(order.subtotal ?? order.total).toFixed(2).replace('.', ',')}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Desconto cupom</span>
+          <span>- R${Number(order.discount_coupon ?? 0).toFixed(2).replace('.', ',')}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Desconto PIX</span>
+          <span>- R${Number(order.discount_pix ?? 0).toFixed(2).replace('.', ',')}</span>
+        </div>
+        <div className="flex items-center justify-between text-foreground">
+          <span>Pagamento</span>
+          <span>{order.payment_method === 'PIX' ? 'PIX' : 'Outro'}</span>
+        </div>
+        <div className="flex items-center justify-between text-foreground break-all">
+          <span>Cupom</span>
+          <span>{order.coupon_code_applied ?? '—'}</span>
+        </div>
+      </div>
+
       {/* Bottom */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-accent font-bold text-base">R${order.total.toFixed(2).replace('.', ',')}</span>
+        <span className="text-accent font-bold text-base">R${Number(order.total_final ?? order.total).toFixed(2).replace('.', ',')}</span>
         <span className="text-muted text-[11px]">{timeAgo(order.created_at)}</span>
       </div>
 

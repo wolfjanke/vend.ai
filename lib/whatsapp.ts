@@ -1,4 +1,5 @@
 import type { CartItem, DeliveryAddress, Store } from '@/types'
+import type { PricingResult } from '@/lib/pricing'
 
 interface CheckoutPayload {
   store:            Store
@@ -8,6 +9,7 @@ interface CheckoutPayload {
   notes?:           string
   orderNum:         string
   deliveryAddress?: DeliveryAddress
+  pricing?:         PricingResult
 }
 
 // ─── Formata a mensagem de pedido para WhatsApp ───────────────────────────────
@@ -47,7 +49,12 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
     `🧾 *Itens do Pedido:*`,
     itemLines,
     `━━━━━━━━━━━━━━━`,
-    `💰 *Total: R$\u00a0${total.toFixed(2).replace('.', ',')}*`
+    `💰 *Subtotal: R$\u00a0${(pricing?.subtotal ?? total).toFixed(2).replace('.', ',')}*`,
+    `🎟️ Desconto cupom: R$\u00a0${(pricing?.discountCoupon ?? 0).toFixed(2).replace('.', ',')}`,
+    `⚡ Desconto PIX: R$\u00a0${(pricing?.discountPix ?? 0).toFixed(2).replace('.', ',')}`,
+    `💵 *Total final: R$\u00a0${(pricing?.totalFinal ?? total).toFixed(2).replace('.', ',')}*`,
+    `💳 Pagamento: ${(pricing?.paymentMethod ?? 'OUTRO') === 'PIX' ? 'PIX' : 'Outro'}`,
+    `🏷️ Cupom aplicado: ${pricing?.couponCodeApplied ?? 'nenhum'}`
   )
 
   if (notes?.trim()) lines.push('', `📝 *Obs:* ${notes.trim()}`)

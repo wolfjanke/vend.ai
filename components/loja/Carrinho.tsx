@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { CartItem, DeliveryAddress } from '@/types'
+import type { CartItem, DeliveryAddress, CouponRule } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
+import { calculateCheckoutPricing } from '@/lib/pricing'
 
 interface Props {
   isOpen:     boolean
@@ -11,10 +12,12 @@ interface Props {
   onClose:    () => void
   onChangeQty:(idx: number, delta: number) => void
   onRemove:   (idx: number) => void
-  onCheckout: (name: string, phone: string, notes: string, delivery: DeliveryAddress) => Promise<void>
+  onCheckout: (name: string, phone: string, notes: string, delivery: DeliveryAddress, paymentMethod: 'PIX' | 'OUTRO', couponCode?: string) => Promise<void>
+  pixDiscountPercent?: number
+  couponRules?: CouponRule[]
 }
 
-export default function Carrinho({ isOpen, cart, onClose, onChangeQty, onRemove, onCheckout }: Props) {
+export default function Carrinho({ isOpen, cart, onClose, onChangeQty, onRemove, onCheckout, pixDiscountPercent = 0, couponRules = [] }: Props) {
   const [name,    setName]    = useState('')
   const [phone,   setPhone]   = useState('')
   const [notes,   setNotes]   = useState('')
@@ -25,10 +28,17 @@ export default function Carrinho({ isOpen, cart, onClose, onChangeQty, onRemove,
   const [bairro, setBairro] = useState('')
   const [cidade, setCidade] = useState('')
   const [uf, setUf] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'OUTRO'>('OUTRO')
+  const [couponCode, setCouponCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors,  setErrors]  = useState<Record<string, string>>({})
 
-  const total = cart.reduce((s, c) => s + c.price * c.qty, 0)
+  const pricing = calculateCheckoutPricing({
+    items: cart,
+    paymentMethod,
+    couponCode,
+    settings: { pixDiscountPercent, couponRules },
+  })
 
   function validate(): boolean {
     const e: Record<string, string> = {}
@@ -63,10 +73,11 @@ export default function Carrinho({ isOpen, cart, onClose, onChangeQty, onRemove,
         cidade:      cidade.trim(),
         uf:          uf.trim().toUpperCase(),
       }
-      await onCheckout(name.trim(), phone.trim(), notes.trim(), delivery)
+      await onCheckout(name.trim(), phone.trim(), notes.trim(), delivery, paymentMethod, couponCode.trim())
       setName(''); setPhone(''); setNotes('')
       setCep(''); setLogradouro(''); setNumero(''); setComplemento('')
       setBairro(''); setCidade(''); setUf('')
+      setPaymentMethod('OUTRO'); setCouponCode('')
     } finally {
       setLoading(false)
     }
@@ -133,7 +144,7 @@ export default function Carrinho({ isOpen, cart, onClose, onChangeQty, onRemove,
         <div className="px-4 sm:px-6 py-5 border-t border-border bg-surface shrink-0 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <div className="flex justify-between items-center mb-4 font-syne">
             <span className="text-muted text-sm">Total</span>
-            <span className="text-accent text-xl font-extrabold">R${total.toFixed(2).replace('.', ',')}</span>
+            <span className="text-accent text-xl font-extrabold">R${pricing.totalFinal.toFixed(2).replace('.', ',')}</span>
           </div>
 
           {cart.length > 0 && (
@@ -242,6 +253,41 @@ export default function Carrinho({ isOpen, cart, onClose, onChangeQty, onRemove,
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
               />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <select
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-sm"
+                  value={paymentMethod}
+                  onChange={e => setPaymentMethod(e.target.value as 'PIX' | 'OUTRO')}
+                >
+                  <option value="OUTRO">Forma de pagamento: Outro</option>
+                  <option value="PIX">Forma de pagamento: PIX</option>
+                </select>
+                <input
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-sm uppercase"
+                  placeholder="Cupom (opcional)"
+                  value={couponCode}
+                  onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                />
+              </div>
+              <div className="rounded-xl border border-border bg-surface2 p-3 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Subtotal</span>
+                  <span>R${pricing.subtotal.toFixed(2).replace('.', ',')}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Desconto cupom</span>
+                  <span>- R${pricing.discountCoupon.toFixed(2).replace('.', ',')}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Desconto PIX</span>
+                  <span>- R${pricing.discountPix.toFixed(2).replace('.', ',')}</span>
+                </div>
+                <div className="flex items-center justify-between font-semibold text-sm pt-1 border-t border-border">
+                  <span>Total final</span>
+                  <span className="text-accent">R${pricing.totalFinal.toFixed(2).replace('.', ',')}</span>
+                </div>
+              </div>
             </div>
           )}
 

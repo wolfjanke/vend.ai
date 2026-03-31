@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { signOut } from 'next-auth/react'
-import type { Store, BannerMessage } from '@/types'
+import type { Store, BannerMessage, CouponRule } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
 import { storeSettingsPatchSchema } from '@/lib/validations'
@@ -25,6 +25,8 @@ export default function ConfigForm({ store }: Props) {
   const [logoUrl,       setLogoUrl]       = useState(store.logo_url ?? '')
   const [freteInfo,     setFreteInfo]     = useState(settings.freteInfo ?? '')
   const [pagamentoInfo, setPagamentoInfo] = useState(settings.pagamentoInfo ?? '')
+  const [pixDiscountPercent, setPixDiscountPercent] = useState<number>(Number(settings.pixDiscountPercent ?? 0))
+  const [couponRules, setCouponRules] = useState<CouponRule[]>(settings.couponRules ?? [])
   const [bannerMessages, setBannerMessages] = useState<BannerMessage[]>(settings.bannerMessages ?? [])
   const [cep, setCep] = useState(store.cep ?? '')
   const [logradouro, setLogradouro] = useState(store.logradouro ?? '')
@@ -60,6 +62,26 @@ export default function ConfigForm({ store }: Props) {
     setBannerMessages(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m))
   }
 
+  function addCoupon() {
+    setCouponRules(prev => [...prev, {
+      id:               crypto.randomUUID(),
+      code:             '',
+      type:             'percent',
+      value:            0,
+      active:           true,
+      startDate:        '',
+      endDate:          '',
+      minOrderValue:    undefined,
+      maxDiscountValue: undefined,
+    }])
+  }
+  function removeCoupon(id: string) {
+    setCouponRules(prev => prev.filter(c => c.id !== id))
+  }
+  function updateCoupon(id: string, patch: Partial<CouponRule>) {
+    setCouponRules(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
+  }
+
   async function uploadLogoFile(file: File) {
     const reader = new FileReader()
     reader.onload = async () => {
@@ -88,6 +110,16 @@ export default function ConfigForm({ store }: Props) {
       logo_url:       logoUrl.trim() || null,
       freteInfo:      freteInfo.trim(),
       pagamentoInfo:  pagamentoInfo.trim(),
+      pixDiscountPercent: Number.isFinite(pixDiscountPercent) ? Math.max(0, Math.min(100, pixDiscountPercent)) : 0,
+      couponRules: couponRules
+        .map(c => ({
+          ...c,
+          code: c.code.trim().toUpperCase(),
+          value: Number(c.value || 0),
+          minOrderValue: c.minOrderValue == null ? undefined : Number(c.minOrderValue),
+          maxDiscountValue: c.maxDiscountValue == null ? undefined : Number(c.maxDiscountValue),
+        }))
+        .filter(c => c.code && c.value >= 0),
       bannerMessages: bannerMessages.filter(m => m.text.trim()),
       cep,
       logradouro,
@@ -113,7 +145,11 @@ export default function ConfigForm({ store }: Props) {
     })
 
     setLoading(false)
-    if (!res.ok) { setError('Erro ao salvar.'); return }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data?.error ?? 'Erro ao salvar.')
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -271,6 +307,115 @@ export default function ConfigForm({ store }: Props) {
             placeholder="Ex: PIX com 5% de desconto. Parcele em até 3x sem juros."
           />
           <p className="text-xs text-muted mt-1.5">A Vi usa esse texto quando o cliente perguntar sobre pagamento.</p>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Desconto PIX (%)</label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary transition-all"
+            value={pixDiscountPercent}
+            onChange={e => setPixDiscountPercent(Number(e.target.value || 0))}
+            placeholder="Ex: 5"
+          />
+          <p className="text-xs text-muted mt-1.5">Aplicado automaticamente no checkout quando o cliente selecionar PIX.</p>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-muted uppercase tracking-wider">Cupons de desconto</label>
+            <button type="button" onClick={addCoupon} className="text-xs text-primary font-semibold hover:underline min-h-[44px] px-2">
+              + Adicionar
+            </button>
+          </div>
+          <p className="text-xs text-muted mb-2">Cada loja possui seus próprios cupons. Você pode ativar/desativar por período.</p>
+          <div className="space-y-3">
+            {couponRules.map(c => (
+              <div key={c.id} className="p-3 bg-surface2 border border-border rounded-xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                  <input
+                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs uppercase"
+                    placeholder="Código (ex: WELCOME10)"
+                    value={c.code}
+                    onChange={e => updateCoupon(c.id, { code: e.target.value.toUpperCase() })}
+                  />
+                  <select
+                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
+                    value={c.type}
+                    onChange={e => updateCoupon(c.id, { type: e.target.value as CouponRule['type'] })}
+                  >
+                    <option value="percent">Percentual (%)</option>
+                    <option value="fixed">Valor fixo (R$)</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
+                    value={c.value}
+                    onChange={e => updateCoupon(c.id, { value: Number(e.target.value || 0) })}
+                    placeholder={c.type === 'percent' ? 'Valor em %' : 'Valor em R$'}
+                  />
+                  <label className="inline-flex items-center gap-2 text-xs text-foreground min-h-[44px]">
+                    <input
+                      type="checkbox"
+                      checked={c.active}
+                      onChange={e => updateCoupon(c.id, { active: e.target.checked })}
+                    />
+                    Cupom ativo
+                  </label>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                  <input
+                    type="date"
+                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
+                    value={c.startDate ?? ''}
+                    onChange={e => updateCoupon(c.id, { startDate: e.target.value })}
+                  />
+                  <input
+                    type="date"
+                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
+                    value={c.endDate ?? ''}
+                    onChange={e => updateCoupon(c.id, { endDate: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
+                    value={c.minOrderValue ?? ''}
+                    onChange={e => updateCoupon(c.id, { minOrderValue: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="Pedido mínimo (R$)"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
+                      value={c.maxDiscountValue ?? ''}
+                      onChange={e => updateCoupon(c.id, { maxDiscountValue: e.target.value ? Number(e.target.value) : undefined })}
+                      placeholder="Teto desconto (R$)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCoupon(c.id)}
+                      className="shrink-0 min-h-[44px] px-3 border border-warm/30 text-warm rounded-lg text-xs hover:bg-warm/10"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>

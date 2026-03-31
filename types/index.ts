@@ -37,6 +37,20 @@ export interface BannerMessage {
   theme?:    string
 }
 
+export type CouponType = 'percent' | 'fixed'
+
+export interface CouponRule {
+  id:               string
+  code:             string
+  type:             CouponType
+  value:            number
+  active:           boolean
+  startDate?:       string
+  endDate?:         string
+  minOrderValue?:   number
+  maxDiscountValue?: number
+}
+
 export interface StoreSettings {
   theme?:            'dark' | 'light'
   welcomeMessage?:   string
@@ -44,6 +58,8 @@ export interface StoreSettings {
   freteInfo?:        string
   pagamentoInfo?:    string
   bannerMessages?:   BannerMessage[]
+  pixDiscountPercent?: number
+  couponRules?:      CouponRule[]
 }
 
 /** Endereço da loja (lojista) — opcional */
@@ -137,6 +153,13 @@ export interface Order {
   created_at:         string
   recovery_sent_at?:  string | null
   delivery_address?:  DeliveryAddress | null
+  subtotal?:          number | null
+  discount_pix?:      number | null
+  discount_coupon?:   number | null
+  discount_total?:    number | null
+  total_final?:       number | null
+  payment_method?:    'PIX' | 'OUTRO' | null
+  coupon_code_applied?: string | null
 }
 
 // ─── Vi Chat ──────────────────────────────────────────────────────────────────

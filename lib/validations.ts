@@ -29,6 +29,18 @@ export const storeSettingsPatchSchema = z.object({
   logo_url:       z.string().nullable().optional(),
   freteInfo:      z.string().optional(),
   pagamentoInfo:  z.string().optional(),
+  pixDiscountPercent: z.number().min(0).max(100).optional(),
+  couponRules: z.array(z.object({
+    id:               z.string(),
+    code:             z.string().min(1).max(64),
+    type:             z.enum(['percent', 'fixed']),
+    value:            z.number().nonnegative(),
+    active:           z.boolean(),
+    startDate:        z.string().optional(),
+    endDate:          z.string().optional(),
+    minOrderValue:    z.number().nonnegative().optional(),
+    maxDiscountValue: z.number().nonnegative().optional(),
+  })).optional(),
   bannerMessages: z.array(z.object({
     id:        z.string(),
     title:     z.string().optional(),
@@ -43,6 +55,23 @@ export const storeSettingsPatchSchema = z.object({
   bairro:      z.string().optional(),
   cidade:      z.string().optional(),
   uf:          z.string().max(2).optional(),
+}).superRefine((data, ctx) => {
+  for (const [idx, c] of (data.couponRules ?? []).entries()) {
+    if (c.type === 'percent' && c.value > 100) {
+      ctx.addIssue({ code: 'custom', path: ['couponRules', idx, 'value'], message: 'Cupom percentual deve ser de 0 a 100' })
+    }
+    if (c.startDate && c.endDate && c.startDate > c.endDate) {
+      ctx.addIssue({ code: 'custom', path: ['couponRules', idx, 'endDate'], message: 'Data final do cupom deve ser maior ou igual à inicial' })
+    }
+  }
+  for (const [idx, b] of (data.bannerMessages ?? []).entries()) {
+    if (!b.text.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['bannerMessages', idx, 'text'], message: 'Texto do banner é obrigatório' })
+    }
+    if (b.startDate && b.endDate && b.startDate > b.endDate) {
+      ctx.addIssue({ code: 'custom', path: ['bannerMessages', idx, 'endDate'], message: 'Data final do banner deve ser maior ou igual à inicial' })
+    }
+  }
 })
 
 const variantSchema = z.object({
@@ -90,6 +119,8 @@ export const orderCreateSchema = z.object({
   customerName:     z.string().min(1).max(200),
   customerWhatsapp: phoneDigits,
   notes:            z.string().max(5000).optional(),
+  paymentMethod:    z.enum(['PIX', 'OUTRO']).default('OUTRO'),
+  couponCode:       z.string().trim().max(64).optional(),
   deliveryAddress:  deliveryAddressSchema,
 })
 
