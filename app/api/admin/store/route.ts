@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { storeSettingsPatchSchema } from '@/lib/validations'
+import { requireSession } from '@/lib/require-session'
 
 function emptyToNull(s: string | undefined | null): string | null {
   if (s == null || String(s).trim() === '') return null
@@ -10,8 +9,8 @@ function emptyToNull(s: string | undefined | null): string | null {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.storeId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   let body: unknown
   try {

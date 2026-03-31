@@ -10,6 +10,18 @@ import { registerSchema } from '@/lib/validations'
 
 type Step = 1 | 2 | 3
 
+function passwordStrength(pass: string): { score: number; label: string } {
+  let score = 0
+  if (pass.length >= 6) score++
+  if (pass.length >= 10) score++
+  if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score++
+  if (/\d/.test(pass)) score++
+  if (/[^A-Za-z0-9]/.test(pass)) score++
+  if (score <= 1) return { score: 1, label: 'Fraca' }
+  if (score <= 3) return { score: 2, label: 'Média' }
+  return { score: 3, label: 'Forte' }
+}
+
 const step1Schema = z.object({
   name:  z.string().min(1, 'Informe seu nome'),
   email: z.string().email('E-mail inválido'),
@@ -31,6 +43,7 @@ export default function CadastroPage() {
   const [slug,      setSlug]      = useState('sua-loja')
 
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
+  const strength = passwordStrength(pass)
 
   function handleStep1() {
     const r = step1Schema.safeParse({ name, email, pass })
@@ -161,6 +174,18 @@ export default function CadastroPage() {
                   onKeyDown={e => e.key === 'Enter' && handleStep1()}
                 />
                 {fieldErr.pass && <p className="text-xs text-warm mt-1">{fieldErr.pass}</p>}
+                {!fieldErr.pass && pass.length > 0 && (
+                  <div className="mt-2">
+                    <div className="h-1.5 w-full rounded-full bg-surface2 overflow-hidden">
+                      <div
+                        className={`h-full transition-all ${
+                          strength.score === 1 ? 'bg-warm w-1/3' : strength.score === 2 ? 'bg-yellow-400 w-2/3' : 'bg-accent w-full'
+                        }`}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted mt-1">Força da senha: {strength.label}</p>
+                  </div>
+                )}
               </div>
             </div>
             <button

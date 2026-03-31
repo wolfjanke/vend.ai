@@ -99,7 +99,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section id="como-funciona" className="px-6 md:px-16 py-20 border-t border-border">
+      <section id="como-funciona" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
         <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Como funciona</p>
         <h2 className="font-syne font-extrabold text-3xl md:text-4xl mb-12">Do cadastro à venda<br />em 3 passos</h2>
         <div className="grid md:grid-cols-3 gap-5">
@@ -119,12 +119,12 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section id="funcionalidades" className="px-6 md:px-16 py-20 border-t border-border">
+      <section id="funcionalidades" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
         <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Funcionalidades</p>
         <h2 className="font-syne font-extrabold text-3xl md:text-4xl mb-12">Tudo que você precisa.<br />Nada que você não usa.</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { icon: '🤖', title: 'Vi — Assistente com IA', desc: 'A Vi atende seus clientes 24h, sugere produtos, responde dúvidas e recupera carrinhos abandonados.', wide: true },
+            { icon: '🤖', title: 'Vi — Assistente com IA', desc: 'A Vi atende seus clientes 24h, sugere produtos e responde dúvidas. Nos planos Pro+, você recupera pedidos não concluídos pelo painel com mensagens prontas.', wide: true },
             { icon: '📲', title: 'WhatsApp integrado',    desc: 'Pedidos chegam formatados no WhatsApp que você já usa.' },
             { icon: '📊', title: 'Painel de controle',    desc: 'Gerencie pedidos, estoque e métricas em um lugar só.' },
             { icon: '📸', title: 'IA no cadastro',        desc: 'Tire foto do produto e a IA gera nome e descrição na hora.' },
@@ -140,12 +140,14 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="planos" className="px-6 md:px-16 py-20 border-t border-border">
+      <section id="planos" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
         <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Planos</p>
-        <h2 className="font-syne font-extrabold text-3xl md:text-4xl mb-12">Comece grátis.<br />Cresça quando quiser.</h2>
-        <div className="flex flex-wrap gap-5 justify-center">
+        <h2 className="font-syne font-extrabold text-xl sm:text-3xl md:text-4xl leading-tight mb-14 md:mb-16 max-w-2xl">
+          Comece grátis.<br />Cresça quando quiser.
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mt-3 md:mt-5">
           {/* Grátis */}
-          <div className="bg-surface border border-border rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px]">
+          <div className="bg-surface border border-border rounded-2xl p-8 w-full max-w-none min-w-0">
             <h3 className="font-syne font-bold text-lg mb-2">Grátis</h3>
             <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 0<span className="text-base text-muted">/mês</span></div>
             <p className="text-xs text-muted mb-5">Para começar e testar</p>
@@ -162,7 +164,7 @@ export default function LandingPage() {
             </Link>
           </div>
           {/* Starter */}
-          <div className="bg-surface border border-border rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px]">
+          <div className="bg-surface border border-border rounded-2xl p-8 w-full max-w-none min-w-0">
             <h3 className="font-syne font-bold text-lg mb-2">Starter</h3>
             <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 39,90<span className="text-base text-muted">/mês</span></div>
             <p className="text-xs text-muted mb-5">Para começar a vender</p>
@@ -175,12 +177,12 @@ export default function LandingPage() {
               ))}
             </ul>
             <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10 transition-all">
-              Assinar Starter
+              Começar e escolher Starter
             </Link>
           </div>
           {/* Pro - Mais popular */}
-          <div className="relative bg-surface border border-primary rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px] shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap">Mais popular</span>
+          <div className="bg-surface border border-primary rounded-2xl p-8 w-full max-w-none min-w-0 shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]">
+            <span className="inline-flex bg-primary text-white text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap mb-3">Mais popular</span>
             <h3 className="font-syne font-bold text-lg mb-2">Pro</h3>
             <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 49,90<span className="text-base text-muted">/mês</span></div>
             <p className="text-xs text-muted mb-5">Para lojas em crescimento</p>
@@ -190,11 +192,11 @@ export default function LandingPage() {
               ))}
             </ul>
             <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl bg-primary text-white font-syne font-bold text-sm hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all">
-              Assinar Pro
+              Começar e escolher Pro
             </Link>
           </div>
           {/* Loja */}
-          <div className="bg-surface border border-border rounded-2xl p-8 flex-1 min-w-[220px] max-w-[260px]">
+          <div className="bg-surface border border-border rounded-2xl p-8 w-full max-w-none min-w-0">
             <h3 className="font-syne font-bold text-lg mb-2">Loja</h3>
             <div className="font-syne font-extrabold text-4xl text-accent mb-1">R$ 99,90<span className="text-base text-muted">/mês</span></div>
             <p className="text-xs text-muted mb-5">Para quem já vende muito</p>
@@ -204,14 +206,14 @@ export default function LandingPage() {
               ))}
             </ul>
             <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl border border-border text-foreground text-sm font-semibold hover:border-primary hover:text-primary transition-all">
-              Assinar Loja
+              Começar e escolher Loja
             </Link>
           </div>
         </div>
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="px-6 md:px-16 py-20 border-t border-border">
+      <section id="faq" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
         <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">FAQ</p>
         <h2 className="font-syne font-extrabold text-3xl md:text-4xl mb-10">Perguntas frequentes</h2>
         <div className="max-w-2xl space-y-2">
@@ -235,6 +237,13 @@ export default function LandingPage() {
               <span className="text-muted group-open:rotate-180 transition-transform">▼</span>
             </summary>
             <p className="px-5 pb-4 text-sm text-muted">No plano Grátis você pode cadastrar até 10 produtos. Nos planos Starter (25), Pro (50) e Loja (ilimitado) o limite aumenta.</p>
+          </details>
+          <details className="bg-surface border border-border rounded-xl overflow-hidden group">
+            <summary className="px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between">
+              Como faço upgrade de plano?
+              <span className="text-muted group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <p className="px-5 pb-4 text-sm text-muted">Você começa criando sua loja grátis. Quando precisar de mais produtos e recursos, é só fazer upgrade para Starter, Pro ou Loja.</p>
           </details>
           <details className="bg-surface border border-border rounded-xl overflow-hidden group">
             <summary className="px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between">

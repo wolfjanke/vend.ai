@@ -94,6 +94,10 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
         body:    JSON.stringify({ images: previews.slice(0, 10) }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        const msg = data?.error ?? 'Não foi possível analisar com IA agora.'
+        throw new Error(msg)
+      }
 
       setProdName(data.nome ?? '')
       setProdDesc(data.descricao ?? '')
@@ -125,8 +129,9 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
       setVariants(generatedVariants)
       setAnalyzed(true)
       setAiStatus(`✓ ${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''} identificada${generatedVariants.length > 1 ? 's' : ''}`)
-    } catch {
-      setAiStatus('Erro na análise — preencha manualmente')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro na análise — preencha manualmente'
+      setAiStatus(msg)
       setAnalyzed(true)
     } finally {
       setAnalyzing(false)

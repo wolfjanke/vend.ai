@@ -16,8 +16,20 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const planRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
-    const plan = planRows[0]?.plan ?? 'free'
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY não configurada no servidor' }, { status: 500 })
+    }
+
+    let plan = 'pro'
+    try {
+      const planRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
+      plan = planRows[0]?.plan ?? 'free'
+    } catch {
+      // Compatibilidade com bancos antigos que ainda não têm a coluna stores.plan.
+      // Nesses casos, mantém comportamento anterior (análise liberada).
+      plan = 'pro'
+    }
+
     if (plan === 'free') {
       return NextResponse.json(
         { error: 'IA no cadastro de produto está disponível nos planos pagos. Faça upgrade para usar.' },
@@ -64,6 +76,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(analysisResult)
   } catch (error) {
     console.error('[/api/produtos/analyze]', error)
-    return NextResponse.json({ error: 'Erro na análise' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : 'Erro na análise'
+    if (msg.includes('API_KEY_INVALID') || msg.toLowerCase().includes('api key expired')) {
+      return NextResponse.json(
+        { error: 'A chave da IA expirou. Atualize GEMINI_API_KEY no .env.local e reinicie o servidor.' },
+        { status: 500 }
+      )
+    }
+    return NextResponse.json({ error: msg || 'Erro na análise' }, { status: 500 })
   }
 }
