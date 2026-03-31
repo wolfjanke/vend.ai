@@ -6,6 +6,7 @@ const navItems = [
   { href: '/admin/dashboard',     label: 'Dashboard', icon: '📊' },
   { href: '/admin/pedidos',       label: 'Pedidos',   icon: '🛍️' },
   { href: '/admin/produtos',      label: 'Produtos',  icon: '👗' },
+  { href: '/admin/marketing',     label: 'Marketing', icon: '🎯' },
   { href: '/admin/configuracoes', label: 'Config',    icon: '⚙️' },
 ]
 

@@ -17,7 +17,7 @@ export default async function ConfiguracoesPage() {
     <div className="animate-fade-up max-w-lg">
       <div className="mb-6">
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Configurações</h1>
-        <p className="text-sm text-muted">Gerencie os dados da sua loja</p>
+        <p className="text-sm text-muted">Gerencie os dados gerais da sua loja</p>
       </div>
       <ConfigForm store={store} />
     </div>

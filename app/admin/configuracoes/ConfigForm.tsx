@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { signOut } from 'next-auth/react'
-import type { Store, BannerMessage, CouponRule } from '@/types'
+import type { Store } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
 import { storeSettingsPatchSchema } from '@/lib/validations'
@@ -25,9 +25,6 @@ export default function ConfigForm({ store }: Props) {
   const [logoUrl,       setLogoUrl]       = useState(store.logo_url ?? '')
   const [freteInfo,     setFreteInfo]     = useState(settings.freteInfo ?? '')
   const [pagamentoInfo, setPagamentoInfo] = useState(settings.pagamentoInfo ?? '')
-  const [pixDiscountPercent, setPixDiscountPercent] = useState<number>(Number(settings.pixDiscountPercent ?? 0))
-  const [couponRules, setCouponRules] = useState<CouponRule[]>(settings.couponRules ?? [])
-  const [bannerMessages, setBannerMessages] = useState<BannerMessage[]>(settings.bannerMessages ?? [])
   const [cep, setCep] = useState(store.cep ?? '')
   const [logradouro, setLogradouro] = useState(store.logradouro ?? '')
   const [numero, setNumero] = useState(store.numero ?? '')
@@ -45,42 +42,6 @@ export default function ConfigForm({ store }: Props) {
   const [pwdErr, setPwdErr] = useState('')
   const [pwdLoading, setPwdLoading] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
-
-  function addBanner() {
-    setBannerMessages(prev => [...prev, {
-      id:        crypto.randomUUID(),
-      title:     '',
-      text:      '',
-      startDate: '',
-      endDate:   '',
-    }])
-  }
-  function removeBanner(id: string) {
-    setBannerMessages(prev => prev.filter(m => m.id !== id))
-  }
-  function updateBanner(id: string, field: keyof BannerMessage, value: string) {
-    setBannerMessages(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m))
-  }
-
-  function addCoupon() {
-    setCouponRules(prev => [...prev, {
-      id:               crypto.randomUUID(),
-      code:             '',
-      type:             'percent',
-      value:            0,
-      active:           true,
-      startDate:        '',
-      endDate:          '',
-      minOrderValue:    undefined,
-      maxDiscountValue: undefined,
-    }])
-  }
-  function removeCoupon(id: string) {
-    setCouponRules(prev => prev.filter(c => c.id !== id))
-  }
-  function updateCoupon(id: string, patch: Partial<CouponRule>) {
-    setCouponRules(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
-  }
 
   async function uploadLogoFile(file: File) {
     const reader = new FileReader()
@@ -110,17 +71,6 @@ export default function ConfigForm({ store }: Props) {
       logo_url:       logoUrl.trim() || null,
       freteInfo:      freteInfo.trim(),
       pagamentoInfo:  pagamentoInfo.trim(),
-      pixDiscountPercent: Number.isFinite(pixDiscountPercent) ? Math.max(0, Math.min(100, pixDiscountPercent)) : 0,
-      couponRules: couponRules
-        .map(c => ({
-          ...c,
-          code: c.code.trim().toUpperCase(),
-          value: Number(c.value || 0),
-          minOrderValue: c.minOrderValue == null ? undefined : Number(c.minOrderValue),
-          maxDiscountValue: c.maxDiscountValue == null ? undefined : Number(c.maxDiscountValue),
-        }))
-        .filter(c => c.code && c.value >= 0),
-      bannerMessages: bannerMessages.filter(m => m.text.trim()),
       cep,
       logradouro,
       numero,
@@ -299,168 +249,14 @@ export default function ConfigForm({ store }: Props) {
         </div>
 
         <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Formas de pagamento / promoções</label>
+          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Formas de pagamento</label>
           <textarea
             className="w-full px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y placeholder:text-muted"
             value={pagamentoInfo}
             onChange={e => setPagamentoInfo(e.target.value)}
-            placeholder="Ex: PIX com 5% de desconto. Parcele em até 3x sem juros."
+            placeholder="Ex: Parcele em até 3x sem juros."
           />
           <p className="text-xs text-muted mt-1.5">A Vi usa esse texto quando o cliente perguntar sobre pagamento.</p>
-        </div>
-
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Desconto PIX (%)</label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step="0.01"
-            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary transition-all"
-            value={pixDiscountPercent}
-            onChange={e => setPixDiscountPercent(Number(e.target.value || 0))}
-            placeholder="Ex: 5"
-          />
-          <p className="text-xs text-muted mt-1.5">Aplicado automaticamente no checkout quando o cliente selecionar PIX.</p>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-bold text-muted uppercase tracking-wider">Cupons de desconto</label>
-            <button type="button" onClick={addCoupon} className="text-xs text-primary font-semibold hover:underline min-h-[44px] px-2">
-              + Adicionar
-            </button>
-          </div>
-          <p className="text-xs text-muted mb-2">Cada loja possui seus próprios cupons. Você pode ativar/desativar por período.</p>
-          <div className="space-y-3">
-            {couponRules.map(c => (
-              <div key={c.id} className="p-3 bg-surface2 border border-border rounded-xl">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                  <input
-                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs uppercase"
-                    placeholder="Código (ex: WELCOME10)"
-                    value={c.code}
-                    onChange={e => updateCoupon(c.id, { code: e.target.value.toUpperCase() })}
-                  />
-                  <select
-                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
-                    value={c.type}
-                    onChange={e => updateCoupon(c.id, { type: e.target.value as CouponRule['type'] })}
-                  >
-                    <option value="percent">Percentual (%)</option>
-                    <option value="fixed">Valor fixo (R$)</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
-                    value={c.value}
-                    onChange={e => updateCoupon(c.id, { value: Number(e.target.value || 0) })}
-                    placeholder={c.type === 'percent' ? 'Valor em %' : 'Valor em R$'}
-                  />
-                  <label className="inline-flex items-center gap-2 text-xs text-foreground min-h-[44px]">
-                    <input
-                      type="checkbox"
-                      checked={c.active}
-                      onChange={e => updateCoupon(c.id, { active: e.target.checked })}
-                    />
-                    Cupom ativo
-                  </label>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                  <input
-                    type="date"
-                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
-                    value={c.startDate ?? ''}
-                    onChange={e => updateCoupon(c.id, { startDate: e.target.value })}
-                  />
-                  <input
-                    type="date"
-                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
-                    value={c.endDate ?? ''}
-                    onChange={e => updateCoupon(c.id, { endDate: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
-                    value={c.minOrderValue ?? ''}
-                    onChange={e => updateCoupon(c.id, { minOrderValue: e.target.value ? Number(e.target.value) : undefined })}
-                    placeholder="Pedido mínimo (R$)"
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      className="w-full min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-xs"
-                      value={c.maxDiscountValue ?? ''}
-                      onChange={e => updateCoupon(c.id, { maxDiscountValue: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="Teto desconto (R$)"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeCoupon(c.id)}
-                      className="shrink-0 min-h-[44px] px-3 border border-warm/30 text-warm rounded-lg text-xs hover:bg-warm/10"
-                    >
-                      Remover
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-bold text-muted uppercase tracking-wider">Mensagens do banner</label>
-            <button type="button" onClick={addBanner} className="text-xs text-primary font-semibold hover:underline">
-              + Adicionar
-            </button>
-          </div>
-          <p className="text-xs text-muted mb-2">Aparecem na loja em faixa rotativa. Opcional: datas para exibir em épocas (ex: Páscoa, Natal).</p>
-          {bannerMessages.map(m => (
-            <div key={m.id} className="mb-3 p-3 bg-surface2 border border-border rounded-xl">
-              <div className="flex gap-2 mb-2">
-                <input
-                  className="flex-1 min-w-0 px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary"
-                  placeholder="Título (ex: Páscoa)"
-                  value={m.title}
-                  onChange={e => updateBanner(m.id, 'title', e.target.value)}
-                />
-                <button type="button" onClick={() => removeBanner(m.id)} className="px-2 py-1 text-warm text-xs border border-warm/30 rounded-lg hover:bg-warm/10 shrink-0">
-                  Remover
-                </button>
-              </div>
-              <textarea
-                className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary min-h-[60px] resize-y mb-2 placeholder:text-muted"
-                placeholder="Texto da mensagem"
-                value={m.text}
-                onChange={e => updateBanner(m.id, 'text', e.target.value)}
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  className="px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground text-xs"
-                  value={m.startDate ?? ''}
-                  onChange={e => updateBanner(m.id, 'startDate', e.target.value)}
-                />
-                <input
-                  type="date"
-                  className="px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground text-xs"
-                  value={m.endDate ?? ''}
-                  onChange={e => updateBanner(m.id, 'endDate', e.target.value)}
-                />
-              </div>
-            </div>
-          ))}
         </div>
 
         <div>
