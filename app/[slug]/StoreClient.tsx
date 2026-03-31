@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import type { Product, Store, CartItem, StoreContext, BannerMessage } from '@/types'
+import type { Product, Store, CartItem, StoreContext, BannerMessage, DeliveryAddress } from '@/types'
 import Catalogo    from '@/components/loja/Catalogo'
 import Carrinho    from '@/components/loja/Carrinho'
 import ViChat      from '@/components/loja/ViChat'
@@ -109,7 +109,7 @@ export default function StoreClient({ store, products }: Props) {
   }, [])
 
   // ── Checkout ──────────────────────────────────────────────────────────────────
-  const checkout = useCallback(async (name: string, phone: string, notes: string) => {
+  const checkout = useCallback(async (name: string, phone: string, notes: string, delivery: DeliveryAddress) => {
     try {
       const res = await fetch('/api/pedidos', {
         method:  'POST',
@@ -120,13 +120,14 @@ export default function StoreClient({ store, products }: Props) {
           customerName:     name,
           customerWhatsapp: phone,
           notes,
+          deliveryAddress:  delivery,
         }),
       })
 
       const data = await res.json()
       const orderNum = data.orderNumber ?? generateOrderNumber()
 
-      const msg = formatOrderMessage({ store, items: cart, name, phone, notes, orderNum })
+      const msg = formatOrderMessage({ store, items: cart, name, phone, notes, orderNum, deliveryAddress: delivery })
       const url = buildWhatsAppUrl(store.whatsapp, msg)
       window.open(url, '_blank')
 
@@ -220,7 +221,7 @@ export default function StoreClient({ store, products }: Props) {
       )}
 
       {/* Toast */}
-      <div className={`fixed bottom-24 left-1/2 z-[400] -translate-x-1/2 bg-surface2 border border-accent/30 rounded-xl px-5 py-3 text-sm font-medium text-accent pointer-events-none transition-all duration-300 whitespace-nowrap ${toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <div className={`fixed bottom-24 left-1/2 z-[400] w-[min(100vw-2rem,28rem)] -translate-x-1/2 bg-surface2 border border-accent/30 rounded-xl px-4 py-3 text-sm font-medium text-accent text-center pointer-events-none transition-all duration-300 break-words ${toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {toast}
       </div>
     </div>

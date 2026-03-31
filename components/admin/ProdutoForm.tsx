@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter }        from 'next/navigation'
 import type { Product, ProductVariant } from '@/types'
 import { PRODUCT_CATEGORIES, SIZES } from '@/types'
+import MaskedInput from '@/components/ui/MaskedInput'
+import { numberToCurrencyInput, parseCurrency } from '@/lib/masks'
 
 interface Props {
   storeId:        string
@@ -47,8 +49,8 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
     setProdName(initialProduct.name)
     setProdDesc(initialProduct.description ?? '')
     setProdCat(initialProduct.category ?? 'outro')
-    setProdPrice(String(initialProduct.price ?? ''))
-    setProdPromo(initialProduct.promo_price != null ? String(initialProduct.promo_price) : '')
+    setProdPrice(numberToCurrencyInput(Number(initialProduct.price ?? 0)))
+    setProdPromo(initialProduct.promo_price != null ? numberToCurrencyInput(Number(initialProduct.promo_price)) : '')
     setActive(initialProduct.active ?? true)
     setVariants(
       (initialProduct.variants_json ?? []).map((v: ProductVariant) => ({
@@ -177,7 +179,8 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
 
   async function handleSave() {
     if (!prodName.trim()) { alert('Informe o nome do produto'); return }
-    if (!prodPrice)       { alert('Informe o preço'); return }
+    const priceNum = parseCurrency(prodPrice)
+    if (priceNum <= 0) { alert('Informe o preço válido'); return }
     if (!variants.length) { alert('Adicione ao menos uma variação'); return }
     setSaving(true)
 
@@ -196,12 +199,13 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
         })
       )
 
+      const promoNum = prodPromo.trim() ? parseCurrency(prodPromo) : 0
       const payload = {
         name:          prodName.trim(),
         description:   prodDesc.trim(),
         category:      prodCat,
-        price:         parseFloat(prodPrice),
-        promo_price:   prodPromo ? parseFloat(prodPromo) : null,
+        price:         priceNum,
+        promo_price:   promoNum > 0 ? promoNum : null,
         variants_json: finalVariants,
         active,
       }
@@ -353,23 +357,25 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
 
                 <div>
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Preço (R$)</label>
-                  <input
-                    type="number"
-                    className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
-                    placeholder="0,00"
+                  <MaskedInput
+                    mask="currency"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
+                    placeholder="R$ 0,00"
                     value={prodPrice}
-                    onChange={e => setProdPrice(e.target.value)}
+                    onChange={setProdPrice}
+                    inputMode="decimal"
                   />
                 </div>
 
                 <div>
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Preço Promo (opcional)</label>
-                  <input
-                    type="number"
-                    className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
+                  <MaskedInput
+                    mask="currency"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
                     placeholder="Deixe vazio"
                     value={prodPromo}
-                    onChange={e => setProdPromo(e.target.value)}
+                    onChange={setProdPromo}
+                    inputMode="decimal"
                   />
                 </div>
 

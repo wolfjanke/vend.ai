@@ -1,0 +1,30 @@
+---
+description: Mobile-first obrigatório em todo componente React/TSX do projeto vend.ai
+globs:
+  - "**/*.tsx"
+  - "**/*.ts"
+  - "app/**"
+  - "components/**"
+alwaysApply: true
+---
+
+# Regra Mobile-First — vend.ai
+
+O foco principal do produto é uso em celular. Todo layout e componente deve funcionar em viewports de 320px–430px sem corte, sobreposição ilegível ou scroll horizontal acidental.
+
+## Obrigatório em todo componente
+
+1. Layout começa pelo mobile (classes sem prefixo) e expande com `sm:`, `md:`, `lg:` — nunca desktop-first.
+2. Inputs e botões de ação principal: altura mínima `min-h-[44px]` quando forem alvo de toque; `w-full` no mobile quando fizer sentido.
+3. Textos longos: `break-words` ou `truncate` com `title` para tooltip; URLs e `font-mono`: `break-all` + `min-w-0` no flex pai.
+4. Elementos `fixed` ou `absolute`: limitar largura com `max-w-[calc(100vw-16px)]` ou equivalente; considerar `env(safe-area-inset-bottom)` em barras fixas inferiores (iOS).
+5. Grids: `grid-cols-1` ou `grid-cols-2` no base → `sm:` / `md:` / `lg:` para mais colunas.
+6. Evitar `whitespace-nowrap` em textos variáveis; se necessário, o pai deve ter `overflow-x-auto` ou o texto deve poder quebrar.
+7. Títulos `h1`/`h2` em páginas: escalar com `text-xl sm:text-2xl md:text-3xl` (evitar um único tamanho grande só no mobile).
+8. Imagens: `object-cover` com `aspect-*` ou altura definida; evitar larguras fixas que estourem o viewport.
+
+## Checklist antes de concluir uma tela
+
+- Testar mentalmente em 320px de largura.
+- Nenhum flex filho sem `min-w-0` quando o pai usa `truncate` ou texto longo.
+- Toasts e modais: largura máxima à viewport, texto com quebra.

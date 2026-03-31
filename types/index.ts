@@ -46,7 +46,18 @@ export interface StoreSettings {
   bannerMessages?:   BannerMessage[]
 }
 
-export interface Store {
+/** Endereço da loja (lojista) — opcional */
+export interface StoreAddress {
+  cep?:         string | null
+  logradouro?:  string | null
+  numero?:      string | null
+  complemento?: string | null
+  bairro?:      string | null
+  cidade?:      string | null
+  uf?:          string | null
+}
+
+export interface Store extends StoreAddress {
   id:            string
   slug:          string
   name:          string
@@ -102,6 +113,17 @@ export interface OrderItem {
   price:      number
 }
 
+/** Endereço de entrega do cliente (checkout) */
+export interface DeliveryAddress {
+  cep:         string
+  logradouro:  string
+  numero:      string
+  complemento?: string
+  bairro:      string
+  cidade:      string
+  uf:          string
+}
+
 export interface Order {
   id:                 string
   store_id:           string
@@ -114,6 +136,7 @@ export interface Order {
   status:             OrderStatus
   created_at:         string
   recovery_sent_at?:  string | null
+  delivery_address?:  DeliveryAddress | null
 }
 
 // ─── Vi Chat ──────────────────────────────────────────────────────────────────

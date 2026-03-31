@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Order, OrderStatus } from '@/types'
+import type { DeliveryAddress, Order, OrderStatus } from '@/types'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types'
 import { updateOrderStatus } from '@/app/admin/actions'
 
@@ -28,9 +28,20 @@ function timeAgo(iso: string) {
   return `há ${Math.floor(hrs / 24)}d`
 }
 
+function parseDelivery(raw: Order['delivery_address']): DeliveryAddress | null {
+  if (raw == null) return null
+  if (typeof raw === 'object' && raw !== null && 'cep' in raw) return raw as DeliveryAddress
+  try {
+    return JSON.parse(String(raw)) as DeliveryAddress
+  } catch {
+    return null
+  }
+}
+
 export default function PedidoCard({ order }: Props) {
   const [status,   setStatus]   = useState<OrderStatus>(order.status)
   const [pending,  startTransition] = useTransition()
+  const delivery = parseDelivery(order.delivery_address)
 
   function handleAction(nextStatus: OrderStatus) {
     startTransition(async () => {
@@ -67,6 +78,15 @@ export default function PedidoCard({ order }: Props) {
           <div key={i}>• {item.name}{item.color ? ` — ${item.color}` : ''} — {item.size} ({item.qty}x) — R${item.price.toFixed(2).replace('.', ',')}</div>
         ))}
       </div>
+
+      {delivery && (
+        <div className="text-muted text-xs mb-3 leading-relaxed break-words">
+          📍 {delivery.logradouro}, {delivery.numero}
+          {delivery.complemento ? ` — ${delivery.complemento}` : ''}
+          <br />
+          {delivery.bairro} — {delivery.cidade}/{delivery.uf} · CEP {delivery.cep}
+        </div>
+      )}
 
       {order.notes?.trim() && (
         <div className="text-muted text-xs mb-3 italic">Obs: {order.notes.trim()}</div>

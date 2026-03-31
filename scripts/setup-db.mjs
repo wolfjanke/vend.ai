@@ -98,6 +98,28 @@ async function setup() {
     if (e?.code !== '42710') throw e // duplicate_object
   }
 
+  // Endereço da loja + entrega + recuperação de senha
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS cep VARCHAR(12)`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS logradouro TEXT`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS numero VARCHAR(30)`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS complemento TEXT`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS bairro TEXT`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS cidade TEXT`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS uf CHAR(2)`
+
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address JSONB`
+
+  await sql`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id       UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    token         TEXT NOT NULL UNIQUE,
+    expires_at    TIMESTAMPTZ NOT NULL,
+    used_at       TIMESTAMPTZ NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`
+  await sql`CREATE INDEX IF NOT EXISTS password_reset_tokens_token_idx ON password_reset_tokens(token)`
+  await sql`CREATE INDEX IF NOT EXISTS password_reset_tokens_user_idx ON password_reset_tokens(user_id)`
+
   console.log('✓ Tabelas criadas!')
 
   // ─── Seed: Loja ────────────────────────────────────────────────────────────

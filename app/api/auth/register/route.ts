@@ -1,30 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { sql } from '@/lib/db'
-
-function slugify(str: string) {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .substring(0, 40)
-}
+import { slugify } from '@/lib/masks'
+import { registerSchema } from '@/lib/validations'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, storeName, whatsapp } = await req.json()
-
-    if (!email || !password || !storeName || !whatsapp) {
-      return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 })
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: 'Senha deve ter ao menos 6 caracteres' }, { status: 400 })
+    const parsed = registerSchema.safeParse(body)
+    if (!parsed.success) {
+      const err = parsed.error.flatten().fieldErrors
+      const first = Object.values(err).flat()[0] ?? 'Dados inválidos'
+      return NextResponse.json({ error: first }, { status: 400 })
     }
 
-    // Check if email already exists
+    const { email, password, storeName, whatsapp } = parsed.data
+
     const existing = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`
     if (existing.length > 0) {
       return NextResponse.json({ error: 'E-mail já cadastrado' }, { status: 409 })
@@ -33,7 +30,6 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10)
     const storeSlug    = slugify(storeName) || `loja-${Date.now()}`
 
-    // Check slug uniqueness
     const slugCheck = await sql`SELECT id FROM stores WHERE slug = ${storeSlug} LIMIT 1`
     const finalSlug = slugCheck.length > 0 ? `${storeSlug}-${Date.now()}` : storeSlug
 
@@ -45,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const [store] = await sql`
       INSERT INTO stores (user_id, slug, name, whatsapp)
-      VALUES (${newUser.id}, ${finalSlug}, ${storeName}, ${whatsapp.replace(/\D/g, '')})
+      VALUES (${newUser.id}, ${finalSlug}, ${storeName}, ${whatsapp})
       RETURNING id, slug
     `
 

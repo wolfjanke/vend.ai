@@ -73,7 +73,7 @@ export default async function DashboardPage() {
   return (
     <div className="animate-fade-up">
       <div className="mb-6">
-        <h1 className="font-syne font-extrabold text-2xl mb-1">
+        <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">
           {greeting()}, {store?.name ?? 'loja'}! 👋
         </h1>
         <p className="text-sm text-muted">

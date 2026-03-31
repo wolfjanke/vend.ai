@@ -76,6 +76,9 @@ export default function AdminLoginPage() {
           Não tem conta?{' '}
           <a href="/cadastro" className="text-primary hover:underline">Criar grátis</a>
         </p>
+        <p className="text-center text-sm text-muted mt-2">
+          <a href="/esqueci-senha" className="text-primary/80 hover:underline">Esqueci minha senha</a>
+        </p>
       </div>
     </main>
   )

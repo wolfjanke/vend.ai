@@ -2,14 +2,46 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
+import { storeSettingsPatchSchema } from '@/lib/validations'
+
+function emptyToNull(s: string | undefined | null): string | null {
+  if (s == null || String(s).trim() === '') return null
+  return String(s).trim()
+}
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.storeId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
-  const { name, whatsapp, logo_url, freteInfo, pagamentoInfo, bannerMessages } = body
-  if (!name) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+  }
+
+  const parsed = storeSettingsPatchSchema.safeParse(body)
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().fieldErrors
+    const first = Object.values(msg).flat()[0] ?? 'Dados inválidos'
+    return NextResponse.json({ error: first }, { status: 400 })
+  }
+
+  const {
+    name,
+    whatsapp,
+    logo_url,
+    freteInfo,
+    pagamentoInfo,
+    bannerMessages,
+    cep,
+    logradouro,
+    numero,
+    complemento,
+    bairro,
+    cidade,
+    uf,
+  } = parsed.data
 
   const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
   const current = (storeRows[0]?.settings_json as Record<string, unknown>) ?? {}
@@ -20,11 +52,20 @@ export async function PATCH(req: NextRequest) {
     ...(bannerMessages !== undefined && { bannerMessages: Array.isArray(bannerMessages) ? bannerMessages : (current.bannerMessages ?? []) }),
   }
 
+  const logo = logo_url === '' || logo_url == null ? null : logo_url
+
   await sql`
     UPDATE stores SET
       name = ${name},
-      whatsapp = ${whatsapp ?? ''},
-      logo_url = ${logo_url ?? null},
+      whatsapp = ${whatsapp},
+      logo_url = ${logo},
+      cep = ${emptyToNull(cep)},
+      logradouro = ${emptyToNull(logradouro)},
+      numero = ${emptyToNull(numero)},
+      complemento = ${emptyToNull(complemento)},
+      bairro = ${emptyToNull(bairro)},
+      cidade = ${emptyToNull(cidade)},
+      uf = ${emptyToNull(uf?.toUpperCase())},
       settings_json = ${JSON.stringify(merged)}::jsonb
     WHERE id = ${session.storeId}
   `

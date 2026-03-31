@@ -1,26 +1,12 @@
 import Link from 'next/link'
+import LandingHeader from '@/components/landing/LandingHeader'
 
 export default function LandingPage() {
   return (
     <main className="relative z-10">
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass border-b border-border h-16 flex items-center justify-between px-6 animate-slide-down">
-        <span className="font-syne font-extrabold text-xl text-grad">vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)', opacity: 1 }}>.</span>ai</span>
-        <nav className="hidden md:flex gap-6 text-sm font-medium text-muted">
-          <a href="#como-funciona" className="hover:text-foreground transition-colors">Como funciona</a>
-          <a href="#funcionalidades"  className="hover:text-foreground transition-colors">Funcionalidades</a>
-          <a href="#planos"           className="hover:text-foreground transition-colors">Planos</a>
-          <a href="#faq"              className="hover:text-foreground transition-colors">FAQ</a>
-        </nav>
-        <div className="flex gap-3">
-          <a href="/admin" className="text-sm font-medium text-muted hover:text-foreground transition-colors px-3 py-2">
-            Entrar
-          </a>
-          <a href="/cadastro" className="text-sm font-bold px-4 py-2 rounded-xl bg-grad text-bg hover:opacity-90 transition-opacity">
-            Criar loja grátis
-          </a>
-        </div>
-      </header>
+      <div className="relative">
+        <LandingHeader />
+      </div>
 
       {/* Hero */}
       <section className="min-h-[calc(100vh-64px)] flex items-center px-6 md:px-16 gap-16 relative overflow-hidden">

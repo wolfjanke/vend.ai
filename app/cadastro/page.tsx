@@ -3,18 +3,18 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
+import { z } from 'zod'
+import MaskedInput from '@/components/ui/MaskedInput'
+import { slugify } from '@/lib/masks'
+import { registerSchema } from '@/lib/validations'
 
 type Step = 1 | 2 | 3
 
-function slugify(str: string) {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .substring(0, 40)
-}
+const step1Schema = z.object({
+  name:  z.string().min(1, 'Informe seu nome'),
+  email: z.string().email('E-mail inválido'),
+  pass:  z.string().min(6, 'Senha mínimo 6 caracteres'),
+})
 
 export default function CadastroPage() {
   const [step,      setStep]      = useState<Step>(1)
@@ -22,27 +22,49 @@ export default function CadastroPage() {
   const [error,     setError]     = useState('')
   const [finalSlug, setFinalSlug] = useState('')
 
-  // Step 1
   const [name,  setName]  = useState('')
   const [email, setEmail] = useState('')
   const [pass,  setPass]  = useState('')
 
-  // Step 2
   const [storeName, setStoreName] = useState('')
   const [wpp,       setWpp]       = useState('')
   const [slug,      setSlug]      = useState('sua-loja')
 
+  const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
+
   function handleStep1() {
-    if (!name || !email || !pass) { setError('Preencha todos os campos.'); return }
-    if (pass.length < 6)          { setError('Senha deve ter ao menos 6 caracteres.'); return }
+    const r = step1Schema.safeParse({ name, email, pass })
+    if (!r.success) {
+      const fe: Record<string, string> = {}
+      for (const iss of r.error.issues) {
+        const k = String(iss.path[0])
+        if (!fe[k]) fe[k] = iss.message
+      }
+      setFieldErr(fe)
+      setError('Corrija os campos destacados.')
+      return
+    }
+    setFieldErr({})
     setError('')
     setStep(2)
   }
 
   async function handleStep2() {
-    if (!storeName || !wpp) { setError('Preencha nome e WhatsApp.'); return }
+    const r = registerSchema.safeParse({ email, password: pass, storeName: storeName.trim(), whatsapp: wpp })
+    if (!r.success) {
+      const fe: Record<string, string> = {}
+      for (const iss of r.error.issues) {
+        const k = String(iss.path[0])
+        if (!fe[k]) fe[k] = iss.message
+      }
+      setFieldErr(fe)
+      setError(r.error.issues[0]?.message ?? 'Verifique os dados.')
+      return
+    }
+
     setLoading(true)
     setError('')
+    setFieldErr({})
     try {
       const res = await fetch('/api/auth/register', {
         method:  'POST',
@@ -58,7 +80,6 @@ export default function CadastroPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro ao criar conta.')
 
-      // Auto-login after registration
       await signIn('credentials', { email, password: pass, redirect: false })
 
       setFinalSlug(data.slug)
@@ -84,15 +105,16 @@ export default function CadastroPage() {
     )
   }
 
+  const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL : ''
+
   return (
     <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md bg-surface border border-border rounded-[28px] p-10 shadow-[0_20px_60px_rgba(0,0,0,0.4)] animate-fade-up">
+      <div className="w-full max-w-md bg-surface border border-border rounded-[28px] p-6 sm:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.4)] animate-fade-up">
 
-        <div className="font-syne font-extrabold text-3xl text-grad text-center mb-8">
+        <div className="font-syne font-extrabold text-2xl sm:text-3xl text-grad text-center mb-8">
           vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
         </div>
 
-        {/* Step tracker */}
         <div className="flex items-center justify-center gap-0 mb-9">
           <StepDot n={1} />
           <div className={`flex-1 max-w-[60px] h-px transition-all ${step > 1 ? 'bg-accent' : 'bg-border'}`} />
@@ -105,37 +127,46 @@ export default function CadastroPage() {
           <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm">{error}</div>
         )}
 
-        {/* Step 1 */}
         {step === 1 && (
           <div>
-            <h2 className="font-syne font-extrabold text-2xl mb-1">Crie sua conta</h2>
+            <h2 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Crie sua conta</h2>
             <p className="text-sm text-muted mb-6">Rápido, gratuito e sem cartão de crédito</p>
             <div className="flex flex-col gap-3 mb-5">
-              <input
-                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-                placeholder="👤 Seu nome completo"
-                value={name}
-                onChange={e => setName(e.target.value)}
-              />
-              <input
-                type="email"
-                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-                placeholder="📧 Seu e-mail"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-              />
-              <input
-                type="password"
-                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-                placeholder="🔒 Crie uma senha"
-                value={pass}
-                onChange={e => setPass(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleStep1()}
-              />
+              <div>
+                <input
+                  className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.name ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
+                  placeholder="👤 Seu nome completo"
+                  value={name}
+                  onChange={e => { setName(e.target.value); setFieldErr(p => { const n = { ...p }; delete n.name; return n }) }}
+                />
+                {fieldErr.name && <p className="text-xs text-warm mt-1">{fieldErr.name}</p>}
+              </div>
+              <div>
+                <input
+                  type="email"
+                  className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.email ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
+                  placeholder="📧 Seu e-mail"
+                  value={email}
+                  onChange={e => { setEmail(e.target.value); setFieldErr(p => { const n = { ...p }; delete n.email; return n }) }}
+                />
+                {fieldErr.email && <p className="text-xs text-warm mt-1">{fieldErr.email}</p>}
+              </div>
+              <div>
+                <input
+                  type="password"
+                  className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.pass ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
+                  placeholder="🔒 Crie uma senha"
+                  value={pass}
+                  onChange={e => { setPass(e.target.value); setFieldErr(p => { const n = { ...p }; delete n.pass; return n }) }}
+                  onKeyDown={e => e.key === 'Enter' && handleStep1()}
+                />
+                {fieldErr.pass && <p className="text-xs text-warm mt-1">{fieldErr.pass}</p>}
+              </div>
             </div>
             <button
+              type="button"
               onClick={handleStep1}
-              className="w-full py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all"
+              className="w-full min-h-[48px] py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all"
             >
               Continuar →
             </button>
@@ -146,61 +177,71 @@ export default function CadastroPage() {
           </div>
         )}
 
-        {/* Step 2 */}
         {step === 2 && (
           <div>
-            <h2 className="font-syne font-extrabold text-2xl mb-1">Configure sua loja</h2>
+            <h2 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Configure sua loja</h2>
             <p className="text-sm text-muted mb-6">Essas informações aparecem para seus clientes</p>
             <div className="flex flex-col gap-3 mb-5">
-              <input
-                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-                placeholder="🏪 Nome da sua loja"
-                value={storeName}
-                onChange={e => { setStoreName(e.target.value); setSlug(slugify(e.target.value) || 'sua-loja') }}
-              />
-              <div className="flex items-center gap-2 px-3.5 py-2.5 bg-accent/10 border border-accent/30 rounded-[10px]">
-                <span className="text-xs text-muted">Seu link será:</span>
-                <span className="font-mono text-sm text-accent font-semibold">vend.ai/{slug}</span>
+              <div>
+                <input
+                  className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.storeName ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
+                  placeholder="🏪 Nome da sua loja"
+                  value={storeName}
+                  onChange={e => { setStoreName(e.target.value); setSlug(slugify(e.target.value) || 'sua-loja'); setFieldErr(p => { const n = { ...p }; delete n.storeName; return n }) }}
+                />
+                {fieldErr.storeName && <p className="text-xs text-warm mt-1">{fieldErr.storeName}</p>}
               </div>
-              <input
-                type="tel"
-                className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-                placeholder="📱 WhatsApp (11) 99999-9999"
-                value={wpp}
-                onChange={e => setWpp(e.target.value)}
-              />
+              <div className="flex items-start gap-2 px-3.5 py-2.5 bg-accent/10 border border-accent/30 rounded-[10px] min-w-0">
+                <span className="text-xs text-muted shrink-0 pt-0.5">Seu link:</span>
+                <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all min-w-0">vend.ai/{slug}</span>
+              </div>
+              <div>
+                <MaskedInput
+                  mask="phone"
+                  className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.whatsapp ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
+                  placeholder="📱 WhatsApp (11) 99999-9999"
+                  value={wpp}
+                  onChange={v => { setWpp(v); setFieldErr(p => { const n = { ...p }; delete n.whatsapp; return n }) }}
+                  autoComplete="tel"
+                />
+                {fieldErr.whatsapp && <p className="text-xs text-warm mt-1">{fieldErr.whatsapp}</p>}
+              </div>
             </div>
-            <div className="flex gap-2.5">
-              <button
-                onClick={() => setStep(1)}
-                className="px-5 py-3.5 rounded-[14px] border border-border text-muted text-sm hover:border-muted hover:text-foreground transition-all"
-              >
-                ← Voltar
-              </button>
-              <button
-                onClick={handleStep2}
-                disabled={loading}
-                className="flex-1 py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait"
-              >
-                {loading ? 'Criando…' : 'Continuar →'}
-              </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="px-5 py-3.5 min-h-[48px] rounded-[14px] border border-border text-muted text-sm hover:border-muted hover:text-foreground transition-all"
+                >
+                  ← Voltar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStep2}
+                  disabled={loading}
+                  className="flex-1 py-3.5 min-h-[48px] rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {loading ? 'Criando…' : 'Continuar →'}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Step 3 — Success */}
         {step === 3 && (
           <div>
             <div className="text-center text-6xl mb-4 animate-bounce2">🎉</div>
-            <h2 className="font-syne font-extrabold text-2xl mb-1 text-center">Sua loja está no ar!</h2>
+            <h2 className="font-syne font-extrabold text-xl sm:text-2xl mb-1 text-center">Sua loja está no ar!</h2>
             <p className="text-sm text-muted text-center mb-5">Tudo pronto para começar a vender</p>
-            <div className="flex items-center justify-between px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl mb-5">
-              <span className="font-mono text-sm text-accent font-semibold">vend.ai/{finalSlug}</span>
+            <div className="flex flex-col gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl mb-5 min-w-0 overflow-hidden">
+              <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all text-center">{baseUrl ? `${baseUrl}/${finalSlug}` : `vend.ai/${finalSlug}`}</span>
               <button
-                onClick={() => navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL}/${finalSlug}`)}
-                className="px-3 py-1.5 bg-accent rounded-lg text-bg text-xs font-bold"
+                type="button"
+                onClick={() => { if (baseUrl) void navigator.clipboard.writeText(`${baseUrl}/${finalSlug}`) }}
+                className="w-full min-h-[44px] py-2 bg-accent rounded-lg text-bg text-xs font-bold"
               >
-                Copiar
+                Copiar link
               </button>
             </div>
             <div className="flex flex-col gap-2">
@@ -212,14 +253,14 @@ export default function CadastroPage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 p-3.5 bg-surface2 border border-border rounded-[14px] hover:border-primary transition-all group"
+                  className="flex items-center gap-3 p-3.5 bg-surface2 border border-border rounded-[14px] hover:border-primary transition-all group min-h-[44px]"
                 >
-                  <span className="text-xl">{item.icon}</span>
-                  <div className="flex-1">
+                  <span className="text-xl shrink-0">{item.icon}</span>
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold">{item.title}</div>
-                    <div className="text-xs text-muted">{item.sub}</div>
+                    <div className="text-xs text-muted break-words">{item.sub}</div>
                   </div>
-                  <span className="text-muted group-hover:text-foreground transition-colors">→</span>
+                  <span className="text-muted group-hover:text-foreground transition-colors shrink-0">→</span>
                 </Link>
               ))}
             </div>

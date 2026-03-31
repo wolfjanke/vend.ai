@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
+import { productBodySchema } from '@/lib/validations'
 
 export async function GET(
   _req: NextRequest,
@@ -33,10 +34,22 @@ export async function PUT(
   `
   if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { name, description, category, price, promo_price, variants_json, active } = await req.json()
-  if (!name || price == null) {
-    return NextResponse.json({ error: 'name e price são obrigatórios' }, { status: 400 })
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
   }
+
+  const parsed = productBodySchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? 'Dados inválidos' },
+      { status: 400 }
+    )
+  }
+
+  const { name, description, category, price, promo_price, variants_json, active } = parsed.data
 
   await sql`
     UPDATE products SET

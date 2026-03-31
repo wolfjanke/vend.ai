@@ -4,17 +4,27 @@ import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { PlanSlug } from '@/types'
 import { PLAN_PRODUCT_LIMITS } from '@/types'
+import { productBodySchema } from '@/lib/validations'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { name, description, category, price, promo_price, variants_json, active } = await req.json()
-
-    if (!name || !price) {
-      return NextResponse.json({ error: 'name e price são obrigatórios' }, { status: 400 })
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
     }
+
+    const parsed = productBodySchema.safeParse(body)
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'Dados inválidos'
+      return NextResponse.json({ error: msg }, { status: 400 })
+    }
+
+    const { name, description, category, price, promo_price, variants_json, active } = parsed.data
 
     const planRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
     const plan = (planRows[0]?.plan ?? 'free') as PlanSlug
