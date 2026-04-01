@@ -1,11 +1,11 @@
 import { redirect }  from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import ProdutoForm    from '@/components/admin/ProdutoForm'
 import type { StoreSettings } from '@/types'
 
 export default async function NovoProdutoPage() {
-  const session = await getSession()
+  const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
   const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`

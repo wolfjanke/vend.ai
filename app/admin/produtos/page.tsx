@@ -1,6 +1,6 @@
 import { redirect }   from 'next/navigation'
 import Link            from 'next/link'
-import { getSession }  from '@/lib/auth'
+import { getSessionSafe }  from '@/lib/auth'
 import { sql }         from '@/lib/db'
 import type { Product, StoreSettings } from '@/types'
 import { getCategoryDisplayLabel } from '@/types'
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
-  const session = await getSession()
+  const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
   const params = await searchParams

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getSession } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 
 const navItems = [
@@ -12,11 +12,25 @@ const navItems = [
 ]
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession()
+  const session = await getSessionSafe()
   if (!session) return <>{children}</>
 
-  const rows = await sql`SELECT name, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
-  const store = rows[0] as { name: string; slug: string } | undefined
+  let store: { name: string; slug: string } | undefined
+  try {
+    const rows = await sql`SELECT name, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    store = rows[0] as { name: string; slug: string } | undefined
+  } catch (e) {
+    console.error('[admin/layout] stores query:', e)
+    return (
+      <div className="relative z-10 min-h-screen p-4 md:p-6">
+        <div className="max-w-lg mx-auto rounded-2xl border border-warm/30 bg-warm/10 px-4 py-3 text-sm text-warm break-words">
+          Não foi possível carregar os dados da loja. Confira <code className="font-mono text-xs">DATABASE_URL</code> no
+          ambiente de produção e os logs do servidor.
+        </div>
+        {children}
+      </div>
+    )
+  }
 
   return (
     <div className="relative z-10 min-h-screen">

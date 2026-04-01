@@ -1,5 +1,5 @@
 import { redirect, notFound } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import ProdutoForm from '@/components/admin/ProdutoForm'
 import type { Product, StoreSettings } from '@/types'
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export default async function EditarProdutoPage({ params }: Props) {
-  const session = await getSession()
+  const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
   const { id } = await params

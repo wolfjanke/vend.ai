@@ -59,3 +59,13 @@ export const authOptions: NextAuthOptions = {
 }
 
 export const getSession = () => getServerSession(authOptions)
+
+/** Para layouts RSC: nunca lança — evita página 500 em /admin se JWT/secret estiver inconsistente. */
+export async function getSessionSafe() {
+  try {
+    return await getServerSession(authOptions)
+  } catch (e) {
+    console.error('[next-auth] getServerSession:', e)
+    return null
+  }
+}

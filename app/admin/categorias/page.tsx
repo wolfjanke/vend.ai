@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { Store } from '@/types'
 import CategoriesManager from './CategoriesManager'
 
 export default async function CategoriasPage() {
-  const session = await getSession()
+  const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
   const storeRows = await sql`SELECT * FROM stores WHERE id = ${session.storeId} LIMIT 1`

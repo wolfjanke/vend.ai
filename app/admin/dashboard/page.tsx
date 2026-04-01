@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link         from 'next/link'
-import { getSession }  from '@/lib/auth'
+import { getSessionSafe }  from '@/lib/auth'
 import { sql }         from '@/lib/db'
 import MetricCard      from '@/components/admin/MetricCard'
 import PedidoCard      from '@/components/admin/PedidoCard'
@@ -38,7 +38,7 @@ function greeting() {
 }
 
 export default async function DashboardPage() {
-  const session = await getSession()
+  const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
   const storeId = session.storeId

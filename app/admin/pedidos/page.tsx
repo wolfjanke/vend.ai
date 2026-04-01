@@ -1,5 +1,5 @@
 import { redirect }   from 'next/navigation'
-import { getSession }  from '@/lib/auth'
+import { getSessionSafe }  from '@/lib/auth'
 import { sql }         from '@/lib/db'
 import PedidoCard      from '@/components/admin/PedidoCard'
 import Pagination      from '@/components/ui/Pagination'
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default async function PedidosPage({ searchParams }: Props) {
-  const session = await getSession()
+  const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
   const params = await searchParams

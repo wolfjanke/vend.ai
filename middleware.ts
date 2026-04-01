@@ -11,7 +11,10 @@ export const config = {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const token = await getToken({ req })
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+  })
 
   const isAdminRoot = pathname === '/admin'
   const isProtectedAdminRoute = pathname.startsWith('/admin/') && pathname !== '/admin'
