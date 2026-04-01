@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   title:       'vend.ai — Moda com IA',
   description: 'Catálogo digital com IA integrada para lojas de roupas. Pedidos direto no WhatsApp.',
   keywords:    ['loja online', 'moda', 'roupas', 'IA', 'WhatsApp', 'catálogo digital'],
+  icons:       { icon: '/favicon.svg', apple: '/favicon.svg' },
   openGraph: {
     title:       'vend.ai — Moda com IA',
     description: 'Catálogo inteligente + assistente IA + pedidos no WhatsApp',
