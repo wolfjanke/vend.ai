@@ -2,15 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter }        from 'next/navigation'
-import type { Product, ProductVariant } from '@/types'
+import type { Product, ProductVariant, CustomCategory } from '@/types'
 import { PRODUCT_CATEGORIES, SIZES } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import { numberToCurrencyInput, parseCurrency } from '@/lib/masks'
 
 interface Props {
-  storeId:        string
-  productId?:     string
-  initialProduct?: Product
+  storeId:           string
+  productId?:       string
+  initialProduct?:  Product
+  customCategories?: CustomCategory[]
 }
 
 interface VariantState {
@@ -68,7 +69,7 @@ function VariantPhotoThumb({ file, onRemove }: { file: File; onRemove: () => voi
   )
 }
 
-export default function ProdutoForm({ storeId: _storeId, productId, initialProduct }: Props) {
+export default function ProdutoForm({ storeId: _storeId, productId, initialProduct, customCategories = [] }: Props) {
   const router  = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const isEdit  = Boolean(productId && initialProduct)
@@ -450,7 +451,18 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                     onChange={e => { setProdCat(e.target.value); setAiBadges(p => ({ ...p, cat: false })) }}
                   >
                     <option value="">Selecionar…</option>
-                    {PRODUCT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    <optgroup label="Categorias padrão">
+                      {PRODUCT_CATEGORIES.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </optgroup>
+                    {customCategories.length > 0 && (
+                      <optgroup label="Categorias da loja">
+                        {customCategories.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                   {aiBadges.cat && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
                 </div>

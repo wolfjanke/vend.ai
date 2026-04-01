@@ -10,6 +10,14 @@ import { buildWhatsAppUrl, formatOrderMessage, generateOrderNumber } from '@/lib
 
 const BANNER_ROTATE_MS = 6000
 
+/** Parcelamento na vitrine: settings_json pode trazer número ou string (ex.: Postgres/JSON). */
+function installmentsMaxFromSettings(raw: unknown): number | null {
+  if (raw == null || raw === '') return null
+  const n = typeof raw === 'number' ? raw : Number(String(raw).trim())
+  if (!Number.isFinite(n) || n < 1 || n > 48) return null
+  return Math.floor(n)
+}
+
 function filterActiveBanners(messages: BannerMessage[] | undefined): BannerMessage[] {
   if (!messages?.length) return []
   const now = new Date().toISOString().slice(0, 10)
@@ -234,13 +242,10 @@ export default function StoreClient({ store, products }: Props) {
       <Catalogo
         products={products}
         profile={storeProfile}
+        customCategories={settings.customCategories ?? []}
         onAddToCart={addToCart}
         onInteract={resetInactivity}
-        installmentsMaxNoInterest={
-          typeof settings.installmentsMaxNoInterest === 'number'
-            ? settings.installmentsMaxNoInterest
-            : null
-        }
+        installmentsMaxNoInterest={installmentsMaxFromSettings(settings.installmentsMaxNoInterest)}
       />
 
       {/* Cart drawer */}

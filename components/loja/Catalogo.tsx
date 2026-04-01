@@ -2,8 +2,13 @@
 
 import { useMemo, useState } from 'react'
 
-import type { CartItem, Product, ProductVariantDisplay, StoreProfile } from '@/types'
-import { PRODUCT_CATEGORIES, PRODUCT_CATEGORY_SLUGS, getSearchPlaceholder } from '@/types'
+import type { CartItem, CustomCategory, Product, ProductVariantDisplay, StoreProfile } from '@/types'
+import {
+  PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_SLUGS,
+  getCategoryDisplayLabel,
+  getSearchPlaceholder,
+} from '@/types'
 import { expandProductsByVariant } from '@/lib/catalog-display'
 
 import ProductStrip from './ProductStrip'
@@ -11,22 +16,21 @@ import ProductStrip from './ProductStrip'
 interface Props {
   products:    Product[]
   profile:     StoreProfile
+  /** Categorias extras da loja (rótulos nos chips e seções). */
+  customCategories?: CustomCategory[]
   onAddToCart: (item: CartItem) => void
   onInteract?: () => void
   installmentsMaxNoInterest?: number | null
 }
 
-const ALL_FILTERS = [
-  { value: '', label: 'Tudo' },
-  ...PRODUCT_CATEGORIES,
-  { value: 'sale', label: '🔥 Promoções' },
-]
-
 const SMALL_CATEGORY_MAX = 2
 
 type BuiltSection = { key: string; title: string; items: ProductVariantDisplay[] }
 
-function buildCatalogSections(visible: ProductVariantDisplay[]): BuiltSection[] {
+function buildCatalogSections(
+  visible: ProductVariantDisplay[],
+  customCategories: CustomCategory[] = []
+): BuiltSection[] {
   const promoItems = visible.filter(({ product: p }) => p.promo_price != null)
   const nonPromo = visible.filter(({ product: p }) => p.promo_price == null)
 
@@ -51,7 +55,18 @@ function buildCatalogSections(visible: ProductVariantDisplay[]): BuiltSection[] 
     }
   }
 
-  const known = new Set(PRODUCT_CATEGORY_SLUGS)
+  for (const cat of customCategories) {
+    const items = nonPromo.filter(({ product: p }) => p.category === cat.value)
+    if (items.length === 0) continue
+    if (items.length <= SMALL_CATEGORY_MAX) {
+      outros.push(...items)
+    } else {
+      sections.push({ key: cat.value, title: cat.label, items })
+    }
+  }
+
+  const customSlugSet = new Set(customCategories.map(c => c.value))
+  const known = new Set([...PRODUCT_CATEGORY_SLUGS, ...customSlugSet])
   const stray = nonPromo.filter(({ product: p }) => !known.has(p.category))
   if (stray.length > 0) {
     const byCat = new Map<string, ProductVariantDisplay[]>()
@@ -64,9 +79,7 @@ function buildCatalogSections(visible: ProductVariantDisplay[]): BuiltSection[] 
       if (items.length <= SMALL_CATEGORY_MAX) {
         outros.push(...items)
       } else {
-        const label =
-          PRODUCT_CATEGORIES.find(c => c.value === slug)?.label ??
-          (slug === 'outro' ? '📦 Outro' : slug)
+        const label = getCategoryDisplayLabel(slug, customCategories)
         sections.push({ key: `stray-${slug}`, title: label, items })
       }
     }
@@ -86,6 +99,7 @@ function buildCatalogSections(visible: ProductVariantDisplay[]): BuiltSection[] 
 export default function Catalogo({
   products,
   profile,
+  customCategories = [],
   onAddToCart,
   onInteract,
   installmentsMaxNoInterest = null,
@@ -94,6 +108,23 @@ export default function Catalogo({
   const [catFilter, setCatFilter] = useState('')
 
   const visibleProducts = useMemo(() => products.filter(p => p.active !== false), [products])
+
+  /** Filtros disponíveis: apenas categorias com ao menos 1 produto ativo + Promoções se houver */
+  const availableFilters = useMemo(() => {
+    const hasPromo = visibleProducts.some(p => p.promo_price != null)
+
+    // Categorias presentes nos produtos ativos, mantendo a ordem de PRODUCT_CATEGORIES
+    const presentSlugs = new Set(visibleProducts.map(p => p.category))
+    const categoryFilters = PRODUCT_CATEGORIES.filter(c => presentSlugs.has(c.value))
+    const customFilters = customCategories.filter(c => presentSlugs.has(c.value))
+
+    return [
+      { value: '', label: 'Tudo' },
+      ...categoryFilters,
+      ...customFilters,
+      ...(hasPromo ? [{ value: 'sale', label: '🔥 Promoções' }] : []),
+    ]
+  }, [visibleProducts, customCategories])
 
   const expandedVisible = useMemo(
     () => expandProductsByVariant(visibleProducts),
@@ -125,16 +156,19 @@ export default function Catalogo({
 
   const isFiltered = Boolean(search.trim() || catFilter)
 
-  const sectionList = useMemo(() => buildCatalogSections(expandedVisible), [expandedVisible])
+  const sectionList = useMemo(
+    () => buildCatalogSections(expandedVisible, customCategories),
+    [expandedVisible, customCategories]
+  )
 
   const filteredTitle = useMemo(() => {
     if (catFilter === 'sale') return '🔥 Promoções'
     if (catFilter) {
-      return PRODUCT_CATEGORIES.find(c => c.value === catFilter)?.label ?? 'Categoria'
+      return getCategoryDisplayLabel(catFilter, customCategories)
     }
     if (search.trim()) return 'Resultados'
     return 'Produtos'
-  }, [catFilter, search])
+  }, [catFilter, search, customCategories])
 
   return (
     <div>
@@ -166,9 +200,9 @@ export default function Catalogo({
 
         <div className="relative z-10 px-4 md:px-6 pt-5 pb-0" style={{ animationDelay: '0.2s' }}>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {ALL_FILTERS.map(f => (
+            {availableFilters.map(f => (
               <button
-                key={f.value}
+                key={f.value === '' ? 'all' : f.value}
                 type="button"
                 onClick={() => {
                   setCatFilter(f.value)
@@ -197,6 +231,7 @@ export default function Catalogo({
                 onAddToCart={onAddToCart}
                 onInteract={onInteract}
                 installmentsMaxNoInterest={installmentsMaxNoInterest}
+                customCategories={customCategories}
               />
             ) : (
               <div className="text-center py-20 text-muted px-6">
@@ -219,6 +254,7 @@ export default function Catalogo({
                   onAddToCart={onAddToCart}
                   onInteract={onInteract}
                   installmentsMaxNoInterest={installmentsMaxNoInterest}
+                  customCategories={customCategories}
                 />
               ))
             ) : (

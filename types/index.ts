@@ -94,6 +94,14 @@ export interface StoreSettings {
   freeShippingMin?: number | null
   /** Máximo de parcelas sem juros (vitrine: linha Nx R$ … no card). Vazio = não exibir. */
   installmentsMaxNoInterest?: number | null
+  /** Categorias extras da loja (slug + rótulo exibido na vitrine e no admin). */
+  customCategories?: CustomCategory[]
+}
+
+/** Categoria customizada por loja (valor = slug estável no produto). */
+export interface CustomCategory {
+  value: string
+  label: string
 }
 
 export type CheckoutChannel = 'site' | 'whatsapp'
@@ -295,10 +303,25 @@ export const PRODUCT_CATEGORIES = [
 
 export const PRODUCT_CATEGORY_SLUGS = PRODUCT_CATEGORIES.map(c => c.value)
 
-/** Normaliza categoria vinda da IA para um slug conhecido */
-export function normalizeProductCategory(raw: string): string {
+/** Rótulo para exibição: categorias padrão, depois customizadas da loja, senão o slug. */
+export function getCategoryDisplayLabel(
+  slug: string,
+  customCategories?: CustomCategory[] | null
+): string {
+  const s = String(slug ?? '').trim()
+  if (!s) return '📦 Outro'
+  const fromStd = PRODUCT_CATEGORIES.find(c => c.value === s)?.label
+  if (fromStd) return fromStd
+  const fromCustom = customCategories?.find(c => c.value === s)?.label
+  if (fromCustom) return fromCustom
+  return s === 'outro' ? '📦 Outro' : s
+}
+
+/** Normaliza categoria vinda da IA para um slug conhecido (padrão ou customizado da loja). */
+export function normalizeProductCategory(raw: string, customSlugs?: string[]): string {
   const t = String(raw ?? '').trim().toLowerCase()
   if (PRODUCT_CATEGORIES.some(c => c.value === t)) return t
+  if (customSlugs?.some(s => s === t)) return t
   const synonyms: Record<string, string> = {
     camisa: 'camiseta', 't-shirt': 'camiseta', tshirt: 'camiseta', 't shirt': 'camiseta',
     jeans: 'calca', calça: 'calca', calças: 'calca',

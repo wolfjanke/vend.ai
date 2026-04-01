@@ -2,9 +2,10 @@ import { redirect }   from 'next/navigation'
 import Link            from 'next/link'
 import { getSession }  from '@/lib/auth'
 import { sql }         from '@/lib/db'
-import type { Product } from '@/types'
-import { PRODUCT_CATEGORIES } from '@/types'
+import type { Product, StoreSettings } from '@/types'
+import { getCategoryDisplayLabel } from '@/types'
 import ToggleActiveButton from './ToggleActiveButton'
+import DeleteProductButton from './DeleteProductButton'
 import Pagination from '@/components/ui/Pagination'
 
 const PAGE_SIZE = 24
@@ -32,8 +33,11 @@ export default async function ProdutosPage({ searchParams }: Props) {
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
   `
 
-  const getCategoryLabel = (val: string) =>
-    PRODUCT_CATEGORIES.find(c => c.value === val)?.label ?? val
+  const settingsRows = await sql`SELECT settings_json FROM stores WHERE id = ${storeId} LIMIT 1`
+  const settings = (settingsRows[0]?.settings_json as StoreSettings | null) ?? {}
+  const customCategories = settings.customCategories ?? []
+
+  const getCategoryLabel = (val: string) => getCategoryDisplayLabel(val, customCategories)
 
   return (
     <div className="animate-fade-up">
@@ -103,6 +107,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                     Editar
                   </Link>
                   <ToggleActiveButton productId={p.id} active={p.active} />
+                  <DeleteProductButton productId={p.id} productName={p.name} />
                 </div>
               </div>
             ))}

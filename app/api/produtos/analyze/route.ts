@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
       plan = 'pro'
     }
     const profile = getStoreProfile(settingsJson)
-    const productPrompt = buildProductAnalysisPrompt(profile)
+    const customCats = settingsJson?.customCategories ?? []
+    const customSlugs = customCats.map(c => c.value).filter(Boolean)
+    const productPrompt = buildProductAnalysisPrompt(profile, customCats)
 
     if (plan === 'free') {
       return NextResponse.json(
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     analysisResult = {
       ...analysisResult,
-      categoria: normalizeProductCategory(String(analysisResult.categoria ?? 'outro')),
+      categoria: normalizeProductCategory(String(analysisResult.categoria ?? 'outro'), customSlugs),
     }
 
     return NextResponse.json(analysisResult)

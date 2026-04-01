@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import type { Product, CartItem } from '@/types'
-import { PRODUCT_CATEGORIES } from '@/types'
-
-function categoryLabel(slug: string): string {
-  return PRODUCT_CATEGORIES.find(c => c.value === slug)?.label ?? slug
-}
+import type { Product, CartItem, CustomCategory } from '@/types'
+import { getCategoryDisplayLabel } from '@/types'
 
 function sumStock(v: Product['variants_json'][0]): number {
   return Object.values(v.stock).reduce((a, b) => Number(a) + Number(b), 0)
@@ -38,6 +34,7 @@ interface Props {
   /** Vitrine: só imagem + nome/preço/parcelas; cor, tamanho e compra no modal. */
   layout?:     'vitrine' | 'default'
   installmentsMaxNoInterest?: number | null
+  customCategories?: CustomCategory[]
 }
 
 export default function ProdutoCard({
@@ -47,6 +44,7 @@ export default function ProdutoCard({
   onInteract,
   layout = 'default',
   installmentsMaxNoInterest = null,
+  customCategories = [],
 }: Props) {
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(() =>
     displayVariantIndex ??
@@ -94,7 +92,7 @@ export default function ProdutoCard({
   const isSoldOut =
     !variant || Object.values(variant.stock).every(q => Number(q) === 0)
   const isLowStock = variantTotalStock > 0 && variantTotalStock <= 3
-  const cat = categoryLabel(product.category)
+  const cat = getCategoryDisplayLabel(product.category, customCategories)
 
   function handleAdd(closeDetail?: boolean) {
     const size = selectedSize ?? allSizes[0]
@@ -134,17 +132,21 @@ export default function ProdutoCard({
       : null
 
   return (
-    <div className="group bg-surface border border-border rounded-[20px] overflow-hidden hover:-translate-y-1 hover:border-primary hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)] transition-all duration-300">
+    <div className="group bg-surface border border-border rounded-[20px] overflow-hidden hover:-translate-y-1 hover:border-primary hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)] transition-all duration-300 h-full flex flex-col min-h-0">
 
-      {/* Image */}
+      {/* Image — caixa fixa 3:4; imagem preenche com crop uniforme */}
       <button
         type="button"
         onClick={openDetail}
         title="Ver detalhes do produto"
-        className="relative aspect-[3/4] w-full overflow-hidden bg-surface2 text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+        className="relative aspect-[3/4] w-full shrink-0 overflow-hidden bg-surface2 text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
       >
         {variant?.photos[0] ? (
-          <img src={variant.photos[0]} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <img
+            src={variant.photos[0]}
+            alt={product.name}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
           <div className="relative w-full h-full flex flex-col items-center justify-center gap-2 px-3 bg-surface2 text-center">
             <span className="text-5xl sm:text-6xl" aria-hidden>👗</span>
@@ -179,34 +181,34 @@ export default function ProdutoCard({
         <button
           type="button"
           onClick={openDetail}
-          className="w-full min-w-0 text-left p-2.5 sm:p-3 border-t border-border/60 hover:bg-surface2/80 transition-colors rounded-b-[20px]"
+          className="w-full min-w-0 flex-1 flex flex-col min-h-0 text-left p-2.5 sm:p-3 border-t border-border/60 hover:bg-surface2/80 transition-colors rounded-b-[20px]"
         >
-          <span className="font-syne font-semibold text-sm text-foreground line-clamp-2 break-words mb-1.5 block">
+          <span className="font-syne font-semibold text-sm text-foreground line-clamp-2 break-words mb-1.5 block min-h-[2.625rem] leading-snug">
             {product.name}
           </span>
-          {product.variants_json.length > 1 && variant && (
-            <span className="block text-[11px] text-muted line-clamp-1 break-words mb-1">
-              {variant.color}
-            </span>
-          )}
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1 min-w-0">
-            <span className="text-accent font-bold text-sm tabular-nums shrink-0">
-              R${effectivePrice.toFixed(2).replace('.', ',')}
-            </span>
-            {product.promo_price != null && (
-              <span className="text-muted text-[11px] line-through tabular-nums">
-                R${Number(product.price).toFixed(2).replace('.', ',')}
+          <span className="block text-[11px] text-muted line-clamp-1 break-words mb-1 min-h-[1.125rem] leading-tight">
+            {variant?.color?.trim() ? variant.color : 'Cor única'}
+          </span>
+          <div className="mt-auto flex flex-col gap-1 min-w-0 pt-0.5">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+              <span className="text-accent font-bold text-sm tabular-nums shrink-0">
+                R${effectivePrice.toFixed(2).replace('.', ',')}
               </span>
+              {product.promo_price != null && (
+                <span className="text-muted text-[11px] line-through tabular-nums">
+                  R${Number(product.price).toFixed(2).replace('.', ',')}
+                </span>
+              )}
+            </div>
+            {installmentText && (
+              <p className="text-[11px] text-muted leading-snug break-words">
+                {installmentText} <span className="text-muted/90">sem juros</span>
+              </p>
+            )}
+            {!isSoldOut && isLowStock && (
+              <p className="text-[10px] text-warm font-medium">Últimas unidades</p>
             )}
           </div>
-          {installmentText && (
-            <p className="text-[11px] text-muted leading-snug break-words">
-              {installmentText} <span className="text-muted/90">sem juros</span>
-            </p>
-          )}
-          {!isSoldOut && isLowStock && (
-            <p className="text-[10px] text-warm font-medium mt-1.5">Últimas unidades</p>
-          )}
         </button>
       ) : (
         <div className="p-3.5">
