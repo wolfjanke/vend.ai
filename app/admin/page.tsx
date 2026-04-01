@@ -2,11 +2,8 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 
 export default function AdminLoginPage() {
-  const router = useRouter()
-
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,7 +26,9 @@ export default function AdminLoginPage() {
       return
     }
 
-    router.push('/admin/dashboard')
+    // Navegação completa: o layout do admin é RSC e foi gerado sem sessão na /admin;
+    // só com router.push o Next reutiliza esse shell e some o menu até um F5.
+    window.location.assign('/admin/dashboard')
   }
 
   return (

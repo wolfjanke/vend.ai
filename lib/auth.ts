@@ -3,6 +3,17 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { sql } from './db'
 
+/** NextAuth aceita NEXTAUTH_SECRET ou AUTH_SECRET (alguns hosts documentam só um dos nomes). */
+function authSecret(): string | undefined {
+  return process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET
+}
+
+if (process.env.NODE_ENV === 'production' && !authSecret()) {
+  console.error(
+    '[auth] Defina NEXTAUTH_SECRET (ou AUTH_SECRET) nas variáveis de ambiente de produção — sem isso o login devolve erro de configuração.'
+  )
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -13,23 +24,29 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
+        try {
+          const rows = await sql`
+            SELECT id, email, password_hash, store_id
+            FROM admin_users
+            WHERE email = ${credentials.email}
+            LIMIT 1
+          `
+          const user = rows[0]
+          if (!user) return null
+          const hash = user.password_hash as string | null
+          if (!hash) return null
 
-        const rows = await sql`
-          SELECT id, email, password_hash, store_id
-          FROM admin_users
-          WHERE email = ${credentials.email}
-          LIMIT 1
-        `
-        const user = rows[0]
-        if (!user) return null
+          const valid = await bcrypt.compare(credentials.password, hash)
+          if (!valid) return null
 
-        const valid = await bcrypt.compare(credentials.password, user.password_hash as string)
-        if (!valid) return null
-
-        return {
-          id:      user.id as string,
-          email:   user.email as string,
-          storeId: user.store_id as string,
+          return {
+            id:      user.id as string,
+            email:   user.email as string,
+            storeId: user.store_id as string,
+          }
+        } catch (e) {
+          console.error('[auth] authorize (banco ou bcrypt):', e)
+          return null
         }
       },
     }),
@@ -55,7 +72,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: authSecret(),
 }
 
 export const getSession = () => getServerSession(authOptions)
