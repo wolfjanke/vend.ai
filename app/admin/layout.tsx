@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 
+/** Obrigatório com getServerSession/cookies — sem isto o build pode pré-renderizar e `cookies()` lança em produção. */
+export const dynamic = 'force-dynamic'
+
 const navItems = [
   { href: '/admin/dashboard',     label: 'Dashboard', icon: '📊' },
   { href: '/admin/pedidos',       label: 'Pedidos',   icon: '🛍️' },
@@ -12,8 +15,17 @@ const navItems = [
 ]
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  try {
+    return await AdminLayoutInner({ children })
+  } catch (e) {
+    console.error('[admin/layout] fatal', e)
+    return <>{children}</>
+  }
+}
+
+async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const session = await getSessionSafe()
-  if (!session) return <>{children}</>
+  if (!session?.storeId) return <>{children}</>
 
   let store: { name: string; slug: string } | undefined
   try {
