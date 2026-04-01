@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Store, BannerMessage, CouponRule } from '@/types'
+import { getStoreProfile } from '@/types'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 
 interface Props {
@@ -58,6 +59,7 @@ export default function MarketingForm({ store }: Props) {
   }
 
   async function handleSave() {
+    const profile = getStoreProfile(settings)
     const body = {
       // obrigatórios do schema atual
       name: store.name,
@@ -66,6 +68,8 @@ export default function MarketingForm({ store }: Props) {
       // manter dados já existentes para evitar limpeza acidental
       freteInfo: settings.freteInfo ?? '',
       pagamentoInfo: settings.pagamentoInfo ?? '',
+      genderFocus: profile.genderFocus,
+      ageGroup: profile.ageGroup,
       cep: store.cep ?? '',
       logradouro: store.logradouro ?? '',
       numero: store.numero ?? '',

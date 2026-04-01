@@ -11,6 +11,8 @@ export const registerSchema = z.object({
   password:  z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
   storeName: z.string().min(1, 'Nome da loja obrigatório').max(200),
   whatsapp:  phoneDigits,
+  genderFocus: z.enum(['feminine', 'masculine', 'unisex', 'mixed']).optional(),
+  ageGroup:    z.enum(['adult', 'kids', 'all']).optional(),
 })
 
 export const storeAddressSchema = z.object({
@@ -55,8 +57,24 @@ export const storeSettingsPatchSchema = z.object({
   bairro:      z.string().optional(),
   cidade:      z.string().optional(),
   uf:          z.string().max(2).optional(),
+  genderFocus: z.enum(['feminine', 'masculine', 'unisex', 'mixed']).optional(),
+  ageGroup:    z.enum(['adult', 'kids', 'all']).optional(),
+  checkoutChannels: z.object({
+    siteEnabled:     z.boolean().optional(),
+    whatsappEnabled: z.boolean().optional(),
+  }).optional(),
+  deliveryZones: z.array(z.object({
+    id:   z.string(),
+    city: z.string().min(1),
+    uf:   z.string().min(2).max(2),
+    fee:  z.number().nonnegative(),
+  })).optional(),
+  freeShippingMin: z.number().nonnegative().nullable().optional(),
+  installmentsMaxNoInterest: z.number().int().min(1).max(48).nullable().optional(),
 }).superRefine((data, ctx) => {
-  for (const [idx, c] of (data.couponRules ?? []).entries()) {
+  const couponRules = data.couponRules ?? []
+  for (let idx = 0; idx < couponRules.length; idx++) {
+    const c = couponRules[idx]
     if (c.type === 'percent' && c.value > 100) {
       ctx.addIssue({ code: 'custom', path: ['couponRules', idx, 'value'], message: 'Cupom percentual deve ser de 0 a 100' })
     }
@@ -64,7 +82,9 @@ export const storeSettingsPatchSchema = z.object({
       ctx.addIssue({ code: 'custom', path: ['couponRules', idx, 'endDate'], message: 'Data final do cupom deve ser maior ou igual à inicial' })
     }
   }
-  for (const [idx, b] of (data.bannerMessages ?? []).entries()) {
+  const bannerMessages = data.bannerMessages ?? []
+  for (let idx = 0; idx < bannerMessages.length; idx++) {
+    const b = bannerMessages[idx]
     if (!b.text.trim()) {
       ctx.addIssue({ code: 'custom', path: ['bannerMessages', idx, 'text'], message: 'Texto do banner é obrigatório' })
     }
@@ -119,9 +139,11 @@ export const orderCreateSchema = z.object({
   customerName:     z.string().min(1).max(200),
   customerWhatsapp: phoneDigits,
   notes:            z.string().max(5000).optional(),
-  paymentMethod:    z.enum(['PIX', 'OUTRO']).default('OUTRO'),
+  paymentMethod:    z.enum(['PIX', 'CARTAO', 'DINHEIRO', 'OUTRO']).default('OUTRO'),
   couponCode:       z.string().trim().max(64).optional(),
   deliveryAddress:  deliveryAddressSchema,
+  deliveryFee:      z.number().nonnegative(),
+  checkoutChannel:  z.enum(['site', 'whatsapp']),
 })
 
 export type DeliveryAddressInput = z.infer<typeof deliveryAddressSchema>

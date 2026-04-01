@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { genAI, MODEL, PRODUCT_ANALYSIS_PROMPT } from '@/lib/gemini'
+import { genAI, MODEL, buildProductAnalysisPrompt } from '@/lib/gemini'
+import type { StoreSettings } from '@/types'
+import { getStoreProfile, normalizeProductCategory } from '@/types'
+import { logServerError } from '@/lib/logger'
 
 interface AnalysisResult {
   nome:       string
@@ -20,15 +23,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GEMINI_API_KEY não configurada no servidor' }, { status: 500 })
     }
 
-    let plan = 'pro'
+    let plan: string = 'pro'
+    let settingsJson: StoreSettings | null = null
     try {
-      const planRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
-      plan = planRows[0]?.plan ?? 'free'
+      const storeRows = await sql`SELECT plan, settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
+      plan = storeRows[0]?.plan ?? 'free'
+      settingsJson = storeRows[0]?.settings_json as StoreSettings | null
     } catch {
-      // Compatibilidade com bancos antigos que ainda não têm a coluna stores.plan.
-      // Nesses casos, mantém comportamento anterior (análise liberada).
       plan = 'pro'
     }
+    const profile = getStoreProfile(settingsJson)
+    const productPrompt = buildProductAnalysisPrompt(profile)
 
     if (plan === 'free') {
       return NextResponse.json(
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest) {
           data: base64.replace(/^data:image\/\w+;base64,/, ''),
         },
       })),
-      { text: PRODUCT_ANALYSIS_PROMPT },
+      { text: productPrompt },
     ]
 
     const model = genAI.getGenerativeModel({ model: MODEL })
@@ -73,13 +78,27 @@ export async function POST(req: NextRequest) {
       analysisResult = JSON.parse(match[0])
     }
 
+    analysisResult = {
+      ...analysisResult,
+      categoria: normalizeProductCategory(String(analysisResult.categoria ?? 'outro')),
+    }
+
     return NextResponse.json(analysisResult)
   } catch (error) {
-    console.error('[/api/produtos/analyze]', error)
+    logServerError('[/api/produtos/analyze]', error)
     const msg = error instanceof Error ? error.message : 'Erro na análise'
     if (msg.includes('API_KEY_INVALID') || msg.toLowerCase().includes('api key expired')) {
       return NextResponse.json(
         { error: 'A chave da IA expirou. Atualize GEMINI_API_KEY no .env.local e reinicie o servidor.' },
+        { status: 500 }
+      )
+    }
+    if (msg.includes('404') && (msg.includes('not found') || msg.includes('is not found'))) {
+      return NextResponse.json(
+        {
+          error:
+            'O modelo configurado na Gemini API não está disponível. O padrão do projeto é gemini-2.5-flash. Ajuste GEMINI_MODEL no .env.local se necessário e reinicie o servidor.',
+        },
         { status: 500 }
       )
     }

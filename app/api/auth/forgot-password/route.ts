@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { sql } from '@/lib/db'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
 
 const schema = z.object({ email: z.string().email() })
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true })
   } catch (e) {
-    console.error('[forgot-password]', e)
+    logServerError('[forgot-password]', e)
     return NextResponse.json({ ok: true })
   }
 }

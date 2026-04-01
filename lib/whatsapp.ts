@@ -1,5 +1,15 @@
-import type { CartItem, DeliveryAddress, Store } from '@/types'
+import type { CartItem, CheckoutChannel, CheckoutPaymentMethod, DeliveryAddress, Store } from '@/types'
 import type { PricingResult } from '@/lib/pricing'
+
+function paymentMethodLabel(m: CheckoutPaymentMethod | string): string {
+  const map: Record<string, string> = {
+    PIX:     'PIX',
+    CARTAO:  'Cartão',
+    DINHEIRO: 'Dinheiro',
+    OUTRO:   'Outro',
+  }
+  return map[m] ?? String(m)
+}
 
 interface CheckoutPayload {
   store:            Store
@@ -9,12 +19,14 @@ interface CheckoutPayload {
   notes?:           string
   orderNum:         string
   deliveryAddress?: DeliveryAddress
-  pricing?:         PricingResult
+  pricing?:         PricingResult & { deliveryFee?: number; grandTotal?: number }
+  checkoutChannel?: CheckoutChannel
+  paymentMethod?:   CheckoutPaymentMethod | string
 }
 
 // ─── Formata a mensagem de pedido para WhatsApp ───────────────────────────────
 export function formatOrderMessage(payload: CheckoutPayload): string {
-  const { store, items, name, phone, notes, orderNum, deliveryAddress } = payload
+  const { store, items, name, phone, notes, orderNum, deliveryAddress, pricing, checkoutChannel, paymentMethod } = payload
 
   const total = items.reduce((sum, item) => sum + item.price * item.qty, 0)
   const now   = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
@@ -44,6 +56,10 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
     )
   }
 
+  const deliveryFee = pricing?.deliveryFee ?? 0
+  const productsTotal = pricing?.totalFinal ?? total
+  const grand = pricing?.grandTotal != null ? pricing.grandTotal : productsTotal + deliveryFee
+
   lines.push(
     `━━━━━━━━━━━━━━━`,
     `🧾 *Itens do Pedido:*`,
@@ -52,10 +68,17 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
     `💰 *Subtotal: R$\u00a0${(pricing?.subtotal ?? total).toFixed(2).replace('.', ',')}*`,
     `🎟️ Desconto cupom: R$\u00a0${(pricing?.discountCoupon ?? 0).toFixed(2).replace('.', ',')}`,
     `⚡ Desconto PIX: R$\u00a0${(pricing?.discountPix ?? 0).toFixed(2).replace('.', ',')}`,
-    `💵 *Total final: R$\u00a0${(pricing?.totalFinal ?? total).toFixed(2).replace('.', ',')}*`,
-    `💳 Pagamento: ${(pricing?.paymentMethod ?? 'OUTRO') === 'PIX' ? 'PIX' : 'Outro'}`,
+    `📦 Frete: R$\u00a0${deliveryFee.toFixed(2).replace('.', ',')}`,
+    `💵 *Total (produtos + frete): R$\u00a0${grand.toFixed(2).replace('.', ',')}*`,
+    `💳 Pagamento: ${paymentMethodLabel(paymentMethod ?? (pricing?.paymentMethod === 'PIX' ? 'PIX' : 'OUTRO'))}`,
     `🏷️ Cupom aplicado: ${pricing?.couponCodeApplied ?? 'nenhum'}`
   )
+
+  if (checkoutChannel === 'site') {
+    lines.push(`🌐 *Canal:* Site (combinar pagamento com a loja)`)
+  } else if (checkoutChannel === 'whatsapp') {
+    lines.push(`💬 *Canal:* WhatsApp`)
+  }
 
   if (notes?.trim()) lines.push('', `📝 *Obs:* ${notes.trim()}`)
   lines.push(``, `⏰ ${now}`, ``, `Pedido feito via vend.ai/\u200b${store.slug}`)

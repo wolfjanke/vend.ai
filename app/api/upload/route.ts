@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { logServerError } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (!res.ok) throw new Error(data.error?.message ?? 'Upload falhou')
     return NextResponse.json({ url: data.secure_url })
   } catch (error) {
-    console.error('[POST /api/upload]', error)
+    logServerError('[POST /api/upload]', error)
     return NextResponse.json({ error: 'Erro no upload' }, { status: 500 })
   }
 }

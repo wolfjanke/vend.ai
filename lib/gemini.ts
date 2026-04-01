@@ -1,9 +1,37 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { StoreContext } from '@/types'
+import {
+  type StoreContext,
+  type StoreProfile,
+  PRODUCT_CATEGORY_SLUGS,
+  getSegmentLabel,
+} from '@/types'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
-const MODEL = 'gemini-1.5-flash'
+/** Modelo estável na Gemini API (1.5 sem sufixo foi descontinuado e retorna 404). Override: GEMINI_MODEL */
+const MODEL = (process.env.GEMINI_MODEL ?? 'gemini-2.5-flash').trim()
+
+function segmentInstructions(profile: StoreProfile): string {
+  const { genderFocus, ageGroup } = profile
+  const lines: string[] = []
+  if (ageGroup === 'kids') {
+    lines.push('Público infantil: use vocabulário adequado (criança, bebê, tamanho infantil quando fizer sentido).')
+  } else if (ageGroup === 'all') {
+    lines.push('A loja atende várias idades: pode haver peças adultas e infantis; descreva claramente para quem é cada item.')
+  } else {
+    lines.push('Foco em vestuário adulto.')
+  }
+  if (genderFocus === 'masculine') {
+    lines.push('Público masculino: priorize categorias como camiseta, bermuda, calça, shorts, moletom, casaco; evite assumir que a peça é feminina.')
+  } else if (genderFocus === 'feminine') {
+    lines.push('Público feminino: vestidos, blusas, saias, conjuntos etc. são pertinentes quando a imagem corresponder.')
+  } else if (genderFocus === 'unisex') {
+    lines.push('Público unissex: descreva cortes e modelos neutros quando aplicável.')
+  } else {
+    lines.push('Loja mista: pode haver peças femininas e masculinas; identifique pelo corte e estilo na imagem.')
+  }
+  return lines.join('\n')
+}
 
 // ─── Vi System Prompt ─────────────────────────────────────────────────────────
 export function buildViSystemPrompt(ctx: StoreContext): string {
@@ -18,9 +46,17 @@ export function buildViSystemPrompt(ctx: StoreContext): string {
 
   const frete = ctx.freteInfo?.trim() || 'Consulte a loja.'
   const pagamento = ctx.pagamentoInfo?.trim() || 'Consulte a loja.'
+  const segment =
+    ctx.segmentLabel?.trim() ||
+    (ctx.genderFocus && ctx.ageGroup
+      ? getSegmentLabel({ genderFocus: ctx.genderFocus, ageGroup: ctx.ageGroup })
+      : 'Loja de roupas e vestuário.')
 
   return `Você é a Vi, assistente virtual da loja "${ctx.name}" no vend.ai.
-Sua missão é ajudar clientes a encontrar a roupa perfeita e concluir a compra.
+Sua missão é ajudar clientes a encontrar a roupa ideal e concluir a compra.
+
+## PERFIL DA LOJA
+${segment}
 
 ## ESTOQUE ATUAL
 ${productLines || 'Nenhum produto cadastrado ainda.'}
@@ -43,12 +79,14 @@ ${productLines || 'Nenhum produto cadastrado ainda.'}
 }
 
 // ─── Product Analysis Prompt ──────────────────────────────────────────────────
-export const PRODUCT_ANALYSIS_PROMPT = `Você é um especialista em moda feminina. Analise as imagens de produtos de roupas enviadas e retorne um JSON com:
+export function buildProductAnalysisPrompt(profile: StoreProfile): string {
+  const cats = PRODUCT_CATEGORY_SLUGS.join(' | ')
+  return `Você é um especialista em moda e vestuário (loja de roupas em geral). Analise as imagens de produtos enviadas e retorne um JSON com:
 
 {
-  "nome": "nome comercial do produto (ex: Vestido Midi Floral Manga Bufante)",
-  "descricao": "descrição de 2-3 frases sobre o produto, destacando tecido, estilo e ocasião",
-  "categoria": "um de: vestido | blusa | calca | conjunto | saia | outro",
+  "nome": "nome comercial do produto",
+  "descricao": "descrição de 2-3 frases sobre o produto (tecido, estilo, ocasião ou uso)",
+  "categoria": "exatamente um destes valores: ${cats}",
   "variantes": [
     {
       "cor": "nome da cor em português",
@@ -57,7 +95,15 @@ export const PRODUCT_ANALYSIS_PROMPT = `Você é um especialista em moda feminin
   ]
 }
 
+Contexto da loja:
+${getSegmentLabel(profile)}
+
+Instruções por segmento:
+${segmentInstructions(profile)}
+
 Se houver múltiplas fotos com cores diferentes, liste cada cor como uma variante separada.
+O campo "categoria" deve ser obrigatoriamente um dos slugs listados acima (use "outro" se nenhum encaixar bem).
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`
+}
 
 export { genAI, MODEL }

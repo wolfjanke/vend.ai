@@ -24,7 +24,7 @@ export default async function EditarProdutoPage({ params }: Props) {
       <div className="mb-6">
         <h1 className="font-syne font-extrabold text-2xl mb-1">Editar produto</h1>
         <p className="text-sm text-muted">
-          Altere nome, preço, estoque e variações. As fotos atuais são mantidas.
+          Altere nome, preço, estoque e variações. Gerencie as fotos por cor em cada cartão abaixo.
         </p>
       </div>
       <ProdutoForm storeId={session.storeId} productId={id} initialProduct={product} />

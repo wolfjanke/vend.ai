@@ -1,14 +1,42 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import type { ViMessage, StoreContext } from '@/types'
 
-const SUGGESTIONS = [
-  { label: '👗 Festa',       text: 'Vestido para festa' },
-  { label: '😊 Casual',      text: 'Looks casuais' },
-  { label: '🔥 Promoções',   text: 'Promoções do dia' },
-  { label: '📏 Tamanhos',    text: 'Tem tamanho P?' },
-]
+function buildViSuggestions(ctx: StoreContext): Array<{ label: string; text: string }> {
+  const gf = ctx.genderFocus ?? 'feminine'
+  const ag = ctx.ageGroup ?? 'adult'
+  if (ag === 'kids') {
+    return [
+      { label: '👶 Infantil', text: 'Roupas infantis disponíveis' },
+      { label: '😊 Conforto', text: 'Peças confortáveis para criança' },
+      { label: '🔥 Promoções', text: 'Promoções do dia' },
+      { label: '📏 Tamanhos', text: 'Tem tamanho infantil 6?' },
+    ]
+  }
+  if (gf === 'masculine') {
+    return [
+      { label: '👕 Básicos', text: 'Camisetas e bermudas' },
+      { label: '😊 Casual', text: 'Look casual masculino' },
+      { label: '🔥 Promoções', text: 'Promoções do dia' },
+      { label: '📏 Tamanhos', text: 'Tem tamanho M?' },
+    ]
+  }
+  if (gf === 'unisex' || gf === 'mixed') {
+    return [
+      { label: '✨ Novidades', text: 'Novidades da loja' },
+      { label: '😊 Casual', text: 'Looks casuais' },
+      { label: '🔥 Promoções', text: 'Promoções do dia' },
+      { label: '📏 Tamanhos', text: 'Tem tamanho P?' },
+    ]
+  }
+  return [
+    { label: '👗 Festa', text: 'Vestido para festa' },
+    { label: '😊 Casual', text: 'Looks casuais' },
+    { label: '🔥 Promoções', text: 'Promoções do dia' },
+    { label: '📏 Tamanhos', text: 'Tem tamanho P?' },
+  ]
+}
 
 interface Props {
   isOpen:       boolean
@@ -17,6 +45,11 @@ interface Props {
 }
 
 export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
+  const suggestions = useMemo(() => buildViSuggestions(storeContext), [
+    storeContext.genderFocus,
+    storeContext.ageGroup,
+    storeContext.segmentLabel,
+  ])
   const [messages,      setMessages]      = useState<ViMessage[]>([])
   const [input,         setInput]         = useState('')
   const [loading,       setLoading]       = useState(false)
@@ -84,8 +117,18 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
     }
   }
 
+  function escapeHtml(s: string) {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
+
   function renderContent(text: string) {
-    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    const safe = escapeHtml(text)
+    return safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
   }
 
   const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -148,8 +191,8 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
         {/* Suggestions */}
         {showSuggestions && messages.length <= 1 && (
           <div className="flex gap-1.5 flex-wrap px-3.5 py-2 border-t border-border">
-            {SUGGESTIONS.map(s => (
-              <button key={s.label} onClick={() => sendMessage(s.text)} className="px-2.5 py-1 bg-primary/10 border border-primary/30 rounded-lg text-primary text-[11px] hover:bg-primary hover:text-white transition-all">
+            {suggestions.map(s => (
+              <button key={`${s.label}-${s.text}`} type="button" onClick={() => sendMessage(s.text)} className="px-2.5 py-1 bg-primary/10 border border-primary/30 rounded-lg text-primary text-[11px] hover:bg-primary hover:text-white transition-all">
                 {s.label}
               </button>
             ))}

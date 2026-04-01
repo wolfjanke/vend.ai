@@ -1,11 +1,13 @@
 import { Resend } from 'resend'
 
+import { logServerError } from '@/lib/logger'
+
 const from = process.env.EMAIL_FROM ?? 'vend.ai <onboarding@resend.dev>'
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
   const key = process.env.RESEND_API_KEY
   if (!key) {
-    console.warn('[email] RESEND_API_KEY ausente — link de redefinição (dev):', resetUrl)
+    console.warn('[email] RESEND_API_KEY ausente — e-mail de redefinição não enviado.')
     return
   }
 
@@ -21,5 +23,5 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
       <p>O link expira em 1 hora. Se você não pediu isso, ignore este e-mail.</p>
     `,
   })
-  if (error) console.error('[email] Resend:', error)
+  if (error) logServerError('[email] Resend', error)
 }

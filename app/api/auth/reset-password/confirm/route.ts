@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { sql } from '@/lib/db'
+import { logServerError } from '@/lib/logger'
 
 const schema = z.object({
   token: z.string().min(10),
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true })
   } catch (e) {
-    console.error('[reset-password/confirm]', e)
+    logServerError('[reset-password/confirm]', e)
     return NextResponse.json({ error: 'Erro ao redefinir senha' }, { status: 500 })
   }
 }

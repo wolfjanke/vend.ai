@@ -22,7 +22,53 @@ interface VariantState {
   stock:             Record<string, number>
 }
 
-export default function ProdutoForm({ storeId, productId, initialProduct }: Props) {
+/** Reparte ficheiros pelas variações: 1 foto por cor na ordem; extras na última cor. */
+function distributeFilesAcrossVariants(files: File[], variantCount: number): File[][] {
+  if (variantCount <= 0) return []
+  if (files.length === 0) return Array.from({ length: variantCount }, () => [])
+
+  if (files.length >= variantCount) {
+    const result: File[][] = []
+    for (let i = 0; i < variantCount - 1; i++) {
+      result.push([files[i]])
+    }
+    result.push(files.slice(variantCount - 1))
+    return result
+  }
+
+  return Array.from({ length: variantCount }, (_, i) => (i < files.length ? [files[i]] : []))
+}
+
+/** Evita useMemo+revoke: no Strict Mode o cleanup revoga o blob e o useMemo devolvia a mesma URL inválida (ERR_FILE_NOT_FOUND). */
+function VariantPhotoThumb({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file)
+    setUrl(objectUrl)
+    return () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [file])
+  return (
+    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-border shrink-0 group/thumb">
+      {url ? (
+        <img src={url} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full bg-surface2 animate-pulse" aria-hidden />
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute inset-0 flex items-center justify-center bg-bg/70 text-warm text-xs font-bold opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+        aria-label="Remover foto"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
+export default function ProdutoForm({ storeId: _storeId, productId, initialProduct }: Props) {
   const router  = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const isEdit  = Boolean(productId && initialProduct)
@@ -34,6 +80,7 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
   const [analyzed,  setAnalyzed]  = useState(!!initialProduct)
   const [saving,    setSaving]    = useState(false)
   const [active,    setActive]    = useState(true)
+  const [postAiPhotoNote, setPostAiPhotoNote] = useState('')
 
   const [prodName,  setProdName]  = useState('')
   const [prodDesc,  setProdDesc]  = useState('')
@@ -68,6 +115,7 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
     if (!e.target.files?.length) return
     const newFiles = Array.from(e.target.files)
     setFiles(prev => [...prev, ...newFiles])
+    setPostAiPhotoNote('')
     newFiles.forEach(f => {
       const reader = new FileReader()
       reader.onload = ev => setPreviews(prev => [...prev, ev.target?.result as string])
@@ -79,6 +127,7 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
     if (!previews.length) return
     setAnalyzing(true)
     setAiStatus('Carregando imagens…')
+    setPostAiPhotoNote('')
 
     const steps: Array<[number, string]> = [
       [600,  'Identificando a peça…'],
@@ -86,6 +135,8 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
       [2500, 'Gerando nome e descrição…'],
     ]
     steps.forEach(([t, msg]) => setTimeout(() => setAiStatus(msg), t))
+
+    const filesSnapshot = [...files]
 
     try {
       const res = await fetch('/api/produtos/analyze', {
@@ -104,30 +155,47 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
       setProdCat(data.categoria ?? '')
       setAiBadges({ name: true, desc: true, cat: true })
 
-      const generatedVariants: VariantState[] = (data.variantes ?? []).map(
+      const rawVariantes = data.variantes ?? []
+      let generatedVariants: VariantState[] = rawVariantes.map(
         (v: { cor: string; corHex: string }, i: number) => ({
           id:       crypto.randomUUID(),
           color:    v.cor,
           colorHex: v.corHex ?? '#888888',
-          photos:   i === 0
-            ? files.slice(0, Math.ceil(files.length / (data.variantes?.length ?? 1)))
-            : [],
+          photos:   [] as File[],
           stock: Object.fromEntries(SIZES.map(s => [s, 0])),
         })
       )
 
       if (generatedVariants.length === 0) {
-        generatedVariants.push({
+        generatedVariants = [{
           id:       crypto.randomUUID(),
           color:    'Único',
           colorHex: '#888888',
-          photos:   files,
+          photos:   [...filesSnapshot],
           stock:    Object.fromEntries(SIZES.map(s => [s, 0])),
-        })
+        }]
+      } else {
+        const buckets = distributeFilesAcrossVariants(filesSnapshot, generatedVariants.length)
+        generatedVariants = generatedVariants.map((gv, i) => ({
+          ...gv,
+          photos: buckets[i] ?? [],
+        }))
+      }
+
+      const n = generatedVariants.length
+      const m = filesSnapshot.length
+      if (n > 1 && m > n) {
+        setPostAiPhotoNote('Fotos extra foram agrupadas na última cor — ajuste abaixo se precisar.')
+      } else if (m === n && n > 1) {
+        setPostAiPhotoNote('A 1.ª foto corresponde à 1.ª cor listada abaixo, e assim por diante.')
+      } else if (m < n) {
+        setPostAiPhotoNote('Há mais variações de cor do que fotos: algumas cores ficaram sem foto até você adicionar.')
       }
 
       setVariants(generatedVariants)
       setAnalyzed(true)
+      setFiles([])
+      setPreviews([])
       setAiStatus(`✓ ${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''} identificada${generatedVariants.length > 1 ? 's' : ''}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro na análise — preencha manualmente'
@@ -162,6 +230,28 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
     ))
   }
 
+  function addVariantPhotos(variantId: string, fileList: FileList | null) {
+    if (!fileList?.length) return
+    const next = Array.from(fileList)
+    setVariants(prev => prev.map(v =>
+      v.id === variantId ? { ...v, photos: [...v.photos, ...next] } : v
+    ))
+  }
+
+  function removeNewPhoto(variantId: string, index: number) {
+    setVariants(prev => prev.map(v =>
+      v.id === variantId ? { ...v, photos: v.photos.filter((_, i) => i !== index) } : v
+    ))
+  }
+
+  function removeExistingPhoto(variantId: string, index: number) {
+    setVariants(prev => prev.map(v =>
+      v.id === variantId
+        ? { ...v, existingPhotoUrls: (v.existingPhotoUrls ?? []).filter((_, i) => i !== index) }
+        : v
+    ))
+  }
+
   async function uploadPhoto(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -182,11 +272,22 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
     })
   }
 
+  function variantHasNoPhoto(v: VariantState): boolean {
+    return (v.existingPhotoUrls?.length ?? 0) === 0 && v.photos.length === 0
+  }
+
   async function handleSave() {
     if (!prodName.trim()) { alert('Informe o nome do produto'); return }
     const priceNum = parseCurrency(prodPrice)
     if (priceNum <= 0) { alert('Informe o preço válido'); return }
     if (!variants.length) { alert('Adicione ao menos uma variação'); return }
+
+    const missingPhoto = variants.some(variantHasNoPhoto)
+    if (missingPhoto) {
+      const ok = window.confirm('Uma ou mais cores estão sem foto. Deseja continuar mesmo assim?')
+      if (!ok) return
+    }
+
     setSaving(true)
 
     try {
@@ -251,7 +352,7 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
           <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
             <div className="text-5xl mb-3">🖼️</div>
             <div className="font-syne font-semibold text-sm mb-1">Selecionar fotos da galeria</div>
-            <div className="text-xs text-muted mb-4">Selecione várias fotos — a IA vai agrupar por cor</div>
+            <div className="text-xs text-muted mb-4">Selecione várias fotos — a IA sugere variações de cor</div>
             <div className="px-4 py-2 bg-primary/10 border border-primary rounded-xl text-primary text-xs font-semibold">
               📂 Abrir galeria
             </div>
@@ -268,7 +369,7 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
       </div>
       )}
 
-      {/* Analyze bar */}
+      {/* Analyze bar ou nota pós-distribuição */}
       {!isEdit && files.length > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-3 p-4 bg-surface border border-border rounded-2xl mb-4">
           <div>
@@ -281,12 +382,14 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
           </div>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => fileRef.current?.click()}
               className="px-3.5 py-2 border border-border rounded-xl text-muted text-xs hover:text-foreground transition-all"
             >
               + Adicionar
             </button>
             <button
+              type="button"
               onClick={analyzeWithAI}
               disabled={analyzing}
               className="flex items-center gap-1.5 px-4 py-2 bg-grad text-bg font-syne font-bold text-xs rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-70 disabled:cursor-wait"
@@ -297,17 +400,9 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
         </div>
       )}
 
-      {/* Variant photos: show existing in edit mode */}
-      {isEdit && variants.some(v => (v.existingPhotoUrls?.length ?? 0) > 0) && (
-        <div className="mb-4 p-4 bg-surface2 border border-border rounded-2xl">
-          <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Fotos atuais (por variação)</div>
-          <div className="flex flex-wrap gap-2">
-            {variants.flatMap(v => (v.existingPhotoUrls ?? []).map((url, i) => (
-              <div key={`${v.id}-${i}`} className="w-16 h-16 rounded-xl overflow-hidden border border-border">
-                <img src={url} alt="" className="w-full h-full object-cover" />
-              </div>
-            )))}
-          </div>
+      {!isEdit && analyzed && files.length === 0 && postAiPhotoNote && (
+        <div className="mb-4 p-4 bg-surface2 border border-border rounded-2xl text-sm text-muted break-words">
+          {postAiPhotoNote}
         </div>
       )}
 
@@ -373,15 +468,21 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Preço Promo (opcional)</label>
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">
+                    Preço promocional (opcional)
+                  </label>
                   <MaskedInput
                     mask="currency"
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
-                    placeholder="Deixe vazio"
+                    placeholder="Deixe vazio se não houver promoção"
                     value={prodPromo}
                     onChange={setProdPromo}
                     inputMode="decimal"
                   />
+                  <p className="text-[11px] text-muted mt-1.5 leading-snug break-words">
+                    Com valor aqui, o produto entra na seção <span className="text-foreground/90">Promoções</span> na loja e
+                    exibe o selo de promoção no card.
+                  </p>
                 </div>
 
                 <div className="flex items-center">
@@ -403,12 +504,14 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
           <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
             <div className="font-syne font-bold text-sm mb-4">Variações de Cor</div>
 
-            {variants.map(v => (
+            {variants.map(v => {
+              const noPhoto = variantHasNoPhoto(v)
+              return (
               <div key={v.id} className="bg-surface2 border border-border rounded-2xl p-4 mb-3">
-                <div className="flex items-center gap-2.5 mb-3">
+                <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                   <div className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0" style={{ background: v.colorHex }} />
                   <input
-                    className="flex-1 px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground font-syne font-bold text-xs outline-none focus:border-primary transition-all"
+                    className="flex-1 min-w-0 px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground font-syne font-bold text-xs outline-none focus:border-primary transition-all"
                     value={v.color}
                     onChange={e => updateVariant(v.id, { color: e.target.value })}
                     placeholder="Nome da cor"
@@ -417,18 +520,63 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
                     type="color"
                     value={v.colorHex}
                     onChange={e => updateVariant(v.id, { colorHex: e.target.value })}
-                    className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent p-0"
+                    className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent p-0 shrink-0"
                   />
+                  {noPhoto && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-warm px-2 py-0.5 rounded border border-warm/30 bg-warm/10">Sem foto</span>
+                  )}
                   <button
+                    type="button"
                     onClick={() => removeVariant(v.id)}
-                    className="px-2.5 py-1.5 bg-warm/10 border border-warm/30 rounded-lg text-warm text-xs"
+                    className="px-2.5 py-1.5 bg-warm/10 border border-warm/30 rounded-lg text-warm text-xs shrink-0"
                   >
                     ✕
                   </button>
                 </div>
 
+                <div className="mb-4">
+                  <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Fotos desta cor</div>
+                  <div className="flex flex-wrap gap-2 items-start">
+                    {(v.existingPhotoUrls ?? []).map((url, i) => (
+                      <div key={`ex-${v.id}-${i}`} className="relative w-16 h-16 rounded-xl overflow-hidden border border-border shrink-0 group/thumb">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeExistingPhoto(v.id, i)}
+                          className="absolute inset-0 flex items-center justify-center bg-bg/70 text-warm text-xs font-bold opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                          aria-label="Remover foto"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    {v.photos.map((file, i) => (
+                      <VariantPhotoThumb
+                        key={`new-${v.id}-${i}-${file.name}-${file.size}-${file.lastModified}`}
+                        file={file}
+                        onRemove={() => removeNewPhoto(v.id, i)}
+                      />
+                    ))}
+                    <label className="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer text-muted text-xl hover:border-primary hover:text-primary transition-colors shrink-0 min-h-[44px] min-w-[44px] sm:min-h-[64px] sm:min-w-[64px] sm:w-16 sm:h-16">
+                      <span className="sr-only">Adicionar fotos</span>
+                      <span aria-hidden>+</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={e => {
+                          addVariantPhotos(v.id, e.target.files)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-muted mt-2 break-words">Use + para enviar mais imagens desta cor. Remova miniaturas para excluir antes de salvar.</p>
+                </div>
+
                 <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Estoque por tamanho</div>
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                   {SIZES.map(s => (
                     <div key={s} className="flex flex-col items-center gap-1">
                       <span className="text-[10px] font-bold text-muted">{s}</span>
@@ -443,9 +591,10 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
                   ))}
                 </div>
               </div>
-            ))}
+            )})}
 
             <button
+              type="button"
               onClick={addVariant}
               className="w-full py-2.5 border-2 border-dashed border-border rounded-xl text-muted text-xs hover:border-primary hover:text-primary transition-all"
             >
@@ -456,12 +605,14 @@ export default function ProdutoForm({ storeId, productId, initialProduct }: Prop
           {/* Save buttons */}
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={() => router.back()}
               className="flex-1 py-3 border border-border rounded-xl text-muted text-sm hover:border-muted hover:text-foreground transition-all"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={handleSave}
               disabled={saving}
               className="flex-[2] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait"

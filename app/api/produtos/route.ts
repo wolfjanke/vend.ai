@@ -5,6 +5,7 @@ import { sql } from '@/lib/db'
 import type { PlanSlug } from '@/types'
 import { PLAN_PRODUCT_LIMITS } from '@/types'
 import { productBodySchema } from '@/lib/validations'
+import { logServerError } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
     `
     return NextResponse.json({ id: product.id })
   } catch (error) {
-    console.error('[POST /api/produtos]', error)
+    logServerError('[POST /api/produtos]', error)
     return NextResponse.json({ error: 'Erro ao criar produto' }, { status: 500 })
   }
 }

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { sql } from '@/lib/db'
 import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
+import { logServerError } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +21,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: first }, { status: 400 })
     }
 
-    const { email, password, storeName, whatsapp } = parsed.data
+    const { email, password, storeName, whatsapp, genderFocus, ageGroup } = parsed.data
+    const initialSettings = {
+      genderFocus: genderFocus ?? 'feminine',
+      ageGroup:    ageGroup ?? 'adult',
+    }
 
     const existing = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`
     if (existing.length > 0) {
@@ -40,8 +45,8 @@ export async function POST(req: NextRequest) {
     `
 
     const [store] = await sql`
-      INSERT INTO stores (user_id, slug, name, whatsapp)
-      VALUES (${newUser.id}, ${finalSlug}, ${storeName}, ${whatsapp})
+      INSERT INTO stores (user_id, slug, name, whatsapp, settings_json)
+      VALUES (${newUser.id}, ${finalSlug}, ${storeName}, ${whatsapp}, ${JSON.stringify(initialSettings)}::jsonb)
       RETURNING id, slug
     `
 
@@ -49,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ slug: store.slug })
   } catch (error) {
-    console.error('[POST /api/auth/register]', error)
+    logServerError('[POST /api/auth/register]', error)
     return NextResponse.json({ error: 'Erro ao criar conta' }, { status: 500 })
   }
 }

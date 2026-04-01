@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
+import { logServerError } from '@/lib/logger'
 
 export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
   try {
@@ -13,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
 
     return NextResponse.json({ store, products })
   } catch (error) {
-    console.error('[GET /api/loja/[slug]]', error)
+    logServerError('[GET /api/loja/[slug]]', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

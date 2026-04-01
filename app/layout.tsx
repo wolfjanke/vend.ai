@@ -19,8 +19,8 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title:       'vend.ai — Moda com IA',
-  description: 'Catálogo digital com IA integrada para lojas de moda feminina. Pedidos direto no WhatsApp.',
-  keywords:    ['loja online', 'moda feminina', 'IA', 'WhatsApp', 'catálogo digital'],
+  description: 'Catálogo digital com IA integrada para lojas de roupas. Pedidos direto no WhatsApp.',
+  keywords:    ['loja online', 'moda', 'roupas', 'IA', 'WhatsApp', 'catálogo digital'],
   openGraph: {
     title:       'vend.ai — Moda com IA',
     description: 'Catálogo inteligente + assistente IA + pedidos no WhatsApp',

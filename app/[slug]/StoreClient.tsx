@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import type { Product, Store, CartItem, StoreContext, BannerMessage, DeliveryAddress } from '@/types'
+import type { Product, Store, CartItem, StoreContext, BannerMessage, DeliveryAddress, CheckoutChannel, CheckoutPaymentMethod } from '@/types'
+import { getStoreProfile, getSegmentLabel } from '@/types'
 import Catalogo    from '@/components/loja/Catalogo'
 import Carrinho    from '@/components/loja/Carrinho'
 import ViChat      from '@/components/loja/ViChat'
@@ -39,6 +40,7 @@ export default function StoreClient({ store, products }: Props) {
   const [dialogVisible, setDialogVisible] = useState(false)
   const inactivityRef = useRef<ReturnType<typeof setTimeout>>()
   const settings      = store.settings_json ?? {}
+  const storeProfile  = useMemo(() => getStoreProfile(settings), [settings])
   const activeBanners = useMemo(() => filterActiveBanners(settings.bannerMessages), [store.settings_json])
   const [bannerIndex, setBannerIndex] = useState(0)
 
@@ -55,6 +57,9 @@ export default function StoreClient({ store, products }: Props) {
     name:           store.name,
     freteInfo:      settings.freteInfo,
     pagamentoInfo:  settings.pagamentoInfo,
+    genderFocus:    storeProfile.genderFocus,
+    ageGroup:       storeProfile.ageGroup,
+    segmentLabel:   getSegmentLabel(storeProfile),
     products: products.map(p => ({
       name:     p.name,
       category: p.category,
@@ -115,7 +120,15 @@ export default function StoreClient({ store, products }: Props) {
   }, [])
 
   // ── Checkout ──────────────────────────────────────────────────────────────────
-  const checkout = useCallback(async (name: string, phone: string, notes: string, delivery: DeliveryAddress, paymentMethod: 'PIX' | 'OUTRO', couponCode?: string) => {
+  const checkout = useCallback(async (
+    name: string,
+    phone: string,
+    notes: string,
+    delivery: DeliveryAddress,
+    paymentMethod: CheckoutPaymentMethod,
+    couponCode: string | undefined,
+    meta: { deliveryFee: number; checkoutChannel: CheckoutChannel }
+  ) => {
     try {
       const res = await fetch('/api/pedidos', {
         method:  'POST',
@@ -129,14 +142,33 @@ export default function StoreClient({ store, products }: Props) {
           paymentMethod,
           couponCode,
           deliveryAddress:  delivery,
+          deliveryFee:      meta.deliveryFee,
+          checkoutChannel:  meta.checkoutChannel,
         }),
       })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        showToast(err?.error ?? '⚠️ Não foi possível registrar o pedido')
+        return
+      }
 
       const data = await res.json()
       const orderNum = data.orderNumber ?? generateOrderNumber()
       const pricing = data.pricing
 
-      const msg = formatOrderMessage({ store, items: cart, name, phone, notes, orderNum, deliveryAddress: delivery, pricing })
+      const msg = formatOrderMessage({
+        store,
+        items: cart,
+        name,
+        phone,
+        notes,
+        orderNum,
+        deliveryAddress: delivery,
+        pricing,
+        checkoutChannel: meta.checkoutChannel,
+        paymentMethod,
+      })
       const url = buildWhatsAppUrl(store.whatsapp, msg)
       window.open(url, '_blank')
 
@@ -199,7 +231,17 @@ export default function StoreClient({ store, products }: Props) {
       )}
 
       {/* Catalog */}
-      <Catalogo products={products} onAddToCart={addToCart} onInteract={resetInactivity} />
+      <Catalogo
+        products={products}
+        profile={storeProfile}
+        onAddToCart={addToCart}
+        onInteract={resetInactivity}
+        installmentsMaxNoInterest={
+          typeof settings.installmentsMaxNoInterest === 'number'
+            ? settings.installmentsMaxNoInterest
+            : null
+        }
+      />
 
       {/* Cart drawer */}
       <Carrinho
@@ -211,6 +253,7 @@ export default function StoreClient({ store, products }: Props) {
         onCheckout={checkout}
         pixDiscountPercent={Number(settings.pixDiscountPercent ?? 0)}
         couponRules={settings.couponRules ?? []}
+        storeSettings={settings}
       />
 
       {/* Vi chat */}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import { requireSession } from '@/lib/require-session'
+import { logServerError } from '@/lib/logger'
 
 function emptyToNull(s: string | undefined | null): string | null {
   if (s == null || String(s).trim() === '') return null
@@ -43,6 +44,12 @@ export async function PATCH(req: NextRequest) {
       bairro,
       cidade,
       uf,
+      genderFocus,
+      ageGroup,
+      checkoutChannels,
+      deliveryZones,
+      freeShippingMin,
+      installmentsMaxNoInterest,
     } = parsed.data
 
     const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
@@ -54,11 +61,17 @@ export async function PATCH(req: NextRequest) {
       ...(pixDiscountPercent !== undefined && { pixDiscountPercent }),
       ...(couponRules !== undefined && { couponRules: Array.isArray(couponRules) ? couponRules : (current.couponRules ?? []) }),
       ...(bannerMessages !== undefined && {
-        bannerMessages: (Array.isArray(bannerMessages) ? bannerMessages : (current.bannerMessages ?? []))
+        bannerMessages: (Array.isArray(bannerMessages) ? bannerMessages : (Array.isArray(current.bannerMessages) ? current.bannerMessages : []))
           .filter((m: { text?: string; startDate?: string; endDate?: string }) => m?.text?.trim())
           .filter((m: { startDate?: string; endDate?: string }) => !m.startDate || !m.endDate || m.startDate <= m.endDate)
           .sort((a: { startDate?: string }, b: { startDate?: string }) => (b.startDate ?? '').localeCompare(a.startDate ?? '')),
       }),
+      ...(genderFocus !== undefined && { genderFocus }),
+      ...(ageGroup !== undefined && { ageGroup }),
+      ...(checkoutChannels !== undefined && { checkoutChannels }),
+      ...(deliveryZones !== undefined && { deliveryZones }),
+      ...(freeShippingMin !== undefined && { freeShippingMin }),
+      ...(installmentsMaxNoInterest !== undefined && { installmentsMaxNoInterest }),
     }
 
     const logo = logo_url === '' || logo_url == null ? null : logo_url
@@ -80,7 +93,7 @@ export async function PATCH(req: NextRequest) {
     `
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('[/api/admin/store]', error)
+    logServerError('[/api/admin/store]', error)
     return NextResponse.json(
       { error: 'Falha de conexão com o banco (Neon). Verifique internet/DATABASE_URL e tente novamente.' },
       { status: 503 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { genAI, MODEL, buildViSystemPrompt } from '@/lib/gemini'
 import type { ViMessage, StoreContext } from '@/types'
+import { logServerError } from '@/lib/logger'
 
 export const runtime = 'edge'
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[/api/vi]', error)
+    logServerError('[/api/vi]', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

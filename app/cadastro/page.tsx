@@ -7,6 +7,7 @@ import { z } from 'zod'
 import MaskedInput from '@/components/ui/MaskedInput'
 import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
+import type { AgeGroup, GenderFocus } from '@/types'
 
 type Step = 1 | 2 | 3
 
@@ -41,6 +42,8 @@ export default function CadastroPage() {
   const [storeName, setStoreName] = useState('')
   const [wpp,       setWpp]       = useState('')
   const [slug,      setSlug]      = useState('sua-loja')
+  const [genderFocus, setGenderFocus] = useState<GenderFocus>('feminine')
+  const [ageGroup, setAgeGroup]       = useState<AgeGroup>('adult')
 
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
   const strength = passwordStrength(pass)
@@ -87,6 +90,8 @@ export default function CadastroPage() {
           password:  pass,
           storeName: storeName.trim(),
           whatsapp:  wpp,
+          genderFocus,
+          ageGroup,
         }),
       })
 
@@ -230,6 +235,31 @@ export default function CadastroPage() {
                   autoComplete="tel"
                 />
                 {fieldErr.whatsapp && <p className="text-xs text-warm mt-1">{fieldErr.whatsapp}</p>}
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Público principal</label>
+                <select
+                  className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary"
+                  value={genderFocus}
+                  onChange={e => setGenderFocus(e.target.value as GenderFocus)}
+                >
+                  <option value="feminine">Feminino</option>
+                  <option value="masculine">Masculino</option>
+                  <option value="unisex">Unissex</option>
+                  <option value="mixed">Misto (feminino e masculino)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Faixa etária</label>
+                <select
+                  className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary"
+                  value={ageGroup}
+                  onChange={e => setAgeGroup(e.target.value as AgeGroup)}
+                >
+                  <option value="adult">Adulto</option>
+                  <option value="kids">Infantil</option>
+                  <option value="all">Todas as idades</option>
+                </select>
               </div>
             </div>
             <div className="flex flex-col gap-2">

@@ -2,7 +2,8 @@
 
 import { useState, useRef } from 'react'
 import { signOut } from 'next-auth/react'
-import type { Store } from '@/types'
+import type { Store, AgeGroup, GenderFocus, DeliveryZone } from '@/types'
+import { getStoreProfile } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
 import { storeSettingsPatchSchema } from '@/lib/validations'
@@ -20,6 +21,9 @@ interface Props {
 
 export default function ConfigForm({ store }: Props) {
   const settings = store.settings_json ?? {}
+  const initialProfile = getStoreProfile(settings)
+  const [genderFocus, setGenderFocus] = useState<GenderFocus>(initialProfile.genderFocus)
+  const [ageGroup, setAgeGroup]       = useState<AgeGroup>(initialProfile.ageGroup)
   const [name,          setName]          = useState(store.name)
   const [wpp,           setWpp]           = useState(() => initialWppDisplay(store.whatsapp))
   const [logoUrl,       setLogoUrl]       = useState(store.logo_url ?? '')
@@ -43,6 +47,36 @@ export default function ConfigForm({ store }: Props) {
   const [pwdLoading, setPwdLoading] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
 
+  const initialCc = settings.checkoutChannels ?? {}
+  const [siteEnabled, setSiteEnabled] = useState(initialCc.siteEnabled === true)
+  const [whatsappEnabled, setWhatsappEnabled] = useState(initialCc.whatsappEnabled !== false)
+
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(() => {
+    const z = settings.deliveryZones
+    if (!Array.isArray(z) || !z.length) return []
+    return z.map(row => ({
+      id:   String(row.id ?? `z-${Math.random().toString(36).slice(2, 11)}`),
+      city: String(row.city ?? ''),
+      uf:   String(row.uf ?? '')
+        .trim()
+        .toUpperCase()
+        .slice(0, 2),
+      fee:  typeof row.fee === 'number' && Number.isFinite(row.fee) ? row.fee : 0,
+    }))
+  })
+
+  const [freeShippingMinStr, setFreeShippingMinStr] = useState(() => {
+    const v = settings.freeShippingMin
+    if (v == null) return ''
+    return String(v)
+  })
+
+  const [installmentsMaxStr, setInstallmentsMaxStr] = useState(() => {
+    const v = settings.installmentsMaxNoInterest
+    if (v == null || v === undefined) return ''
+    return String(v)
+  })
+
   async function uploadLogoFile(file: File) {
     const reader = new FileReader()
     reader.onload = async () => {
@@ -63,14 +97,59 @@ export default function ConfigForm({ store }: Props) {
     reader.readAsDataURL(file)
   }
 
+  function addDeliveryZone() {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `z-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    setDeliveryZones(prev => [...prev, { id, city: '', uf: '', fee: 0 }])
+  }
+
+  function removeDeliveryZone(index: number) {
+    setDeliveryZones(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function updateDeliveryZone(index: number, patch: Partial<DeliveryZone>) {
+    setDeliveryZones(prev =>
+      prev.map((row, i) => (i === index ? { ...row, ...patch } : row))
+    )
+  }
+
   async function handleSave() {
     if (!name.trim()) { setError('Nome da loja obrigatório.'); return }
+    if (!siteEnabled && !whatsappEnabled) {
+      setError('Ative pelo menos um canal: site ou WhatsApp.')
+      return
+    }
+    const zonesPayload: DeliveryZone[] = deliveryZones
+      .filter(z => z.city.trim() && z.uf.trim().length === 2)
+      .map(z => ({
+        id:   z.id.trim() || `z-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        city: z.city.trim(),
+        uf:   z.uf.trim().toUpperCase().slice(0, 2),
+        fee:  Math.max(0, Number(z.fee) || 0),
+      }))
+
+    let freeShippingMin: number | null = null
+    if (freeShippingMinStr.trim() !== '') {
+      const n = Number(freeShippingMinStr.replace(',', '.'))
+      if (Number.isFinite(n) && n >= 0) freeShippingMin = n
+    }
+
+    let installmentsMaxNoInterest: number | null = null
+    if (installmentsMaxStr.trim() !== '') {
+      const n = parseInt(installmentsMaxStr.trim(), 10)
+      if (Number.isFinite(n) && n >= 1 && n <= 48) installmentsMaxNoInterest = n
+    }
+
     const body = {
       name:           name.trim(),
       whatsapp:       wpp,
       logo_url:       logoUrl.trim() || null,
       freteInfo:      freteInfo.trim(),
       pagamentoInfo:  pagamentoInfo.trim(),
+      genderFocus,
+      ageGroup,
       cep,
       logradouro,
       numero,
@@ -78,6 +157,13 @@ export default function ConfigForm({ store }: Props) {
       bairro,
       cidade,
       uf: uf ? uf.toUpperCase() : '',
+      checkoutChannels: {
+        siteEnabled,
+        whatsappEnabled,
+      },
+      deliveryZones:    zonesPayload,
+      freeShippingMin,
+      installmentsMaxNoInterest,
     }
     const parsed = storeSettingsPatchSchema.safeParse(body)
     if (!parsed.success) {
@@ -137,6 +223,38 @@ export default function ConfigForm({ store }: Props) {
             value={name}
             onChange={e => setName(e.target.value)}
           />
+        </div>
+
+        <div>
+          <p className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Perfil da loja</p>
+          <p className="text-xs text-muted mb-3">Usado na Vi, na busca da loja e na análise de produtos por IA.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] text-muted block mb-1">Público principal</label>
+              <select
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
+                value={genderFocus}
+                onChange={e => setGenderFocus(e.target.value as GenderFocus)}
+              >
+                <option value="feminine">Feminino</option>
+                <option value="masculine">Masculino</option>
+                <option value="unisex">Unissex</option>
+                <option value="mixed">Misto</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] text-muted block mb-1">Faixa etária</label>
+              <select
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
+                value={ageGroup}
+                onChange={e => setAgeGroup(e.target.value as AgeGroup)}
+              >
+                <option value="adult">Adulto</option>
+                <option value="kids">Infantil</option>
+                <option value="all">Todas as idades</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -249,6 +367,85 @@ export default function ConfigForm({ store }: Props) {
         </div>
 
         <div>
+          <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Zonas de entrega (checkout)</p>
+          <p className="text-xs text-muted mb-3 break-words">
+            Cadastre cidade e UF com a taxa. Lista vazia = entrega em qualquer lugar com frete R$ 0 (útil só com frete grátis mínimo abaixo). Com zonas, só essas cidades recebem entrega.
+          </p>
+          <div className="space-y-3">
+            {deliveryZones.map((z, i) => (
+              <div
+                key={z.id}
+                className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_auto] gap-2 items-end border border-border/60 rounded-xl p-3 bg-surface2/50"
+              >
+                <div className="min-w-0">
+                  <label className="text-[11px] text-muted block mb-1">Cidade</label>
+                  <input
+                    className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0"
+                    value={z.city}
+                    onChange={e => updateDeliveryZone(i, { city: e.target.value })}
+                    placeholder="Ex: Guarulhos"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted block mb-1">UF</label>
+                  <input
+                    className="w-full min-h-[44px] px-2 py-2.5 bg-surface2 border border-border rounded-xl text-sm uppercase text-center"
+                    maxLength={2}
+                    value={z.uf}
+                    onChange={e => updateDeliveryZone(i, { uf: e.target.value.toUpperCase() })}
+                    placeholder="SP"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted block mb-1">Taxa (R$)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="w-full min-h-[44px] px-2 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0"
+                    value={Number.isFinite(z.fee) ? z.fee : 0}
+                    onChange={e => {
+                      const v = parseFloat(e.target.value)
+                      updateDeliveryZone(i, { fee: Number.isFinite(v) ? Math.max(0, v) : 0 })
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeDeliveryZone(i)}
+                  className="min-h-[44px] px-3 border border-warm/30 text-warm text-xs rounded-xl hover:bg-warm/10 shrink-0 justify-self-start sm:justify-self-end"
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addDeliveryZone}
+              className="w-full min-h-[44px] border border-dashed border-border rounded-xl text-sm text-muted hover:text-foreground hover:border-muted transition-colors"
+            >
+              + Adicionar cidade
+            </button>
+          </div>
+          <div className="mt-4">
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+              Frete grátis a partir do pedido (R$)
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-w-0"
+              value={freeShippingMinStr}
+              onChange={e => setFreeShippingMinStr(e.target.value)}
+              placeholder="Ex: 150 (subtotal após cupom)"
+            />
+            <p className="text-xs text-muted mt-1.5 break-words">
+              Deixe em branco para não aplicar frete grátis automático. O valor considera o subtotal após desconto do cupom.
+            </p>
+          </div>
+        </div>
+
+        <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Formas de pagamento</label>
           <textarea
             className="w-full px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y placeholder:text-muted"
@@ -257,6 +454,57 @@ export default function ConfigForm({ store }: Props) {
             placeholder="Ex: Parcele em até 3x sem juros."
           />
           <p className="text-xs text-muted mt-1.5">A Vi usa esse texto quando o cliente perguntar sobre pagamento.</p>
+          <div className="mt-4">
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+              Parcelamento na vitrine (sem juros)
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={48}
+              inputMode="numeric"
+              className="w-full min-h-[44px] max-w-[120px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
+              value={installmentsMaxStr}
+              onChange={e => setInstallmentsMaxStr(e.target.value)}
+              placeholder="Ex: 6"
+            />
+            <p className="text-xs text-muted mt-1.5 break-words">
+              Número máximo de parcelas sem juros usado na loja para exibir &quot;Nx R$ …&quot; em cada produto. Deixe em branco para não mostrar essa linha.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Finalização do pedido (checkout)</p>
+          <p className="text-xs text-muted mb-3 break-words">
+            O cliente vê essas opções após informar o endereço. Pelo menos um canal deve ficar ativo.
+          </p>
+          <div className="flex flex-col gap-3">
+            <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1 size-4 shrink-0 accent-primary"
+                checked={whatsappEnabled}
+                onChange={e => setWhatsappEnabled(e.target.checked)}
+              />
+              <span className="text-sm text-foreground">
+                <span className="font-semibold">WhatsApp</span>
+                <span className="block text-xs text-muted">Enviar o pedido e combinar pagamento no chat (PIX, cartão na entrega, dinheiro).</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1 size-4 shrink-0 accent-primary"
+                checked={siteEnabled}
+                onChange={e => setSiteEnabled(e.target.checked)}
+              />
+              <span className="text-sm text-foreground">
+                <span className="font-semibold">Site</span>
+                <span className="block text-xs text-muted">Opção “pagar no site” com aviso; o pedido segue para o WhatsApp com os dados.</span>
+              </span>
+            </label>
+          </div>
         </div>
 
         <div>
