@@ -226,6 +226,8 @@ export interface OrderItem {
   color:      string
   qty:        number
   price:      number
+  /** Foto da variante no pedido (quando disponível no checkout) */
+  photo?:     string
 }
 
 /** Endereço de entrega do cliente (checkout) */

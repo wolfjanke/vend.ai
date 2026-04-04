@@ -103,9 +103,12 @@ export default async function PedidosPage({ searchParams }: Props) {
       <div className="mb-6">
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Pedidos</h1>
         <p className="text-sm text-muted">Acompanhe e gerencie todos os pedidos da sua loja</p>
+        <p className="text-xs text-muted mt-2 tabular-nums">
+          {total === 1 ? '1 pedido encontrado' : `${total} pedidos encontrados`}
+        </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col gap-3 mb-6">
         <form action={baseUrl} method="GET" className="flex gap-2 flex-1 min-w-0">
           {statusFilter && statusFilter !== 'TODOS' && (
             <input type="hidden" name="status" value={statusFilter} />
@@ -121,7 +124,8 @@ export default async function PedidosPage({ searchParams }: Props) {
             Buscar
           </button>
         </form>
-        <div className="flex gap-2 flex-wrap">
+        <div className="overflow-x-auto overflow-y-hidden -mx-1 px-1 pb-1 scrollbar-thin">
+          <div className="flex gap-2 flex-nowrap min-w-min">
           {STATUS_FILTERS.map(f => {
             const href = f.value === 'TODOS'
               ? (searchTerm ? `${baseUrl}?search=${encodeURIComponent(searchTerm)}` : baseUrl)
@@ -132,7 +136,7 @@ export default async function PedidosPage({ searchParams }: Props) {
               <a
                 key={f.value}
                 href={href}
-                className={`px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
+                className={`px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-full text-xs font-semibold border transition-all whitespace-nowrap shrink-0 ${
                   (statusFilter ?? 'TODOS') === f.value
                     ? 'bg-primary/20 border-primary text-primary'
                     : 'bg-surface border-border text-muted hover:text-foreground'
@@ -142,6 +146,7 @@ export default async function PedidosPage({ searchParams }: Props) {
               </a>
             )
           })}
+          </div>
         </div>
       </div>
 

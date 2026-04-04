@@ -1,18 +1,10 @@
-import Link from 'next/link'
+import { Globe } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
+import AdminSidebar from '@/components/admin/AdminSidebar'
 
 /** Obrigatório com getServerSession/cookies — sem isto o build pode pré-renderizar e `cookies()` lança em produção. */
 export const dynamic = 'force-dynamic'
-
-const navItems = [
-  { href: '/admin/dashboard',     label: 'Dashboard', icon: '📊' },
-  { href: '/admin/pedidos',       label: 'Pedidos',   icon: '🛍️' },
-  { href: '/admin/produtos',      label: 'Produtos',  icon: '👗' },
-  { href: '/admin/categorias',    label: 'Categorias', icon: '🏷️' },
-  { href: '/admin/marketing',     label: 'Marketing', icon: '🎯' },
-  { href: '/admin/configuracoes', label: 'Config',    icon: '⚙️' },
-]
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   try {
@@ -28,9 +20,15 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   if (!session?.storeId) return <>{children}</>
 
   let store: { name: string; slug: string } | undefined
+  let newOrdersCount = 0
   try {
     const rows = await sql`SELECT name, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
     store = rows[0] as { name: string; slug: string } | undefined
+    const countRows = await sql`
+      SELECT COUNT(*)::int as c FROM orders
+      WHERE store_id = ${session.storeId} AND status = 'NOVO'
+    `
+    newOrdersCount = Number(countRows[0]?.c ?? 0)
   } catch (e) {
     console.error('[admin/layout] stores query:', e)
     return (
@@ -63,9 +61,10 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               href={`/${store.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-accent text-xs font-medium hover:bg-accent/20 transition-all"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-accent text-xs font-medium hover:bg-accent/20 transition-all"
             >
-              🌐 Ver loja
+              <Globe size={14} aria-hidden />
+              Ver loja
             </a>
           )}
           <form action="/api/auth/signout-redirect" method="POST">
@@ -77,33 +76,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="hidden md:flex w-52 flex-col gap-1 p-4 border-r border-border min-h-[calc(100vh-64px)] sticky top-16">
-          {navItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-muted hover:text-foreground hover:bg-surface2 transition-all"
-            >
-              <span>{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </aside>
-
-        {/* Mobile bottom nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-border flex">
-          {navItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-muted hover:text-foreground transition-colors"
-            >
-              <span className="text-lg">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <AdminSidebar newOrdersCount={newOrdersCount} />
 
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">

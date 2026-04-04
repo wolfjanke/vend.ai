@@ -2,12 +2,15 @@
 
 import { useState, useRef } from 'react'
 import { signOut } from 'next-auth/react'
+import { Info, Loader2, Trash2 } from 'lucide-react'
 import type { Store, AgeGroup, GenderFocus, DeliveryZone } from '@/types'
 import { getStoreProfile } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import { maskPhone } from '@/lib/masks'
+import SectionHeader from '@/components/admin/SectionHeader'
+import ConfirmDialog from '@/components/admin/ConfirmDialog'
 
 function initialWppDisplay(w: string) {
   const d = w.replace(/\D/g, '')
@@ -46,6 +49,8 @@ export default function ConfigForm({ store }: Props) {
   const [pwdErr, setPwdErr] = useState('')
   const [pwdLoading, setPwdLoading] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
 
   const initialCc = settings.checkoutChannels ?? {}
   const [siteEnabled, setSiteEnabled] = useState(initialCc.siteEnabled === true)
@@ -78,6 +83,8 @@ export default function ConfigForm({ store }: Props) {
   })
 
   async function uploadLogoFile(file: File) {
+    setLogoUploading(true)
+    setError('')
     const reader = new FileReader()
     reader.onload = async () => {
       try {
@@ -92,6 +99,8 @@ export default function ConfigForm({ store }: Props) {
         else setError('Falha no upload da logo')
       } catch {
         setError('Falha no upload da logo')
+      } finally {
+        setLogoUploading(false)
       }
     }
     reader.readAsDataURL(file)
@@ -213,9 +222,12 @@ export default function ConfigForm({ store }: Props) {
 
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL : ''
 
+  const privacyMail = 'privacidade@vend.ai'
+
   return (
     <>
-      <div className="bg-surface border border-border rounded-2xl p-4 sm:p-6 flex flex-col gap-4">
+      <div className="bg-surface border border-border rounded-2xl p-4 sm:p-6 flex flex-col gap-2">
+        <SectionHeader title="Informações básicas" />
         <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Nome da loja</label>
           <input
@@ -225,9 +237,20 @@ export default function ConfigForm({ store }: Props) {
           />
         </div>
 
+        <SectionHeader
+          title="Perfil da loja"
+          description="Usado na Vi, na busca da loja e na análise de produtos por IA."
+        />
+        <div className="flex items-center gap-2 mb-2">
+          <span
+            className="text-muted"
+            title="Usado pela Vi para sugerir produtos e pela IA de cadastro para classificar peças."
+          >
+            <Info size={16} aria-hidden />
+          </span>
+          <p className="text-xs text-muted">Público e faixa etária ajudam a Vi e a IA a entenderem seu catálogo.</p>
+        </div>
         <div>
-          <p className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Perfil da loja</p>
-          <p className="text-xs text-muted mb-3">Usado na Vi, na busca da loja e na análise de produtos por IA.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] text-muted block mb-1">Público principal</label>
@@ -257,6 +280,7 @@ export default function ConfigForm({ store }: Props) {
           </div>
         </div>
 
+        <SectionHeader title="Contato" />
         <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">WhatsApp</label>
           <MaskedInput
@@ -276,15 +300,26 @@ export default function ConfigForm({ store }: Props) {
             if (f) void uploadLogoFile(f)
             e.target.value = ''
           }} />
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-            <button
-              type="button"
-              onClick={() => logoInputRef.current?.click()}
-              className="min-h-[44px] px-4 py-2.5 bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold hover:bg-primary/20"
-            >
-              Enviar imagem
-            </button>
-            <span className="text-xs text-muted">ou cole uma URL abaixo</span>
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center mb-2">
+            {logoUrl.trim() ? (
+              <img
+                src={logoUrl.trim()}
+                alt=""
+                className="w-14 h-14 rounded-full object-cover border border-border bg-surface2 shrink-0"
+              />
+            ) : null}
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={logoUploading}
+                className="min-h-[44px] px-4 py-2.5 bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold hover:bg-primary/20 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+              >
+                {logoUploading ? <Loader2 size={16} className="animate-spin" /> : null}
+                {logoUploading ? 'Enviando…' : 'Enviar imagem'}
+              </button>
+              <span className="text-xs text-muted">ou cole uma URL abaixo</span>
+            </div>
           </div>
           <input
             type="url"
@@ -295,8 +330,8 @@ export default function ConfigForm({ store }: Props) {
           />
         </div>
 
+        <SectionHeader title="Endereço da loja (opcional)" />
         <div>
-          <p className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Endereço da loja (opcional)</p>
           <div className="space-y-2">
             <div>
               <label className="text-[11px] text-muted block mb-1">CEP</label>
@@ -355,6 +390,7 @@ export default function ConfigForm({ store }: Props) {
           </div>
         </div>
 
+        <SectionHeader title="Frete e entrega" />
         <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Informações de frete</label>
           <textarea
@@ -371,6 +407,11 @@ export default function ConfigForm({ store }: Props) {
           <p className="text-xs text-muted mb-3 break-words">
             Cadastre cidade e UF com a taxa. Lista vazia = entrega em qualquer lugar com frete R$ 0 (útil só com frete grátis mínimo abaixo). Com zonas, só essas cidades recebem entrega.
           </p>
+          {deliveryZones.length === 0 && (
+            <p className="text-xs text-muted mb-3 p-3 rounded-xl border border-dashed border-border bg-surface2/50">
+              Nenhuma cidade cadastrada. Adicione abaixo ou deixe vazio para não restringir por cidade.
+            </p>
+          )}
           <div className="space-y-3">
             {deliveryZones.map((z, i) => (
               <div
@@ -445,6 +486,7 @@ export default function ConfigForm({ store }: Props) {
           </div>
         </div>
 
+        <SectionHeader title="Pagamento" />
         <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Formas de pagamento</label>
           <textarea
@@ -474,8 +516,8 @@ export default function ConfigForm({ store }: Props) {
           </div>
         </div>
 
+        <SectionHeader title="Checkout" description="Canais em que o cliente pode finalizar o pedido." />
         <div>
-          <p className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Finalização do pedido (checkout)</p>
           <p className="text-xs text-muted mb-3 break-words">
             O cliente vê essas opções após informar o endereço. Pelo menos um canal deve ficar ativo.
           </p>
@@ -507,6 +549,7 @@ export default function ConfigForm({ store }: Props) {
           </div>
         </div>
 
+        <SectionHeader title="Conta e link da loja" />
         <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Link da loja</label>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-[12px] min-w-0 overflow-hidden">
@@ -586,15 +629,40 @@ export default function ConfigForm({ store }: Props) {
 
       <div className="mt-6 bg-surface border border-warm/20 rounded-2xl p-6">
         <h3 className="font-syne font-bold text-sm text-warm mb-2">Zona de risco</h3>
-        <p className="text-xs text-muted mb-4">Essas ações são irreversíveis.</p>
-        <button
-          type="button"
-          onClick={() => signOut({ callbackUrl: '/admin' })}
-          className="px-4 py-2.5 border border-warm/30 text-warm text-sm rounded-xl hover:bg-warm/10 transition-all min-h-[44px]"
-        >
-          Sair da conta
-        </button>
+        <p className="text-xs text-muted mb-4 break-words">
+          Essas ações são sensíveis. Para exclusão de dados e conta, envie um e-mail conforme a LGPD.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: '/admin' })}
+            className="px-4 py-2.5 border border-warm/30 text-warm text-sm rounded-xl hover:bg-warm/10 transition-all min-h-[44px]"
+          >
+            Sair da conta
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteAccountOpen(true)}
+            className="px-4 py-2.5 border border-border text-muted text-sm rounded-xl hover:border-warm hover:text-warm transition-all min-h-[44px] inline-flex items-center justify-center gap-2"
+          >
+            <Trash2 size={16} aria-hidden />
+            Solicitar exclusão de conta
+          </button>
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteAccountOpen}
+        title="Solicitar exclusão de conta"
+        description={`Envie um e-mail para ${privacyMail} com o assunto "Exclusão de conta" e o identificador da sua loja. Responderemos em até 15 dias úteis, conforme a LGPD.`}
+        confirmLabel="Abrir e-mail"
+        cancelLabel="Fechar"
+        onConfirm={() => {
+          window.location.href = `mailto:${privacyMail}?subject=${encodeURIComponent('Exclusão de conta — vend.ai')}`
+          setDeleteAccountOpen(false)
+        }}
+        onCancel={() => setDeleteAccountOpen(false)}
+      />
     </>
   )
 }

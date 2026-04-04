@@ -35,7 +35,7 @@ async function revalidateStorePaths(storeId: string) {
   if (slug) revalidatePath(`/${slug}`)
 }
 
-export async function addCustomCategory(label: string) {
+export async function addCustomCategory(label: string): Promise<CustomCategory> {
   const session = await getSession()
   if (!session?.storeId) throw new Error('Não autorizado')
   const trimmed = String(label ?? '').trim()
@@ -58,7 +58,8 @@ export async function addCustomCategory(label: string) {
   const taken = new Set<string>([...PRODUCT_CATEGORY_SLUGS, ...list.map(c => c.value)])
   const value = uniqueSlug(base, taken)
 
-  list.push({ value, label: trimmed })
+  const added: CustomCategory = { value, label: trimmed }
+  list.push(added)
   const merged: StoreSettings = { ...current, customCategories: list }
 
   await sql`
@@ -66,6 +67,7 @@ export async function addCustomCategory(label: string) {
     WHERE id = ${session.storeId}
   `
   await revalidateStorePaths(session.storeId)
+  return added
 }
 
 export async function removeCustomCategory(value: string) {

@@ -1,29 +1,46 @@
 'use client'
 
 import { useState } from 'react'
+import { Info, Tag } from 'lucide-react'
 import type { CustomCategory } from '@/types'
 import { PRODUCT_CATEGORIES } from '@/types'
 import { addCustomCategory, removeCustomCategory } from '@/app/admin/actions'
+import ConfirmDialog from '@/components/admin/ConfirmDialog'
 
 interface Props {
   customCategories: CustomCategory[]
   productCounts: Record<string, number>
 }
 
-export default function CategoriesManager({ customCategories: initial, productCounts }: Props) {
+export default function CategoriesManager({ customCategories: initial, productCounts: initialCounts }: Props) {
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>(initial)
+  const [productCounts, setProductCounts] = useState<Record<string, number>>(initialCounts)
   const [newLabel, setNewLabel] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | null>(null)
+  const [removeValue, setRemoveValue] = useState<string | null>(null)
+  const [removeLabel, setRemoveLabel] = useState('')
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setFieldError(null)
+    const trimmed = newLabel.trim()
+    if (trimmed.length < 2) {
+      setFieldError('Use pelo menos 2 caracteres.')
+      return
+    }
+    if (customCategories.some(c => c.label.toLowerCase() === trimmed.toLowerCase())) {
+      setFieldError('Já existe uma categoria com esse nome.')
+      return
+    }
     setLoading(true)
     try {
-      await addCustomCategory(newLabel)
+      const added = await addCustomCategory(newLabel)
+      setCustomCategories(prev => [...prev, added])
+      setProductCounts(prev => ({ ...prev, [added.value]: 0 }))
       setNewLabel('')
-      window.location.reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao adicionar')
     } finally {
@@ -31,19 +48,23 @@ export default function CategoriesManager({ customCategories: initial, productCo
     }
   }
 
-  async function handleRemove(value: string) {
-    if (!window.confirm('Remover esta categoria da lista? Os produtos já cadastrados nela mantêm o mesmo tipo; você pode editar cada produto se precisar.')) {
-      return
-    }
+  async function confirmRemove() {
+    if (!removeValue) return
     setError(null)
     setLoading(true)
     try {
-      await removeCustomCategory(value)
-      setCustomCategories(prev => prev.filter(c => c.value !== value))
+      await removeCustomCategory(removeValue)
+      setCustomCategories(prev => prev.filter(c => c.value !== removeValue))
+      setProductCounts(prev => {
+        const next = { ...prev }
+        delete next[removeValue]
+        return next
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao remover')
     } finally {
       setLoading(false)
+      setRemoveValue(null)
     }
   }
 
@@ -56,7 +77,15 @@ export default function CategoriesManager({ customCategories: initial, productCo
       )}
 
       <section className="bg-surface border border-border rounded-2xl p-5">
-        <h2 className="font-syne font-bold text-sm mb-4 text-foreground">Categorias padrão</h2>
+        <div className="flex items-start gap-2 mb-4">
+          <h2 className="font-syne font-bold text-sm text-foreground">Categorias padrão</h2>
+          <span
+            className="inline-flex text-muted"
+            title="Estas categorias são fixas e não podem ser removidas."
+          >
+            <Info size={16} className="shrink-0 mt-0.5" aria-hidden />
+          </span>
+        </div>
         <p className="text-xs text-muted mb-4 break-words">
           Sempre disponíveis no cadastro de produto. A contagem reflete produtos ativos e inativos.
         </p>
@@ -77,22 +106,39 @@ export default function CategoriesManager({ customCategories: initial, productCo
       </section>
 
       <section className="bg-surface border border-border rounded-2xl p-5">
-        <h2 className="font-syne font-bold text-sm mb-4 text-foreground">Categorias da sua loja</h2>
+        <div className="flex items-start gap-2 mb-4">
+          <h2 className="font-syne font-bold text-sm text-foreground">Categorias da sua loja</h2>
+          <span
+            className="inline-flex text-muted"
+            title="Crie categorias específicas do seu negócio: Festa, Praia, Básico, etc."
+          >
+            <Info size={16} className="shrink-0 mt-0.5" aria-hidden />
+          </span>
+        </div>
         <p className="text-xs text-muted mb-4 break-words">
-          Use para perfumaria, relógios, bolsas e outros itens além do vestuário. Elas aparecem no cadastro de
-          produto e na análise por IA.
+          Use para perfumaria, relógios, bolsas e outros itens além do vestuário. Elas aparecem no cadastro de produto e
+          na análise por IA.
         </p>
 
         <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2 mb-6">
-          <input
-            type="text"
-            value={newLabel}
-            onChange={e => setNewLabel(e.target.value)}
-            placeholder="Ex: Perfumes, Relógios"
-            className="flex-1 min-w-0 min-h-[44px] px-4 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
-            maxLength={80}
-            disabled={loading}
-          />
+          <div className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={newLabel}
+              onChange={e => {
+                setNewLabel(e.target.value)
+                setFieldError(null)
+              }}
+              placeholder="Ex: Perfumes, Relógios"
+              className={`w-full min-h-[44px] px-4 py-2.5 bg-surface2 border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all ${
+                fieldError ? 'border-warm' : 'border-border'
+              }`}
+              maxLength={80}
+              disabled={loading}
+              aria-invalid={Boolean(fieldError)}
+            />
+            {fieldError && <p className="text-xs text-warm mt-1">{fieldError}</p>}
+          </div>
           <button
             type="submit"
             disabled={loading || !newLabel.trim()}
@@ -103,7 +149,11 @@ export default function CategoriesManager({ customCategories: initial, productCo
         </form>
 
         {customCategories.length === 0 ? (
-          <p className="text-sm text-muted">Nenhuma categoria extra ainda.</p>
+          <div className="text-center py-10 px-4 border border-dashed border-border rounded-xl">
+            <Tag className="w-10 h-10 mx-auto mb-3 text-muted opacity-60" aria-hidden />
+            <p className="text-sm font-medium text-foreground mb-1">Nenhuma categoria extra ainda</p>
+            <p className="text-xs text-muted">Adicione acima para organizar seu catálogo do seu jeito.</p>
+          </div>
         ) : (
           <ul className="space-y-2">
             {customCategories.map(c => (
@@ -120,7 +170,10 @@ export default function CategoriesManager({ customCategories: initial, productCo
                   <button
                     type="button"
                     disabled={loading}
-                    onClick={() => handleRemove(c.value)}
+                    onClick={() => {
+                      setRemoveValue(c.value)
+                      setRemoveLabel(c.label)
+                    }}
                     className="text-xs py-2 px-3 min-h-[40px] border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/10 transition-all disabled:opacity-50"
                   >
                     Excluir
@@ -131,6 +184,17 @@ export default function CategoriesManager({ customCategories: initial, productCo
           </ul>
         )}
       </section>
+
+      <ConfirmDialog
+        open={removeValue !== null}
+        title="Remover categoria?"
+        description={`A categoria "${removeLabel}" sai da lista. Os produtos já cadastrados nela não são apagados, mas podem perder o vínculo com este rótulo — edite cada produto se precisar.`}
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        variant="destructive"
+        onConfirm={() => void confirmRemove()}
+        onCancel={() => setRemoveValue(null)}
+      />
     </div>
   )
 }
