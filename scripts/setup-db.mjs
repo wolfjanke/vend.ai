@@ -129,43 +129,55 @@ async function setup() {
 
   console.log('✓ Tabelas criadas!')
 
-  // ─── Seed: Loja ────────────────────────────────────────────────────────────
+  // ─── Seed: Loja Demo ───────────────────────────────────────────────────────
   console.log('🌱 Inserindo dados de exemplo...')
 
   // Admin user
   const passwordHash = await bcrypt.hash('admin123', 10)
 
-  const existingUser = await sql`SELECT id FROM admin_users WHERE email = 'admin@bellamoda.com' LIMIT 1`
+  const existingUser = await sql`SELECT id FROM admin_users WHERE email = 'admin@urbanmix.com' LIMIT 1`
 
   let userId
   if (existingUser.length === 0) {
     const [newUser] = await sql`
       INSERT INTO admin_users (email, password_hash)
-      VALUES ('admin@bellamoda.com', ${passwordHash})
+      VALUES ('admin@urbanmix.com', ${passwordHash})
       RETURNING id
     `
     userId = newUser.id
-    console.log('✓ Admin user criado: admin@bellamoda.com / admin123')
+    console.log('✓ Admin user criado: admin@urbanmix.com / admin123')
   } else {
     userId = existingUser[0].id
     console.log('✓ Admin user já existe')
   }
 
+  // Configurações da loja demo com PIX 5%, frete e perfil unissex
+  const demoSettings = JSON.stringify({
+    freteInfo: 'Frete grátis para compras acima de R$ 199. Entregamos em todo Brasil em até 7 dias úteis.',
+    pagamentoInfo: 'PIX (5% de desconto), cartão de crédito em até 3x sem juros. Dinheiro na retirada.',
+    pixDiscountPercent: 5,
+    genderFocus: 'unisex',
+    ageGroup: 'adult',
+    installmentsMaxNoInterest: 3,
+  })
+
   // Loja
-  const existingStore = await sql`SELECT id FROM stores WHERE slug = 'bella-moda' LIMIT 1`
+  const existingStore = await sql`SELECT id FROM stores WHERE slug = 'urban-mix' LIMIT 1`
 
   let storeId
   if (existingStore.length === 0) {
     const [store] = await sql`
-      INSERT INTO stores (user_id, slug, name, whatsapp)
-      VALUES (${userId}, 'bella-moda', 'Bella Moda', '5511999999999')
+      INSERT INTO stores (user_id, slug, name, whatsapp, settings_json)
+      VALUES (${userId}, 'urban-mix', 'Urban Mix', '5511999999999', ${demoSettings}::jsonb)
       RETURNING id
     `
     storeId = store.id
-    console.log('✓ Loja "Bella Moda" criada, slug: bella-moda')
+    console.log('✓ Loja "Urban Mix" criada, slug: urban-mix')
   } else {
     storeId = existingStore[0].id
-    console.log('✓ Loja já existe')
+    // Garantir que o settings_json está atualizado mesmo se a loja já existia
+    await sql`UPDATE stores SET settings_json = ${demoSettings}::jsonb WHERE id = ${storeId}`
+    console.log('✓ Loja já existe (settings_json atualizado)')
   }
 
   // Vincular admin à loja
@@ -175,6 +187,7 @@ async function setup() {
   const existingProducts = await sql`SELECT COUNT(*) as c FROM products WHERE store_id = ${storeId}`
   if (Number(existingProducts[0].c) === 0) {
     const products = [
+      // ── Femininos ────────────────────────────────────────────────────────────
       {
         name: 'Vestido Midi Floral Manga Bufante',
         description: 'Vestido midi com estampa floral delicada e mangas bufantes. Ideal para looks românticos e encontros especiais.',
@@ -193,38 +206,77 @@ async function setup() {
         ]),
       },
       {
-        name: 'Blusa Cropped Ombro a Ombro',
-        description: 'Blusa cropped com decote ombro a ombro super tendência. Combina com calças, saias e shorts.',
-        category: 'blusa', price: 89.90, promo_price: null,
-        variants_json: JSON.stringify([
-          { id: 'v4', color: 'Branco', colorHex: '#FFFFFF', photos: [], stock: { PP: 2, P: 5, M: 7, G: 3 } },
-          { id: 'v5', color: 'Nude', colorHex: '#D4A574', photos: [], stock: { PP: 1, P: 3, M: 4, G: 2 } },
-        ]),
-      },
-      {
         name: 'Saia Midi Plissada',
         description: 'Saia midi plissada elegante e versátil. De looks casuais a formais, ela transforma qualquer visual.',
         category: 'saia', price: 129.90, promo_price: 109.90,
         variants_json: JSON.stringify([
-          { id: 'v6', color: 'Verde Musgo', colorHex: '#6B7C5C', photos: [], stock: { P: 3, M: 5, G: 4 } },
-          { id: 'v7', color: 'Vinho', colorHex: '#7B2D42', photos: [], stock: { P: 2, M: 3, G: 2 } },
+          { id: 'v4', color: 'Verde Musgo', colorHex: '#6B7C5C', photos: [], stock: { P: 3, M: 5, G: 4 } },
+          { id: 'v5', color: 'Vinho', colorHex: '#7B2D42', photos: [], stock: { P: 2, M: 3, G: 2 } },
         ]),
       },
       {
-        name: 'Calça Pantalona Linho',
-        description: 'Calça pantalona em linho premium para dias quentes. Conforto máximo com elegância.',
-        category: 'calca', price: 169.90, promo_price: null,
+        name: 'Blusa Cropped Ombro a Ombro',
+        description: 'Blusa cropped com decote ombro a ombro super tendência. Combina com calças, saias e shorts.',
+        category: 'blusa', price: 89.90, promo_price: null,
         variants_json: JSON.stringify([
-          { id: 'v8', color: 'Bege', colorHex: '#D2B48C', photos: [], stock: { P: 4, M: 6, G: 3, GG: 2 } },
+          { id: 'v6', color: 'Branco', colorHex: '#FFFFFF', photos: [], stock: { PP: 2, P: 5, M: 7, G: 3 } },
+          { id: 'v7', color: 'Nude', colorHex: '#D4A574', photos: [], stock: { PP: 1, P: 3, M: 4, G: 2 } },
+        ]),
+      },
+      // ── Masculinos ───────────────────────────────────────────────────────────
+      {
+        name: 'Camiseta Básica Oversized',
+        description: 'Camiseta oversized em algodão premium. Corte confortável e moderno, perfeita para o dia a dia.',
+        category: 'camiseta', price: 79.90, promo_price: null,
+        variants_json: JSON.stringify([
+          { id: 'v8', color: 'Preto', colorHex: '#1a1a1a', photos: [], stock: { P: 5, M: 8, G: 6, GG: 3 } },
+          { id: 'v9', color: 'Branco', colorHex: '#FFFFFF', photos: [], stock: { P: 4, M: 7, G: 5, GG: 2 } },
+          { id: 'v10', color: 'Cinza', colorHex: '#888888', photos: [], stock: { P: 3, M: 6, G: 4, GG: 2 } },
         ]),
       },
       {
-        name: 'Vestido Curto Canelado',
-        description: 'Vestido curto em tecido canelado que molda o corpo perfeitamente. Prático, moderno e chique.',
-        category: 'vestido', price: 139.90, promo_price: null,
+        name: 'Bermuda Jogger Cargo',
+        description: 'Bermuda jogger com bolsos cargo laterais. Estilo streetwear com muito conforto para o verão.',
+        category: 'bermuda', price: 119.90, promo_price: 99.90,
         variants_json: JSON.stringify([
-          { id: 'v9', color: 'Preto', colorHex: '#1a1a1a', photos: [], stock: { PP: 3, P: 5, M: 6, G: 4, GG: 2 } },
-          { id: 'v10', color: 'Caramelo', colorHex: '#C68642', photos: [], stock: { PP: 1, P: 3, M: 4, G: 2 } },
+          { id: 'v11', color: 'Cáqui', colorHex: '#C3A882', photos: [], stock: { P: 4, M: 6, G: 5, GG: 2 } },
+          { id: 'v12', color: 'Preto', colorHex: '#1a1a1a', photos: [], stock: { P: 3, M: 5, G: 4, GG: 2 } },
+        ]),
+      },
+      {
+        name: 'Moletom Masculino',
+        description: 'Moletom com capuz em moletinho flanelado. Quentinho, estiloso e versátil para as estações mais frias.',
+        category: 'moletom', price: 149.90, promo_price: null,
+        variants_json: JSON.stringify([
+          { id: 'v13', color: 'Cinza Mescla', colorHex: '#9E9E9E', photos: [], stock: { P: 3, M: 5, G: 4, GG: 1 } },
+          { id: 'v14', color: 'Azul Marinho', colorHex: '#1A237E', photos: [], stock: { P: 2, M: 4, G: 3, GG: 2 } },
+        ]),
+      },
+      {
+        name: 'Calça Slim Jeans',
+        description: 'Calça slim em jeans lavagem escura. Modelagem ajustada que valoriza o corpo com elegância casual.',
+        category: 'calca', price: 189.90, promo_price: null,
+        variants_json: JSON.stringify([
+          { id: 'v15', color: 'Índigo', colorHex: '#3F51B5', photos: [], stock: { 38: 3, 40: 5, 42: 6, 44: 4, 46: 2 } },
+        ]),
+      },
+      // ── Unissex ──────────────────────────────────────────────────────────────
+      {
+        name: 'Jaqueta Corta-Vento Unissex',
+        description: 'Jaqueta corta-vento leve com capuz e refletivos. Ideal para atividades ao ar livre e looks urbanos.',
+        category: 'casaco', price: 229.90, promo_price: 189.90,
+        variants_json: JSON.stringify([
+          { id: 'v16', color: 'Preto', colorHex: '#1a1a1a', photos: [], stock: { P: 3, M: 5, G: 4, GG: 2 } },
+          { id: 'v17', color: 'Verde Oliva', colorHex: '#556B2F', photos: [], stock: { P: 2, M: 4, G: 3, GG: 1 } },
+        ]),
+      },
+      {
+        name: 'Camiseta Tie-Dye Unissex',
+        description: 'Camiseta com estampa tie-dye artesanal. Cada peça é única — estilo descolado para qualquer gênero.',
+        category: 'camiseta', price: 69.90, promo_price: null,
+        variants_json: JSON.stringify([
+          { id: 'v18', color: 'Rosa/Roxo', colorHex: '#C471ED', photos: [], stock: { P: 4, M: 6, G: 5, GG: 2 } },
+          { id: 'v19', color: 'Azul/Turquesa', colorHex: '#00BCD4', photos: [], stock: { P: 3, M: 5, G: 4, GG: 2 } },
         ]),
       },
     ]
@@ -245,37 +297,38 @@ async function setup() {
   if (Number(existingOrders[0].c) === 0) {
     const pedidos = [
       {
-        order_number: 'BM-001',
-        customer_name: 'Ana Silva',
+        order_number: 'UM-001',
+        customer_name: 'Carlos Mendes',
         customer_whatsapp: '5511988887777',
         items_json: JSON.stringify([
-          { product_id: 'p1', name: 'Vestido Midi Floral', size: 'M', color: 'Rosa', qty: 1, price: 189.90 }
+          { product_id: 'p1', name: 'Camiseta Básica Oversized', size: 'M', color: 'Preto', qty: 2, price: 79.90 }
         ]),
-        total: 189.90,
-        notes: 'Pode ser na cor rosa mesmo',
+        total: 159.80,
+        notes: 'Quero os dois na cor preta mesmo',
         status: 'NOVO',
       },
       {
-        order_number: 'BM-002',
-        customer_name: 'Juliana Costa',
+        order_number: 'UM-002',
+        customer_name: 'Fernanda Lima',
         customer_whatsapp: '5521977776666',
         items_json: JSON.stringify([
           { product_id: 'p2', name: 'Conjunto Cropped + Wide Leg', size: 'P', color: 'Preto', qty: 1, price: 199.90 },
-          { product_id: 'p3', name: 'Blusa Cropped', size: 'P', color: 'Branco', qty: 1, price: 89.90 },
+          { product_id: 'p3', name: 'Saia Midi Plissada', size: 'P', color: 'Verde Musgo', qty: 1, price: 109.90 },
         ]),
-        total: 289.80,
-        notes: '',
+        total: 309.80,
+        notes: 'Paguei no PIX com 5% de desconto',
         status: 'CONFIRMADO',
       },
       {
-        order_number: 'BM-003',
-        customer_name: 'Mariana Rodrigues',
+        order_number: 'UM-003',
+        customer_name: 'Rafael Santos',
         customer_whatsapp: '5531966665555',
         items_json: JSON.stringify([
-          { product_id: 'p5', name: 'Calça Pantalona Linho', size: 'G', color: 'Bege', qty: 1, price: 169.90 }
+          { product_id: 'p4', name: 'Jaqueta Corta-Vento Unissex', size: 'G', color: 'Verde Oliva', qty: 1, price: 189.90 },
+          { product_id: 'p5', name: 'Bermuda Jogger Cargo', size: 'G', color: 'Cáqui', qty: 1, price: 99.90 },
         ]),
-        total: 169.90,
-        notes: 'Entregar pela manhã',
+        total: 289.80,
+        notes: 'Entregar pela manhã se possível',
         status: 'EM_ENTREGA',
       },
     ]
@@ -297,10 +350,10 @@ async function setup() {
   console.log('\n✅ Banco de dados configurado com sucesso!')
   console.log('\n📝 Credenciais de acesso:')
   console.log('   URL: http://localhost:3000/admin')
-  console.log('   Email: admin@bellamoda.com')
+  console.log('   Email: admin@urbanmix.com')
   console.log('   Senha: admin123')
   console.log('\n🛍️  Loja de exemplo:')
-  console.log('   URL: http://localhost:3000/bella-moda')
+  console.log('   URL: http://localhost:3000/urban-mix')
 }
 
 setup().catch(err => {

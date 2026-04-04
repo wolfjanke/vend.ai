@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { Product, CartItem, CustomCategory } from '@/types'
 import { getCategoryDisplayLabel } from '@/types'
+import ProductPlaceholder from './ProductPlaceholder'
 
 function sumStock(v: Product['variants_json'][0]): number {
   return Object.values(v.stock).reduce((a, b) => Number(a) + Number(b), 0)
@@ -94,8 +95,14 @@ export default function ProdutoCard({
   const isLowStock = variantTotalStock > 0 && variantTotalStock <= 3
   const cat = getCategoryDisplayLabel(product.category, customCategories)
 
+  // O botão fica habilitado somente quando cor e tamanho estão escolhidos.
+  // Se só há uma cor, ela já está auto-selecionada via selectedVariantIdx.
+  // Se só há um tamanho, ele é considerado implicitamente selecionado.
+  const effectiveSize = selectedSize ?? (allSizes.length === 1 ? allSizes[0] : null)
+  const canAdd = !isSoldOut && !!variant && !!effectiveSize
+
   function handleAdd(closeDetail?: boolean) {
-    const size = selectedSize ?? allSizes[0]
+    const size = effectiveSize
     if (!size || !variant) return
 
     onInteract?.()
@@ -148,13 +155,18 @@ export default function ProdutoCard({
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="relative w-full h-full flex flex-col items-center justify-center gap-2 px-3 bg-surface2 text-center">
-            <span className="text-5xl sm:text-6xl" aria-hidden>👗</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/90 line-clamp-2 break-words">{cat}</span>
-            {variant && (
-              <span className="text-xs text-muted break-words max-w-full">{variant.color}</span>
-            )}
-            <span className="text-[10px] text-muted/80 mt-1">Toque para ver detalhes</span>
+          <div className="absolute inset-0">
+            <ProductPlaceholder
+              category={product.category}
+              colorHex={variant?.colorHex}
+              className="w-full h-full"
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-bg/80 to-transparent pt-6 pb-2 px-2 text-center pointer-events-none">
+              {variant && (
+                <span className="text-[10px] text-muted/90 break-words block">{variant.color}</span>
+              )}
+              <span className="text-[9px] text-muted/60 block mt-0.5">Toque para ver detalhes</span>
+            </div>
           </div>
         )}
 
@@ -305,7 +317,7 @@ export default function ProdutoCard({
             <button
               type="button"
               onClick={() => handleAdd()}
-              disabled={allSizes.length === 0}
+              disabled={!canAdd}
               className={`w-full py-2.5 rounded-xl text-xs font-semibold border transition-all ${
                 added
                   ? 'bg-accent/20 border-accent text-accent'
@@ -365,7 +377,15 @@ export default function ProdutoCard({
                       />
                     ))}
                   </div>
-                ) : null}
+                ) : (
+                  <div className="w-full h-44 rounded-2xl overflow-hidden border border-border mb-3 bg-surface2">
+                    <ProductPlaceholder
+                      category={product.category}
+                      colorHex={variant?.colorHex}
+                      className="w-full h-full"
+                    />
+                  </div>
+                )}
                 <p className="text-xs text-muted uppercase tracking-wide mb-1">{cat}</p>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <span className="text-accent font-bold text-lg">
@@ -454,10 +474,17 @@ export default function ProdutoCard({
               </div>
               {!isSoldOut && (
                 <div className="flex-shrink-0 border-t border-border px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-surface">
+                  {!canAdd && !added && (
+                    <p className="text-center text-xs text-muted mb-2">
+                      {!variant
+                        ? 'Escolha uma cor para continuar'
+                        : 'Escolha um tamanho para continuar'}
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleAdd(true)}
-                    disabled={allSizes.length === 0}
+                    disabled={!canAdd}
                     className={`w-full min-h-[48px] py-3 rounded-xl text-sm font-semibold border transition-all ${
                       added
                         ? 'bg-accent/20 border-accent text-accent'

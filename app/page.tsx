@@ -17,37 +17,40 @@ import {
   Heart,
 } from 'lucide-react'
 import LandingHeader from '@/components/landing/LandingHeader'
-import LandingPhoneMockup from '@/components/landing/LandingPhoneMockup'
+import LandingHeroDevices from '@/components/landing/LandingHeroDevices'
 import ScrollReveal from '@/components/landing/ScrollReveal'
 import NumberCounter from '@/components/landing/NumberCounter'
 
+/** Padding horizontal seguro no mobile (evita texto colado na borda / cortado) */
+const sectionX = 'px-4 sm:px-6 md:px-12 lg:px-16'
+
 export default function LandingPage() {
   return (
-    <main className="relative z-10">
+    <main className="relative z-10 min-w-0 overflow-x-hidden">
       <div className="relative">
         <LandingHeader />
       </div>
 
       {/* ── Hero ──────────────────────────────────────────────── */}
-      <section className="min-h-[calc(100vh-64px)] flex items-center px-6 md:px-16 gap-16 relative overflow-hidden pt-8 pb-16">
+      <section className={`min-h-[calc(100vh-64px)] flex flex-col lg:flex-row lg:items-center lg:justify-between ${sectionX} gap-12 lg:gap-8 xl:gap-12 relative overflow-hidden pt-8 pb-16`}>
         {/* orbs */}
         <div className="animate-float-orb absolute w-[600px] h-[600px] -top-32 -left-32 bg-[radial-gradient(circle,_#7B6EFF12,_transparent_65%)] pointer-events-none" />
         <div className="animate-float-orb2 absolute w-[500px] h-[500px] bottom-0 right-32 bg-[radial-gradient(circle,_#00E5A00D,_transparent_65%)] pointer-events-none" />
 
-        <div className="flex-1 max-w-xl animate-fade-up">
+        <div className="w-full min-w-0 flex-1 max-w-full lg:max-w-lg xl:max-w-xl animate-fade-up">
           {/* badge */}
-          <div className="relative inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/40 bg-primary/10 text-primary text-xs font-bold mb-7 ring-pulse">
-            <Zap size={12} className="fill-primary" />
-            Plataforma com IA para quem vende moda
+          <div className="relative inline-flex flex-wrap items-center justify-center gap-2 px-3 py-2 sm:px-4 rounded-full border border-primary/40 bg-primary/10 text-primary text-[11px] sm:text-xs font-bold mb-6 sm:mb-7 ring-pulse max-w-full text-center">
+            <Zap size={12} className="fill-primary shrink-0" />
+            <span className="break-words text-balance">Plataforma com IA para quem vende moda</span>
           </div>
 
-          <h1 className="font-syne font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.1] mb-5">
+          <h1 className="font-syne font-extrabold text-[1.65rem] min-[400px]:text-[1.85rem] sm:text-4xl md:text-5xl lg:text-6xl leading-[1.12] sm:leading-[1.1] mb-5 break-words hyphens-auto max-w-full">
             Sua loja de roupas<br />
             no digital{' '}
             <span className="text-grad">em 2 minutos.</span>
           </h1>
 
-          <p className="text-muted text-base sm:text-lg leading-relaxed mb-8 max-w-md">
+          <p className="text-muted text-base sm:text-lg leading-relaxed mb-8 max-w-md break-words">
             Catálogo inteligente, assistente com IA e pedidos direto no WhatsApp.
             Perfeito pra quem está começando — sem precisar de site ou taxa de marketplace.
           </p>
@@ -61,7 +64,7 @@ export default function LandingPage() {
               <ArrowRight size={16} />
             </Link>
             <Link
-              href="/bella-moda"
+              href="/urban-mix"
               className="font-medium px-6 py-4 rounded-xl border border-border text-foreground hover:border-primary hover:text-primary transition-all text-center min-h-[48px] flex items-center justify-center"
               title="Ver loja de exemplo com a Vi em ação"
             >
@@ -92,52 +95,52 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <LandingPhoneMockup />
+        <LandingHeroDevices />
       </section>
 
       {/* ── Numbers ───────────────────────────────────────────── */}
-      <section className="px-6 md:px-16 py-14 border-t border-border bg-surface/40">
-        <ScrollReveal className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center max-w-4xl mx-auto">
+      <section className={`${sectionX} py-14 border-t border-border bg-surface/40`}>
+        <ScrollReveal className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center max-w-4xl mx-auto min-w-0">
           <div>
-            <div className="font-syne font-extrabold text-3xl sm:text-4xl text-grad mb-1">
+            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0 break-all">
               <NumberCounter target={1200} suffix="+" />
             </div>
-            <p className="text-xs text-muted leading-snug">Lojistas ativos</p>
+            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Lojistas ativos</p>
           </div>
           <div>
-            <div className="font-syne font-extrabold text-3xl sm:text-4xl text-grad mb-1">
+            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0">
               <NumberCounter target={2} suffix=" min" />
             </div>
-            <p className="text-xs text-muted leading-snug">Para montar a loja</p>
+            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Para montar a loja</p>
           </div>
           <div>
-            <div className="font-syne font-extrabold text-3xl sm:text-4xl text-grad mb-1">
+            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0">
               <NumberCounter target={95} suffix="%" />
             </div>
-            <p className="text-xs text-muted leading-snug">Pedidos via WhatsApp</p>
+            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Pedidos via WhatsApp</p>
           </div>
           <div>
-            <div className="font-syne font-extrabold text-3xl sm:text-4xl text-grad mb-1">
+            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0">
               <NumberCounter target={24} suffix="h" />
             </div>
-            <p className="text-xs text-muted leading-snug">Vi atendendo pra você</p>
+            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Vi atendendo pra você</p>
           </div>
         </ScrollReveal>
       </section>
 
       {/* ── O Problema ────────────────────────────────────────── */}
-      <section className="px-6 md:px-16 py-20 border-t border-border">
-        <ScrollReveal>
+      <section className={`${sectionX} py-16 sm:py-20 border-t border-border`}>
+        <ScrollReveal className="min-w-0">
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">A realidade de quem vende moda</p>
-          <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-4 max-w-xl leading-tight">
+          <h2 className="font-syne font-extrabold text-2xl min-[400px]:text-[1.65rem] sm:text-3xl md:text-4xl mb-4 max-w-full sm:max-w-xl leading-tight break-words text-balance">
             Você passa mais tempo respondendo Direct do que vendendo?
           </h2>
-          <p className="text-muted text-base max-w-lg mb-12">
+          <p className="text-muted text-base max-w-full sm:max-w-lg mb-10 sm:mb-12 break-words">
             Esse é o problema de quem começa. Com o vend.ai isso muda.
           </p>
         </ScrollReveal>
 
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-3 gap-4 sm:gap-5 min-w-0">
           {[
             {
               icon: Clock,
@@ -162,21 +165,21 @@ export default function LandingPage() {
             },
           ].map((item, i) => (
             <ScrollReveal key={item.label} delay={i * 120}>
-              <div className="bg-surface border border-border rounded-2xl p-6 h-full flex flex-col gap-4 hover:border-primary/40 transition-all">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-warm/10 flex items-center justify-center">
-                    <item.icon size={16} className="text-warm-DEFAULT" style={{ color: 'var(--warm)' }} />
+              <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 h-full flex flex-col gap-4 hover:border-primary/40 transition-all min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 shrink-0 rounded-lg bg-warm/10 flex items-center justify-center">
+                    <item.icon size={18} className="text-warm-DEFAULT" style={{ color: 'var(--warm)' }} />
                   </div>
-                  <span className="font-syne font-bold text-sm">{item.label}</span>
+                  <span className="font-syne font-bold text-base sm:text-sm min-w-0 break-words leading-tight">{item.label}</span>
                 </div>
-                <div className="flex flex-col gap-3 flex-1">
-                  <div className="flex gap-2.5 items-start">
+                <div className="flex flex-col gap-3 flex-1 min-w-0">
+                  <div className="flex gap-2.5 items-start min-w-0">
                     <XCircle size={15} className="mt-0.5 shrink-0 text-warm-DEFAULT" style={{ color: 'var(--warm)' }} />
-                    <p className="text-sm text-muted leading-relaxed">{item.before}</p>
+                    <p className="text-sm text-muted leading-relaxed min-w-0 break-words">{item.before}</p>
                   </div>
-                  <div className="flex gap-2.5 items-start">
+                  <div className="flex gap-2.5 items-start min-w-0">
                     <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-accent" />
-                    <p className="text-sm text-foreground leading-relaxed">{item.after}</p>
+                    <p className="text-sm text-foreground leading-relaxed min-w-0 break-words">{item.after}</p>
                   </div>
                 </div>
               </div>
@@ -186,14 +189,14 @@ export default function LandingPage() {
       </section>
 
       {/* ── Vi em Ação (mock chat) ─────────────────────────────── */}
-      <section className="px-6 md:px-16 py-20 border-t border-border">
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-          <ScrollReveal direction="left">
+      <section className={`${sectionX} py-16 sm:py-20 border-t border-border`}>
+        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-12 items-center min-w-0">
+          <ScrollReveal direction="left" className="min-w-0">
             <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Vi — Assistente com IA</p>
-            <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-5 leading-tight">
+            <h2 className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl mb-5 leading-tight break-words text-balance">
               Sua vendedora virtual que nunca dorme
             </h2>
-            <p className="text-muted text-base leading-relaxed mb-6">
+            <p className="text-muted text-base leading-relaxed mb-6 break-words">
               A Vi conhece todo o seu catálogo, sugere produtos por estilo, cor e tamanho, e guia o cliente até o pedido no WhatsApp — tudo automaticamente.
             </p>
             <ul className="flex flex-col gap-3">
@@ -273,7 +276,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Como funciona ─────────────────────────────────────── */}
-      <section id="como-funciona" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
+      <section id="como-funciona" className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24`}>
         <ScrollReveal>
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Como funciona</p>
           <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-14 leading-tight">
@@ -306,15 +309,15 @@ export default function LandingPage() {
             },
           ].map((step, i) => (
             <ScrollReveal key={step.n} delay={i * 130}>
-              <div className="relative bg-surface border border-border rounded-2xl p-7 hover:border-primary hover:-translate-y-1 hover:shadow-[0_10px_40px_var(--primary-glow)] transition-all h-full">
-                <span className="absolute top-4 right-5 font-syne font-extrabold text-5xl text-primary/10 leading-none select-none">
+              <div className="relative bg-surface border border-border rounded-2xl p-5 sm:p-7 hover:border-primary hover:-translate-y-1 hover:shadow-[0_10px_40px_var(--primary-glow)] transition-all h-full min-w-0">
+                <span className="absolute top-4 right-4 sm:right-5 font-syne font-extrabold text-4xl sm:text-5xl text-primary/10 leading-none select-none max-w-[45%] text-right break-all pointer-events-none">
                   {step.n}
                 </span>
-                <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center mb-4">
+                <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center mb-4 shrink-0">
                   <step.icon size={20} className="text-primary" />
                 </div>
-                <h3 className="font-syne font-bold text-base mb-2">{step.title}</h3>
-                <p className="text-sm text-muted leading-relaxed">{step.desc}</p>
+                <h3 className="font-syne font-bold text-base mb-2 min-w-0 break-words pr-10">{step.title}</h3>
+                <p className="text-sm text-muted leading-relaxed min-w-0 break-words">{step.desc}</p>
               </div>
             </ScrollReveal>
           ))}
@@ -322,7 +325,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ──────────────────────────────────────────── */}
-      <section id="funcionalidades" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
+      <section id="funcionalidades" className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24`}>
         <ScrollReveal>
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Funcionalidades</p>
           <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-14 leading-tight">
@@ -373,8 +376,8 @@ export default function LandingPage() {
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.highlight ? 'bg-primary/20' : 'bg-surface2'}`}>
                   <f.icon size={18} className={f.highlight ? 'text-primary' : 'text-muted'} />
                 </div>
-                <h3 className="font-syne font-bold text-sm">{f.title}</h3>
-                <p className="text-xs text-muted leading-relaxed">{f.desc}</p>
+                <h3 className="font-syne font-bold text-sm min-w-0 break-words">{f.title}</h3>
+                <p className="text-xs text-muted leading-relaxed min-w-0 break-words">{f.desc}</p>
               </div>
             </ScrollReveal>
           ))}
@@ -382,8 +385,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── Para quem é ───────────────────────────────────────── */}
-      <section className="px-6 md:px-16 py-20 border-t border-border">
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+      <section className={`${sectionX} py-16 sm:py-20 border-t border-border`}>
+        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-12 items-center min-w-0">
           <ScrollReveal direction="left">
             <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Para quem é</p>
             <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-5 leading-tight">
@@ -441,7 +444,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Depoimentos ───────────────────────────────────────── */}
-      <section className="px-6 md:px-16 py-20 border-t border-border">
+      <section className={`${sectionX} py-16 sm:py-20 border-t border-border`}>
         <ScrollReveal>
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Depoimentos</p>
           <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-12 leading-tight">
@@ -449,7 +452,7 @@ export default function LandingPage() {
           </h2>
         </ScrollReveal>
 
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-3 gap-4 sm:gap-5 min-w-0">
           {[
             {
               quote: 'Montei minha loja em um dia. A Vi atende meus clientes e os pedidos chegam certinhos no WhatsApp. Não precisei de nada técnico.',
@@ -474,13 +477,13 @@ export default function LandingPage() {
             },
           ].map((t, i) => (
             <ScrollReveal key={t.name} delay={i * 100}>
-              <div className="bg-surface border border-border rounded-2xl p-6 h-full flex flex-col gap-4 hover:border-primary/30 transition-all">
+              <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 h-full flex flex-col gap-4 hover:border-primary/30 transition-all min-w-0">
                 <div className="flex">
                   {[...Array(5)].map((_, j) => (
                     <Star key={j} size={13} className="fill-accent text-accent" />
                   ))}
                 </div>
-                <p className="text-sm text-muted leading-relaxed flex-1">
+                <p className="text-sm text-muted leading-relaxed flex-1 min-w-0 break-words">
                   &ldquo;
                   {t.quote.split(t.highlight).map((part, idx, arr) => (
                     idx < arr.length - 1
@@ -503,33 +506,36 @@ export default function LandingPage() {
       </section>
 
       {/* ── Planos ────────────────────────────────────────────── */}
-      <section id="planos" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
-        <ScrollReveal>
+      <section id="planos" className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24`}>
+        <ScrollReveal className="min-w-0">
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Planos</p>
-          <h2 className="font-syne font-extrabold text-xl sm:text-3xl md:text-4xl leading-tight mb-4 max-w-2xl">
+          <h2 className="font-syne font-extrabold text-xl sm:text-3xl md:text-4xl leading-tight mb-4 max-w-full sm:max-w-2xl break-words">
             Comece grátis.<br />Cresça quando quiser.
           </h2>
-          <p className="text-muted text-sm mb-14">Sem fidelidade. Cancele quando quiser.</p>
+          <p className="text-muted text-sm mb-10 sm:mb-14">Sem fidelidade. Cancele quando quiser.</p>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 min-w-0">
           {/* Grátis */}
           <ScrollReveal delay={0}>
-            <div className="bg-surface border border-border rounded-2xl p-7 w-full flex flex-col h-full">
-              <h3 className="font-syne font-bold text-lg mb-2">Grátis</h3>
-              <div className="font-syne font-extrabold text-4xl text-accent mb-1">
-                R$ 0<span className="text-base text-muted">/mês</span>
+            <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
+              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Grátis</h3>
+              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
+                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 0</p>
+                <p className="text-sm text-muted font-medium">por mês</p>
               </div>
-              <p className="text-xs text-muted mb-6">Para começar e testar</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm">
+              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para começar e testar</p>
+              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
                 {['Até 10 produtos', 'Vi assistente básica', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-foreground">
-                    <CheckCircle2 size={13} className="text-accent shrink-0" /> {f}
+                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
+                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
                 {['IA no cadastro', 'Recuperação de pedido'].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-muted">
-                    <XCircle size={13} className="shrink-0" /> {f}
+                  <li key={f} className="flex items-start gap-2 text-muted min-w-0">
+                    <XCircle size={13} className="shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -541,21 +547,24 @@ export default function LandingPage() {
 
           {/* Starter */}
           <ScrollReveal delay={100}>
-            <div className="bg-surface border border-border rounded-2xl p-7 w-full flex flex-col h-full">
-              <h3 className="font-syne font-bold text-lg mb-2">Starter</h3>
-              <div className="font-syne font-extrabold text-4xl text-accent mb-1">
-                R$ 39,90<span className="text-base text-muted">/mês</span>
+            <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
+              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Starter</h3>
+              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
+                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 39,90</p>
+                <p className="text-sm text-muted font-medium">por mês</p>
               </div>
-              <p className="text-xs text-muted mb-6">Para começar a vender</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm">
+              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para começar a vender</p>
+              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
                 {['Até 25 produtos', 'Vi com IA real', 'IA no cadastro de produto', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-foreground">
-                    <CheckCircle2 size={13} className="text-accent shrink-0" /> {f}
+                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
+                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
                 {['Recuperação de pedido'].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-muted">
-                    <XCircle size={13} className="shrink-0" /> {f}
+                  <li key={f} className="flex items-start gap-2 text-muted min-w-0">
+                    <XCircle size={13} className="shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -567,19 +576,21 @@ export default function LandingPage() {
 
           {/* Pro - Mais popular */}
           <ScrollReveal delay={200}>
-            <div className="bg-surface border border-primary rounded-2xl p-7 w-full flex flex-col h-full shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]">
+            <div className="bg-surface border border-primary rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0 shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]">
               <span className="inline-flex bg-primary text-white text-xs font-bold px-3 py-1 rounded-full self-start mb-3">
                 Mais popular
               </span>
-              <h3 className="font-syne font-bold text-lg mb-2">Pro</h3>
-              <div className="font-syne font-extrabold text-4xl text-accent mb-1">
-                R$ 49,90<span className="text-base text-muted">/mês</span>
+              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Pro</h3>
+              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
+                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 49,90</p>
+                <p className="text-sm text-muted font-medium">por mês</p>
               </div>
-              <p className="text-xs text-muted mb-6">Para lojas em crescimento</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm">
+              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para lojas em crescimento</p>
+              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
                 {['Até 50 produtos', 'Vi com IA real', 'IA no cadastro de produto', 'Recuperação de pedido', 'Métricas avançadas', 'Suporte prioritário'].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-foreground">
-                    <CheckCircle2 size={13} className="text-accent shrink-0" /> {f}
+                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
+                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -591,16 +602,18 @@ export default function LandingPage() {
 
           {/* Loja */}
           <ScrollReveal delay={300}>
-            <div className="bg-surface border border-border rounded-2xl p-7 w-full flex flex-col h-full">
-              <h3 className="font-syne font-bold text-lg mb-2">Loja</h3>
-              <div className="font-syne font-extrabold text-4xl text-accent mb-1">
-                R$ 99,90<span className="text-base text-muted">/mês</span>
+            <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
+              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Loja</h3>
+              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
+                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 99,90</p>
+                <p className="text-sm text-muted font-medium">por mês</p>
               </div>
-              <p className="text-xs text-muted mb-6">Para quem já vende muito</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm">
+              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para quem já vende muito</p>
+              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
                 {['Produtos ilimitados', 'Vi com IA real', 'IA no cadastro', 'Recuperação de pedido', 'Métricas completas', 'Suporte prioritário'].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-foreground">
-                    <CheckCircle2 size={13} className="text-accent shrink-0" /> {f}
+                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
+                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -613,7 +626,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FAQ ───────────────────────────────────────────────── */}
-      <section id="faq" className="px-6 md:px-16 py-20 border-t border-border scroll-mt-24">
+      <section id="faq" className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24`}>
         <ScrollReveal>
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">FAQ</p>
           <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-10 leading-tight">
@@ -621,7 +634,7 @@ export default function LandingPage() {
           </h2>
         </ScrollReveal>
 
-        <div className="max-w-2xl space-y-2">
+        <div className="max-w-2xl space-y-2 min-w-0 mx-auto sm:mx-0">
           {[
             {
               q: 'Preciso saber de tecnologia para usar?',
@@ -654,8 +667,8 @@ export default function LandingPage() {
           ].map((item, i) => (
             <ScrollReveal key={i} delay={i * 50}>
               <details className="bg-surface border border-border rounded-xl overflow-hidden group">
-                <summary className="px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between gap-3 hover:text-primary transition-colors">
-                  <span>{item.q}</span>
+                <summary className="px-4 sm:px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between gap-3 hover:text-primary transition-colors min-w-0">
+                  <span className="min-w-0 flex-1 pe-2 break-words">{item.q}</span>
                   <span className="text-muted group-open:rotate-180 transition-transform shrink-0 text-xs">▼</span>
                 </summary>
                 <p className="px-5 pb-4 text-sm text-muted leading-relaxed">{item.a}</p>
@@ -666,7 +679,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA Final ─────────────────────────────────────────── */}
-      <section className="px-6 md:px-16 py-24 border-t border-border relative overflow-hidden">
+      <section className={`${sectionX} py-20 sm:py-24 border-t border-border relative overflow-hidden`}>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#7B6EFF18_0%,_transparent_65%)] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,_#00E5A010_0%,_transparent_50%)] pointer-events-none" />
 
@@ -691,7 +704,7 @@ export default function LandingPage() {
               <ArrowRight size={18} />
             </Link>
             <Link
-              href="/bella-moda"
+              href="/urban-mix"
               className="font-medium px-7 py-4 rounded-xl border border-border text-foreground hover:border-primary hover:text-primary transition-all text-center min-h-[52px] flex items-center justify-center"
             >
               Ver demonstração
@@ -704,7 +717,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ────────────────────────────────────────────── */}
-      <footer className="px-6 py-12 border-t border-border">
+      <footer className={`${sectionX} py-10 sm:py-12 border-t border-border`}>
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row gap-8 md:gap-0 justify-between items-start md:items-center mb-8">
             <div>
