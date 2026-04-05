@@ -9,21 +9,31 @@ import {
   Tag,
   Megaphone,
   Settings,
+  CreditCard,
+  BarChart2,
+  ShoppingCart,
   type LucideIcon,
 } from 'lucide-react'
+import type { PlanSlug } from '@/types'
 
-const navItems: Array<{
-  href: string
-  label: string
-  Icon: LucideIcon
-  match: 'exact' | 'prefix'
-}> = [
-  { href: '/admin/dashboard', label: 'Dashboard', Icon: LayoutDashboard, match: 'exact' },
-  { href: '/admin/pedidos', label: 'Pedidos', Icon: ShoppingBag, match: 'prefix' },
-  { href: '/admin/produtos', label: 'Produtos', Icon: Shirt, match: 'prefix' },
-  { href: '/admin/categorias', label: 'Categorias', Icon: Tag, match: 'exact' },
-  { href: '/admin/marketing', label: 'Marketing', Icon: Megaphone, match: 'exact' },
-  { href: '/admin/configuracoes', label: 'Config', Icon: Settings, match: 'exact' },
+interface NavItem {
+  href:     string
+  label:    string
+  Icon:     LucideIcon
+  match:    'exact' | 'prefix'
+  planOnly?: PlanSlug
+}
+
+const navItems: NavItem[] = [
+  { href: '/admin/dashboard',    label: 'Dashboard',  Icon: LayoutDashboard, match: 'exact' },
+  { href: '/admin/pedidos',      label: 'Pedidos',    Icon: ShoppingBag,     match: 'prefix' },
+  { href: '/admin/produtos',     label: 'Produtos',   Icon: Shirt,           match: 'prefix' },
+  { href: '/admin/categorias',   label: 'Categorias', Icon: Tag,             match: 'exact' },
+  { href: '/admin/marketing',    label: 'Marketing',  Icon: Megaphone,       match: 'exact' },
+  { href: '/admin/pagamentos',   label: 'Pagamentos', Icon: CreditCard,      match: 'prefix' },
+  { href: '/admin/financeiro',   label: 'Financeiro', Icon: BarChart2,       match: 'prefix' },
+  { href: '/admin/pdv',          label: 'PDV',        Icon: ShoppingCart,    match: 'prefix', planOnly: 'loja' },
+  { href: '/admin/configuracoes', label: 'Config',   Icon: Settings,        match: 'exact' },
 ]
 
 function isActive(pathname: string, href: string, match: 'exact' | 'prefix') {
@@ -33,16 +43,19 @@ function isActive(pathname: string, href: string, match: 'exact' | 'prefix') {
 
 interface Props {
   newOrdersCount: number
+  plan?: PlanSlug
 }
 
-export default function AdminSidebar({ newOrdersCount }: Props) {
+export default function AdminSidebar({ newOrdersCount, plan = 'free' }: Props) {
   const pathname = usePathname() ?? ''
+
+  const visibleItems = navItems.filter(item => !item.planOnly || item.planOnly === plan)
 
   return (
     <>
       <aside className="hidden md:flex w-52 flex-col gap-1 p-4 border-r border-border min-h-[calc(100vh-64px)] sticky top-16">
-        {navItems.map(({ href, label, Icon, match }) => {
-          const active = isActive(pathname, href, match)
+        {visibleItems.map(({ href, label, Icon, match }) => {
+          const active    = isActive(pathname, href, match)
           const showBadge = href === '/admin/pedidos' && newOrdersCount > 0
           return (
             <Link
@@ -70,8 +83,8 @@ export default function AdminSidebar({ newOrdersCount }: Props) {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-border flex max-w-[100vw]"
         style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
       >
-        {navItems.map(({ href, label, Icon, match }) => {
-          const active = isActive(pathname, href, match)
+        {visibleItems.map(({ href, label, Icon, match }) => {
+          const active    = isActive(pathname, href, match)
           const showBadge = href === '/admin/pedidos' && newOrdersCount > 0
           return (
             <Link

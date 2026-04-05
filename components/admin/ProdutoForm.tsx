@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter }        from 'next/navigation'
-import type { Product, ProductVariant, CustomCategory } from '@/types'
+import type { Product, ProductVariant, CustomCategory, VariantType } from '@/types'
 import { PRODUCT_CATEGORIES, SIZES } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import { numberToCurrencyInput, parseCurrency } from '@/lib/masks'
@@ -21,7 +21,16 @@ interface VariantState {
   photos:            File[]
   existingPhotoUrls?: string[]
   stock:             Record<string, number>
+  variantType:       VariantType
 }
+
+const VARIANT_TYPE_OPTIONS: Array<{ value: VariantType; label: string }> = [
+  { value: 'cor',      label: 'Cor' },
+  { value: 'modelo',   label: 'Modelo / Referência' },
+  { value: 'estampa',  label: 'Estampa' },
+  { value: 'material', label: 'Material' },
+  { value: 'tamanho',  label: 'Tamanho (variação gratuita)' },
+]
 
 /** Reparte ficheiros pelas variações: 1 foto por cor na ordem; extras na última cor. */
 function distributeFilesAcrossVariants(files: File[], variantCount: number): File[][] {
@@ -108,6 +117,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         photos:            [],
         existingPhotoUrls: v.photos ?? [],
         stock:             v.stock ?? Object.fromEntries(SIZES.map(s => [s, 0])),
+        variantType:       v.variantType ?? 'cor',
       }))
     )
   }, [initialProduct])
@@ -159,21 +169,23 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       const rawVariantes = data.variantes ?? []
       let generatedVariants: VariantState[] = rawVariantes.map(
         (v: { cor: string; corHex: string }, i: number) => ({
-          id:       crypto.randomUUID(),
-          color:    v.cor,
-          colorHex: v.corHex ?? '#888888',
-          photos:   [] as File[],
-          stock: Object.fromEntries(SIZES.map(s => [s, 0])),
+          id:          crypto.randomUUID(),
+          color:       v.cor,
+          colorHex:    v.corHex ?? '#888888',
+          photos:      [] as File[],
+          stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+          variantType: 'cor' as VariantType,
         })
       )
 
       if (generatedVariants.length === 0) {
         generatedVariants = [{
-          id:       crypto.randomUUID(),
-          color:    'Único',
-          colorHex: '#888888',
-          photos:   [...filesSnapshot],
-          stock:    Object.fromEntries(SIZES.map(s => [s, 0])),
+          id:          crypto.randomUUID(),
+          color:       'Único',
+          colorHex:    '#888888',
+          photos:      [...filesSnapshot],
+          stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+          variantType: 'cor' as VariantType,
         }]
       } else {
         const buckets = distributeFilesAcrossVariants(filesSnapshot, generatedVariants.length)
@@ -209,11 +221,12 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
   function addVariant() {
     setVariants(prev => [...prev, {
-      id:       crypto.randomUUID(),
-      color:    'Nova Cor',
-      colorHex: '#888888',
-      photos:   [],
-      stock:    Object.fromEntries(SIZES.map(s => [s, 0])),
+      id:          crypto.randomUUID(),
+      color:       'Nova Cor',
+      colorHex:    '#888888',
+      photos:      [],
+      stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+      variantType: 'cor' as VariantType,
     }])
   }
 
@@ -297,11 +310,12 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           const newUrls = await Promise.all(v.photos.map(uploadPhoto))
           const photoUrls = [...(v.existingPhotoUrls ?? []), ...newUrls]
           return {
-            id:       v.id,
-            color:    v.color,
-            colorHex: v.colorHex,
-            photos:   photoUrls,
-            stock:    v.stock,
+            id:          v.id,
+            color:       v.color,
+            colorHex:    v.colorHex,
+            photos:      photoUrls,
+            stock:       v.stock,
+            variantType: v.variantType,
           }
         })
       )
@@ -514,7 +528,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
           {/* Variants */}
           <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-            <div className="font-syne font-bold text-sm mb-4">Variações de Cor</div>
+            <div className="font-syne font-bold text-sm mb-1">Variações</div>
+            <p className="text-[11px] text-muted mb-4 break-words">Cor, modelo ou estampa diferente = produto diferente (conta no limite do plano). Tamanho = variação gratuita.</p>
 
             {variants.map(v => {
               const noPhoto = variantHasNoPhoto(v)
@@ -526,7 +541,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                     className="flex-1 min-w-0 px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground font-syne font-bold text-xs outline-none focus:border-primary transition-all"
                     value={v.color}
                     onChange={e => updateVariant(v.id, { color: e.target.value })}
-                    placeholder="Nome da cor"
+                    placeholder="Nome da variação"
                   />
                   <input
                     type="color"
@@ -544,6 +559,18 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   >
                     ✕
                   </button>
+                </div>
+                <div className="mb-3">
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Tipo de variação</label>
+                  <select
+                    className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary transition-all appearance-none"
+                    value={v.variantType}
+                    onChange={e => updateVariant(v.id, { variantType: e.target.value as VariantType })}
+                  >
+                    {VARIANT_TYPE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="mb-4">

@@ -526,13 +526,13 @@ export default function LandingPage() {
               </div>
               <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para começar e testar</p>
               <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Até 10 produtos', 'Vi assistente básica', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
+                {['Até 10 produtos', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
                   <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
                     <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
                     <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
-                {['IA no cadastro', 'Recuperação de pedido'].map(f => (
+                {['IA no cadastro', 'Vi — atendente IA 24h', 'Mini PDV'].map(f => (
                   <li key={f} className="flex items-start gap-2 text-muted min-w-0">
                     <XCircle size={13} className="shrink-0 mt-0.5" />
                     <span className="min-w-0 break-words leading-snug">{f}</span>
@@ -550,18 +550,18 @@ export default function LandingPage() {
             <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
               <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Starter</h3>
               <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
-                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 39,90</p>
+                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 49,90</p>
                 <p className="text-sm text-muted font-medium">por mês</p>
               </div>
               <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para começar a vender</p>
               <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Até 25 produtos', 'Vi com IA real', 'IA no cadastro de produto', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
+                {['Até 50 produtos', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'IA no cadastro de produto', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
                   <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
                     <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
                     <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
-                {['Recuperação de pedido'].map(f => (
+                {['Vi — atendente IA 24h', 'Mini PDV'].map(f => (
                   <li key={f} className="flex items-start gap-2 text-muted min-w-0">
                     <XCircle size={13} className="shrink-0 mt-0.5" />
                     <span className="min-w-0 break-words leading-snug">{f}</span>
@@ -582,14 +582,20 @@ export default function LandingPage() {
               </span>
               <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Pro</h3>
               <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
-                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 49,90</p>
+                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 99,90</p>
                 <p className="text-sm text-muted font-medium">por mês</p>
               </div>
               <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para lojas em crescimento</p>
               <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Até 50 produtos', 'Vi com IA real', 'IA no cadastro de produto', 'Recuperação de pedido', 'Métricas avançadas', 'Suporte prioritário'].map(f => (
+                {['Até 200 produtos', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'IA no cadastro de produto', 'Vi — atendente IA 24h', 'Recuperação de pedido', 'Métricas avançadas', 'Suporte prioritário'].map(f => (
                   <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
                     <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words leading-snug">{f}</span>
+                  </li>
+                ))}
+                {['Mini PDV'].map(f => (
+                  <li key={f} className="flex items-start gap-2 text-muted min-w-0">
+                    <XCircle size={13} className="shrink-0 mt-0.5" />
                     <span className="min-w-0 break-words leading-snug">{f}</span>
                   </li>
                 ))}
@@ -605,12 +611,12 @@ export default function LandingPage() {
             <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
               <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Loja</h3>
               <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
-                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 99,90</p>
+                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 199,90</p>
                 <p className="text-sm text-muted font-medium">por mês</p>
               </div>
               <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para quem já vende muito</p>
               <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Produtos ilimitados', 'Vi com IA real', 'IA no cadastro', 'Recuperação de pedido', 'Métricas completas', 'Suporte prioritário'].map(f => (
+                {['Produtos ilimitados', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'IA no cadastro de produto', 'Vi — atendente IA 24h', 'Mini PDV (venda presencial)', 'Link de pagamento pelo PDV', 'Métricas completas', 'Suporte prioritário'].map(f => (
                   <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
                     <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
                     <span className="min-w-0 break-words leading-snug">{f}</span>
@@ -649,8 +655,8 @@ export default function LandingPage() {
               a: 'A Vi é uma assistente com IA que atende seus clientes na loja: sugere produtos por estilo, cor ou tamanho, responde dúvidas e indica como finalizar o pedido pelo WhatsApp.',
             },
             {
-              q: 'Qual o limite de produtos no plano grátis?',
-              a: 'No plano Grátis você pode cadastrar até 10 produtos. Nos planos Starter (25), Pro (50) e Loja (ilimitado) o limite aumenta.',
+              q: 'Qual o limite de produtos em cada plano?',
+              a: 'Grátis: 10 produtos. Starter: 50. Pro: 200. Loja: ilimitado. Importante: cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
             },
             {
               q: 'Como faço upgrade de plano?',

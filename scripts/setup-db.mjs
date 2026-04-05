@@ -127,6 +127,31 @@ async function setup() {
   await sql`CREATE INDEX IF NOT EXISTS password_reset_tokens_token_idx ON password_reset_tokens(token)`
   await sql`CREATE INDEX IF NOT EXISTS password_reset_tokens_user_idx ON password_reset_tokens(user_id)`
 
+  // Migration 005: Asaas checkout integration
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_account_id       VARCHAR(64)`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_wallet_id        VARCHAR(64)`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_api_key_enc      TEXT`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_onboarding_status VARCHAR(32) DEFAULT 'PENDING'`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_onboarding_url   TEXT`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_approved_at      TIMESTAMPTZ`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_source          VARCHAR(16)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS asaas_payment_id        VARCHAR(64)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS asaas_installment_id    VARCHAR(64)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS checkout_gross_value    DECIMAL(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS checkout_installment_count INT`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS checkout_installment_value DECIMAL(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS platform_fee_pct        DECIMAL(5,4)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS platform_fee_amount     DECIMAL(10,2)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS asaas_split_status      VARCHAR(32)`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status          VARCHAR(32)`
+  await sql`CREATE TABLE IF NOT EXISTS webhook_events_asaas (
+    id           SERIAL PRIMARY KEY,
+    event_id     VARCHAR(128) UNIQUE NOT NULL,
+    event_type   VARCHAR(64),
+    payload      JSONB,
+    processed_at TIMESTAMPTZ DEFAULT NOW()
+  )`
+
   console.log('✓ Tabelas criadas!')
 
   // ─── Seed: Loja Demo ───────────────────────────────────────────────────────

@@ -259,6 +259,8 @@ export default function StoreClient({ store, products }: Props) {
         pixDiscountPercent={Number(settings.pixDiscountPercent ?? 0)}
         couponRules={settings.couponRules ?? []}
         storeSettings={settings}
+        storeSlug={store.slug}
+        asaasApproved={store.asaas_onboarding_status === 'APPROVED'}
       />
 
       {/* Vi chat */}

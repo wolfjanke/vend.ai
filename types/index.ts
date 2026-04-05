@@ -22,8 +22,8 @@ export type PlanSlug = 'free' | 'starter' | 'pro' | 'loja'
 
 export const PLAN_PRODUCT_LIMITS: Record<PlanSlug, number | null> = {
   free:    10,
-  starter: 25,
-  pro:     50,
+  starter: 50,
+  pro:     200,
   loja:    null, // ilimitado
 }
 
@@ -174,15 +174,20 @@ export interface Store extends StoreAddress {
   created_at:    string
   user_id:       string
   plan?:         PlanSlug
+  asaas_account_id?:       string
+  asaas_wallet_id?:        string
+  asaas_onboarding_status?: AsaasOnboardingStatus
+  asaas_approved_at?:      string
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────────
 export interface ProductVariant {
-  id:       string
-  color:    string
-  colorHex: string
-  photos:   string[]
-  stock:    Record<string, number>
+  id:          string
+  color:       string
+  colorHex:    string
+  photos:      string[]
+  stock:       Record<string, number>
+  variantType?: VariantType
 }
 
 export interface Product {
@@ -261,6 +266,17 @@ export interface Order {
   total_final?:       number | null
   payment_method?:    'PIX' | 'OUTRO' | null
   coupon_code_applied?: string | null
+  // Campos de pagamento integrado (separado de status logístico NOVO..ENTREGUE)
+  payment_source?:            PaymentSource | null
+  payment_status?:            PaymentStatus | null
+  asaas_payment_id?:          string | null
+  asaas_installment_id?:      string | null
+  checkout_gross_value?:      number | null
+  checkout_installment_count?: number | null
+  checkout_installment_value?: number | null
+  platform_fee_pct?:          number | null
+  platform_fee_amount?:       number | null
+  asaas_split_status?:        AsaasSplitStatus | null
 }
 
 // ─── Vi Chat ──────────────────────────────────────────────────────────────────
@@ -335,3 +351,30 @@ export function normalizeProductCategory(raw: string, customSlugs?: string[]): s
 }
 
 export const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'Único']
+
+// ─── Payments / Asaas ─────────────────────────────────────────────────────────
+export type PaymentSource = 'WHATSAPP' | 'CHECKOUT' | 'PDV'
+
+export type PaymentStatus = 'PENDING' | 'CONFIRMED' | 'FAILED'
+
+export type AsaasOnboardingStatus =
+  | 'PENDING'
+  | 'AWAITING_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+
+export type AsaasSplitStatus =
+  | 'PENDING'
+  | 'DONE'
+  | 'CANCELLED'
+  | 'REFUSED'
+
+export type VariantType = 'cor' | 'modelo' | 'tamanho' | 'estampa' | 'material'
+
+export interface InstallmentQuote {
+  faixaTaxa:        number  // ex: 0.065
+  totalComJuros:    number  // ex: 639.00
+  installmentValue: number  // ex: 106.50
+  platformTakePct:  number  // ex: 6.5
+  merchantSharePct: number  // ex: 93.5
+}

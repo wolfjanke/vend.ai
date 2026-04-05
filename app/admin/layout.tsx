@@ -19,11 +19,11 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const session = await getSessionSafe()
   if (!session?.storeId) return <>{children}</>
 
-  let store: { name: string; slug: string } | undefined
+  let store: { name: string; slug: string; plan?: string } | undefined
   let newOrdersCount = 0
   try {
-    const rows = await sql`SELECT name, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
-    store = rows[0] as { name: string; slug: string } | undefined
+    const rows = await sql`SELECT name, slug, plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    store = rows[0] as { name: string; slug: string; plan?: string } | undefined
     const countRows = await sql`
       SELECT COUNT(*)::int as c FROM orders
       WHERE store_id = ${session.storeId} AND status = 'NOVO'
@@ -76,7 +76,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex">
-        <AdminSidebar newOrdersCount={newOrdersCount} />
+        <AdminSidebar newOrdersCount={newOrdersCount} plan={(store?.plan ?? 'free') as import('@/types').PlanSlug} />
 
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">

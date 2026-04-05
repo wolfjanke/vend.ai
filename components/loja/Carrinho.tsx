@@ -34,6 +34,8 @@ interface Props {
   pixDiscountPercent?: number
   couponRules?: CouponRule[]
   storeSettings?: StoreSettings
+  storeSlug?: string
+  asaasApproved?: boolean
 }
 
 export default function Carrinho({
@@ -46,6 +48,8 @@ export default function Carrinho({
   pixDiscountPercent = 0,
   couponRules = [],
   storeSettings,
+  storeSlug,
+  asaasApproved = false,
 }: Props) {
   const [step, setStep] = useState<Step>('cart')
   const [checkoutChannel, setCheckoutChannel] = useState<CheckoutChannel>('whatsapp')
@@ -178,6 +182,14 @@ export default function Carrinho({
   }
 
   function continueFromChannel(ch: CheckoutChannel) {
+    if (ch === 'site' && asaasApproved && storeSlug) {
+      // Salva carrinho no sessionStorage e redireciona para o checkout integrado
+      try {
+        sessionStorage.setItem(`cart_${storeSlug}`, JSON.stringify(cart))
+      } catch { /* ignora */ }
+      window.location.href = `/${storeSlug}/checkout`
+      return
+    }
     setCheckoutChannel(ch)
     setStep('payment')
   }

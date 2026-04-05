@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { Plus, Shirt } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import type { Product, ProductVariant, StoreSettings } from '@/types'
-import { getCategoryDisplayLabel } from '@/types'
+import type { Product, ProductVariant, StoreSettings, PlanSlug } from '@/types'
+import { getCategoryDisplayLabel, PLAN_PRODUCT_LIMITS } from '@/types'
 import ToggleActiveButton from './ToggleActiveButton'
 import DeleteProductButton from './DeleteProductButton'
 import Pagination from '@/components/ui/Pagination'
@@ -115,9 +115,13 @@ export default async function ProdutosPage({ searchParams }: Props) {
     `
   }
 
-  const settingsRows = await sql`SELECT settings_json FROM stores WHERE id = ${storeId} LIMIT 1`
+  const settingsRows = await sql`SELECT settings_json, plan FROM stores WHERE id = ${storeId} LIMIT 1`
   const settings = (settingsRows[0]?.settings_json as StoreSettings | null) ?? {}
   const customCategories = settings.customCategories ?? []
+  const storePlan = (settingsRows[0]?.plan ?? 'free') as PlanSlug
+  const productLimit = PLAN_PRODUCT_LIMITS[storePlan]
+  const totalProducts = await sql`SELECT COUNT(*)::int as c FROM products WHERE store_id = ${storeId}`
+  const totalProductCount = Number(totalProducts[0]?.c ?? 0)
 
   const getCategoryLabel = (val: string) => getCategoryDisplayLabel(val, customCategories)
 
@@ -137,6 +141,19 @@ export default async function ProdutosPage({ searchParams }: Props) {
             <span className="text-muted font-normal text-base">({total})</span>
           </h1>
           <p className="text-sm text-muted">Gerencie o catálogo da sua loja</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted" title="Cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos são variações gratuitas.">
+            <span className={`font-semibold ${productLimit !== null && totalProductCount >= productLimit ? 'text-warm' : 'text-foreground'}`}>
+              {totalProductCount}
+            </span>
+            <span>de</span>
+            <span className="font-semibold">{productLimit === null ? '∞' : productLimit}</span>
+            <span>produtos usados</span>
+            {productLimit !== null && totalProductCount >= productLimit && (
+              <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-warm px-1.5 py-0.5 rounded border border-warm/30 bg-warm/10">
+                Limite atingido
+              </span>
+            )}
+          </div>
         </div>
         <Link
           href="/admin/produtos/novo"

@@ -72,15 +72,27 @@ export default function PedidoCard({ order }: Props) {
   return (
     <div className="bg-surface border border-border rounded-2xl p-5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all">
       {/* Top */}
-      <div className="flex items-start justify-between mb-3 gap-2">
+      <div className="flex items-start justify-between mb-3 gap-2 flex-wrap">
         <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-1 rounded-lg shrink-0">
           #{order.order_number}
         </span>
-        <span
-          className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border shrink-0 ${ORDER_STATUS_COLORS[status]}`}
-        >
-          {ORDER_STATUS_LABELS[status]}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {order.payment_source === 'PDV' && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border border-yellow-400/30 text-yellow-400 bg-yellow-400/10">
+              PDV
+            </span>
+          )}
+          {order.payment_source === 'CHECKOUT' && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border border-primary/30 text-primary bg-primary/10">
+              Site
+            </span>
+          )}
+          <span
+            className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border shrink-0 ${ORDER_STATUS_COLORS[status]}`}
+          >
+            {ORDER_STATUS_LABELS[status]}
+          </span>
+        </div>
       </div>
 
       {/* Customer */}

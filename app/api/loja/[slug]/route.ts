@@ -4,7 +4,15 @@ import { logServerError } from '@/lib/logger'
 
 export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
   try {
-    const storeRows = await sql`SELECT * FROM stores WHERE slug = ${params.slug} LIMIT 1`
+    const storeRows = await sql`
+      SELECT
+        id, slug, name, logo_url, whatsapp, settings_json, created_at, user_id, plan,
+        cep, logradouro, numero, complemento, bairro, cidade, uf,
+        asaas_onboarding_status
+      FROM stores
+      WHERE slug = ${params.slug}
+      LIMIT 1
+    `
     const store = storeRows[0]
     if (!store) return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 })
 

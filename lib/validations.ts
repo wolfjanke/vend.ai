@@ -95,11 +95,12 @@ export const storeSettingsPatchSchema = z.object({
 })
 
 const variantSchema = z.object({
-  id:        z.string(),
-  color:     z.string(),
-  colorHex:  z.string(),
-  photos:    z.array(z.string()),
-  stock:     z.record(z.string(), z.number()),
+  id:          z.string(),
+  color:       z.string(),
+  colorHex:    z.string(),
+  photos:      z.array(z.string()),
+  stock:       z.record(z.string(), z.number()),
+  variantType: z.enum(['cor', 'modelo', 'tamanho', 'estampa', 'material']).optional(),
 }).passthrough()
 
 export const productBodySchema = z.object({
@@ -124,6 +125,27 @@ export const deliveryAddressSchema = z.object({
   uf:          z.string().min(2).max(2, 'UF inválida').transform(s => s.toUpperCase()),
 })
 
+export type DeliveryAddressInput = z.infer<typeof deliveryAddressSchema>
+
+export const checkoutPaymentSchema = z.object({
+  storeSlug:        z.string().min(2).max(40),
+  billingType:      z.enum(['PIX', 'CREDIT_CARD']),
+  installments:     z.number().int().min(1).max(12).default(1),
+  grossValue:       z.number().positive(),
+  creditCardToken:  z.string().optional(),
+  customer: z.object({
+    name:        z.string().min(1).max(200),
+    cpfCnpj:    z.string().optional(),
+    email:       z.string().email().optional(),
+    mobilePhone: z.string().optional(),
+  }),
+  items: z.array(z.object({
+    description: z.string(),
+    quantity:    z.number().int().positive(),
+    value:       z.number().nonnegative(),
+  })).min(1),
+})
+
 export const orderCreateSchema = z.object({
   storeId:          z.string().uuid(),
   items:            z.array(z.object({
@@ -144,6 +166,5 @@ export const orderCreateSchema = z.object({
   deliveryAddress:  deliveryAddressSchema,
   deliveryFee:      z.number().nonnegative(),
   checkoutChannel:  z.enum(['site', 'whatsapp']),
+  payment_source:   z.enum(['WHATSAPP', 'CHECKOUT', 'PDV']).optional().default('WHATSAPP'),
 })
-
-export type DeliveryAddressInput = z.infer<typeof deliveryAddressSchema>
