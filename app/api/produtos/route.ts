@@ -6,6 +6,7 @@ import type { PlanSlug } from '@/types'
 import { PLAN_PRODUCT_LIMITS } from '@/types'
 import { productBodySchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
+import { resolveProductSlugForStore } from '@/lib/product-slug'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -41,11 +42,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const productSlug = await resolveProductSlugForStore(session.storeId, name)
+
     const [product] = await sql`
-      INSERT INTO products (store_id, name, description, category, price, promo_price, variants_json, active)
+      INSERT INTO products (store_id, name, slug, description, category, price, promo_price, variants_json, active)
       VALUES (
         ${session.storeId},
         ${name},
+        ${productSlug},
         ${description ?? ''},
         ${category ?? 'outro'},
         ${price},

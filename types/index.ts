@@ -188,6 +188,9 @@ export interface Store extends StoreAddress {
   vi_overage_messages?:    number
   vi_daily_limit?:         number | null
   photo_analysis_used?:    number
+  assistant_name?:            string
+  assistant_welcome_message?: string | null
+  assistant_tone?:              'friendly' | 'formal' | 'playful' | 'professional'
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────────
@@ -204,6 +207,7 @@ export interface Product {
   id:            string
   store_id:      string
   name:          string
+  slug?:         string
   description:   string
   category:      string
   price:         number
@@ -296,22 +300,28 @@ export interface ViMessage {
 }
 
 export interface StoreContext {
-  storeSlug?:     string
-  whatsapp?:      string
-  name:           string
-  freteInfo?:     string
-  pagamentoInfo?: string
+  storeSlug?:       string
+  whatsapp?:        string
+  name:             string
+  assistantName?:   string
+  welcomeMessage?:  string | null
+  plan?:            PlanSlug
+  freteInfo?:       string
+  pagamentoInfo?:   string
   /** Perfil da loja para tom da Vi */
-  genderFocus?:   GenderFocus
-  ageGroup?:      AgeGroup
-  segmentLabel?:  string
+  genderFocus?:     GenderFocus
+  ageGroup?:        AgeGroup
+  segmentLabel?:    string
   products: Array<{
-    name:     string
-    category: string
-    price:    number
-    sizes:    string[]
-    colors:   string[]
-    inStock:  boolean
+    id?:       string
+    slug?:     string
+    name:      string
+    category:  string
+    price:     number
+    sizes:     string[]
+    colors:    string[]
+    inStock:   boolean
+    productUrl?: string
   }>
 }
 

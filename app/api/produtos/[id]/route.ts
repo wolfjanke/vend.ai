@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { productBodySchema } from '@/lib/validations'
+import { resolveProductSlugForStore } from '@/lib/product-slug'
 
 export async function GET(
   _req: NextRequest,
@@ -50,10 +51,12 @@ export async function PUT(
   }
 
   const { name, description, category, price, promo_price, variants_json, active } = parsed.data
+  const productSlug = await resolveProductSlugForStore(session.storeId, name, id)
 
   await sql`
     UPDATE products SET
       name = ${name},
+      slug = ${productSlug},
       description = ${description ?? ''},
       category = ${category ?? 'outro'},
       price = ${price},
