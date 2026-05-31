@@ -1,222 +1,99 @@
 # vend.ai
 
-Sistema de vendas para lojas de roupa com IA integrada. Catálogo digital + assistente Vi (Claude) + pedidos direto no WhatsApp.
+Sistema de vendas para lojas de moda com IA integrada. Catálogo digital + assistente Vi (Gemini) + pedidos no WhatsApp + checkout Asaas.
+
+**Produção:** [vendai.club](https://vendai.club)
 
 ## Stack
 
-| Camada       | Tecnologia                        |
-|-------------|----------------------------------|
-| Framework   | Next.js 14 (App Router)          |
-| Linguagem   | TypeScript                       |
-| Estilo      | Tailwind CSS (dark glassmorphism) |
-| Banco       | Supabase (PostgreSQL + Auth + Storage) |
-| IA          | Anthropic Claude (`claude-sonnet-4-6`) |
-| Deploy      | Vercel                           |
+| Camada     | Tecnologia                          |
+|-----------|-------------------------------------|
+| Framework | Next.js 14 (App Router)             |
+| Linguagem | TypeScript                          |
+| Estilo    | Tailwind CSS (dark glassmorphism)   |
+| Banco     | Neon PostgreSQL                     |
+| Auth      | NextAuth                            |
+| IA        | Google Gemini (modelos por função)  |
+| Imagens   | Cloudinary (upload assinado)        |
+| Pagamentos| Asaas                               |
+| E-mail    | Resend                              |
+| Deploy    | Vercel                              |
 
----
+## Planos
 
-## Funcionalidades
+| Plano      | Preço/mês | Produtos  | Msgs Vi/mês |
+|-----------|-----------|-----------|-------------|
+| Grátis    | R$ 0      | 10        | 1.000       |
+| Starter   | R$ 49,90  | 25        | 5.000       |
+| Pro       | R$ 99,90  | 200       | 15.000      |
+| Loja      | R$ 199,90 | Ilimitado | 40.000      |
+| Enterprise| R$ 399,90 | Ilimitado | 60.000      |
 
-### 🛍️ Loja Pública (`/[slug]`)
-- Catálogo com grid de produtos filtráveis por categoria, tamanho e cor
-- Busca por texto (nome, descrição, categoria)
-- Carrinho lateral (drawer)
-- Checkout: cliente informa nome + WhatsApp → pedido salvo no Supabase + mensagem formatada abre no wa.me
-- Assistente Vi (chat flutuante com IA real via Claude)
-- Dialog de recuperação de lead por inatividade
+Planos pagos incluem excedente de mensagens Vi (ver `lib/plans.ts`). Definição completa em `lib/plans.ts`.
 
-### ✦ Vi — Assistente IA
-- Chat em tempo real com streaming (Claude `claude-sonnet-4-6`)
-- Conhece todo o estoque da loja em tempo real
-- Sugestões por estilo, ocasião, cor, tamanho
-- Escala para WhatsApp quando não sabe responder
-- Gatilhos automáticos de engajamento
-
-### 📊 Painel Admin (`/admin`)
-- Autenticação segura via Supabase Auth
-- Dashboard com métricas do dia (novos pedidos, faturamento)
-- Gestão de pedidos com ciclo de status (NOVO → CONFIRMADO → EM_ENTREGA → ENTREGUE)
-- CRUD de produtos
-
-### 📸 Cadastro de Produto com IA
-- Upload múltiplo de fotos da galeria
-- IA analisa as fotos e agrupa por variação de cor automaticamente
-- Sugere nome, descrição e categoria (tudo editável)
-- Controle de estoque por tamanho × cor
-- Badge "✦ Sugerido pela IA" desaparece ao editar
-
-### ✨ Onboarding (`/cadastro`)
-- 3 passos: conta → loja → sucesso
-- Slug gerado automaticamente pelo nome da loja
-- Preview do link em tempo real
-
----
-
-## Setup
-
-### 1. Clone e instale
+## Setup local
 
 ```bash
 git clone https://github.com/seu-usuario/vend.ai.git
 cd vend.ai
 npm install
-```
-
-### 2. Configure o banco de dados (Supabase)
-
-1. Crie um projeto em [supabase.com](https://supabase.com)
-2. No SQL Editor, execute o conteúdo de [`supabase/schema.sql`](./supabase/schema.sql)
-3. Em Storage, crie um bucket público chamado `product-photos`
-
-### 3. Configure as variáveis de ambiente
-
-```bash
 cp .env.local.example .env.local
 ```
 
-Edite `.env.local` com seus valores:
+### Variáveis de ambiente
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=
+GEMINI_API_KEY=
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+ASAAS_API_KEY=
+ASAAS_BASE_URL=https://sandbox.asaas.com/api/v3
+ASAAS_WEBHOOK_TOKEN=
+SUBACCOUNT_ENCRYPTION_KEY=
+RESEND_API_KEY=
+EMAIL_FROM=
 ```
 
-### 4. Rode em desenvolvimento
+Opcional: `GEMINI_MODEL` sobrescreve apenas o chat da Vi (padrão `gemini-2.5-flash`). Análise de foto usa `gemini-2.5-pro`; busca de estoque usa `gemini-2.5-flash-lite`.
+
+### Migrations (Neon)
+
+Execute em ordem no SQL Editor do Neon ou via CLI:
+
+```bash
+# Arquivos em migrations/
+# 001 … schema inicial
+# 006_vi_usage.sql — contadores diários Vi
+# 007_store_vi_usage.sql — uso mensal na tabela stores + plano enterprise
+```
+
+### Rodar
 
 ```bash
 npm run dev
 ```
 
-Acesse: **http://localhost:3000**
+Acesse `http://localhost:3000`.
 
-### 5. Deploy na Vercel
+## Modelos Gemini
 
-```bash
-npm i -g vercel
-vercel
-```
+| Função              | Modelo                 | Arquivo / rota              |
+|--------------------|------------------------|-----------------------------|
+| Análise de foto    | `gemini-2.5-pro`       | `lib/gemini.ts` → `/api/produtos/analyze` |
+| Chat Vi            | `gemini-2.5-flash`     | `lib/gemini.ts` → `/api/vi` |
+| Busca no estoque   | `gemini-2.5-flash-lite`| `lib/gemini.ts` → `searchStock()` |
 
-Adicione as variáveis de ambiente no painel da Vercel.
+Plano **Grátis**: Vi com `flash-lite`, sem streaming; ao atingir limite mensal redireciona para WhatsApp.
 
----
+## Estrutura principal
 
-## Estrutura do Projeto
-
-```
-vendai/
-├── app/
-│   ├── page.tsx                    → Landing page
-│   ├── cadastro/page.tsx           → Onboarding (3 passos)
-│   ├── [slug]/
-│   │   ├── page.tsx                → Server Component (fetch Supabase)
-│   │   └── StoreClient.tsx         → Client Component (carrinho, Vi, etc.)
-│   ├── admin/
-│   │   ├── page.tsx                → Login
-│   │   ├── layout.tsx              → Layout admin + nav
-│   │   ├── actions.ts              → Server Actions (updateOrderStatus, etc.)
-│   │   ├── dashboard/page.tsx      → Métricas e pedidos recentes
-│   │   ├── pedidos/page.tsx        → Gestão de pedidos
-│   │   ├── produtos/page.tsx       → Listagem de produtos
-│   │   ├── produtos/novo/page.tsx  → Cadastro com IA
-│   │   └── configuracoes/page.tsx  → Config da loja
-│   └── api/
-│       ├── vi/route.ts             → Chat Vi (streaming Claude)
-│       ├── pedidos/route.ts        → Criar pedido no Supabase
-│       ├── produtos/analyze/route.ts → Análise de fotos com Claude
-│       └── auth/logout/route.ts    → Logout
-├── components/
-│   ├── ui/
-│   │   ├── Button.tsx
-│   │   └── Input.tsx
-│   ├── loja/
-│   │   ├── Catalogo.tsx            → Grid + busca + filtros
-│   │   ├── ProdutoCard.tsx         → Card individual
-│   │   ├── Carrinho.tsx            → Drawer do carrinho
-│   │   └── ViChat.tsx              → Widget de chat
-│   └── admin/
-│       ├── MetricCard.tsx          → Card de métrica
-│       ├── PedidoCard.tsx          → Card de pedido com ações
-│       └── ProdutoForm.tsx         → Formulário de produto com IA
-├── lib/
-│   ├── supabase.ts                 → Clientes Supabase (server + browser)
-│   ├── anthropic.ts                → Cliente Claude + prompts
-│   └── whatsapp.ts                 → Formatação de mensagem + wa.me URL
-├── types/index.ts                  → Tipos TypeScript globais
-├── middleware.ts                   → Auth guard para /admin
-├── supabase/schema.sql             → Schema SQL completo
-├── .env.local.example              → Template de variáveis
-└── PROMPT.md                       → Documentação do prompt da Vi
-```
-
----
-
-## Design System
-
-| Token        | Valor       | Uso                          |
-|-------------|------------|------------------------------|
-| `--bg`      | `#08080F`  | Background principal         |
-| `--surface` | `#11111C`  | Cards e superfícies          |
-| `--primary` | `#7B6EFF`  | Roxo — ações principais      |
-| `--accent`  | `#00E5A0`  | Verde — preços, sucesso      |
-| `--warm`    | `#FF6B6B`  | Vermelho — alertas, estoque  |
-| `--muted`   | `#7777AA`  | Texto secundário             |
-
-Fontes: **Syne** (display/headings) + **DM Sans** (body)
-
----
-
-## Banco de Dados
-
-### `stores`
-| Coluna          | Tipo      | Descrição                  |
-|----------------|----------|---------------------------|
-| `id`           | uuid      | PK                         |
-| `user_id`      | uuid      | FK → auth.users            |
-| `slug`         | text      | URL única da loja          |
-| `name`         | text      | Nome exibido               |
-| `logo_url`     | text?     | URL no Storage             |
-| `whatsapp`     | text      | Número sem formatação      |
-| `settings_json`| jsonb     | Config da loja             |
-
-### `products`
-| Coluna           | Tipo      | Descrição                          |
-|-----------------|----------|------------------------------------|
-| `id`            | uuid      | PK                                  |
-| `store_id`      | uuid      | FK → stores                         |
-| `name`          | text      | Nome do produto                     |
-| `description`   | text      | Descrição                           |
-| `category`      | text      | vestido\|blusa\|calca\|conjunto\|saia\|outro |
-| `price`         | numeric   | Preço                               |
-| `promo_price`   | numeric?  | Preço promocional                   |
-| `variants_json` | jsonb     | Array de variantes (cor + estoque)  |
-| `active`        | boolean   | Visível na loja                     |
-
-### `orders`
-| Coluna              | Tipo         | Descrição           |
-|--------------------|-------------|---------------------|
-| `id`               | uuid         | PK                  |
-| `store_id`         | uuid         | FK → stores         |
-| `order_number`     | text         | Ex: `0042`          |
-| `customer_name`    | text         | Nome do cliente     |
-| `customer_whatsapp`| text         | Número do cliente   |
-| `items_json`       | jsonb        | Array de itens      |
-| `total`            | numeric      | Total em R$         |
-| `notes`            | text         | Observações         |
-| `status`           | order_status | NOVO → … → ENTREGUE |
-
----
-
-## Scripts
-
-```bash
-npm run dev    # Servidor de desenvolvimento
-npm run build  # Build de produção
-npm run start  # Servidor de produção
-npm run lint   # Verificar código
-```
-
----
-
-Feito com ✦ para lojistas que querem vender mais.
+- `app/[slug]` — vitrine pública
+- `app/admin` — painel do lojista
+- `app/api/vi` — assistente IA
+- `lib/plans.ts` — limites e preços
+- `lib/vi-limits.ts` — controle de uso da Vi

@@ -1,53 +1,36 @@
 # vend.ai — Vi System Prompt
 
-Este arquivo documenta o prompt de sistema usado para a assistente Vi. O prompt é gerado dinamicamente em `lib/anthropic.ts` com o contexto real da loja.
+O prompt da assistente Vi é gerado em **`lib/gemini.ts`** (`buildViSystemPrompt`) com o estoque e dados da loja em tempo real.
 
----
+## Stack de IA
 
-## Template do Prompt
+| Uso | Modelo | Função em `lib/gemini.ts` |
+|-----|--------|---------------------------|
+| Análise de foto no cadastro | `gemini-2.5-pro` | `analyzeProductPhoto()` |
+| Chat com o cliente | `gemini-2.5-flash` | `viChatResponse()` |
+| Busca semântica no estoque | `gemini-2.5-flash-lite` | `searchStock()` |
 
-```
-Você é a Vi, assistente virtual da loja "{NOME_DA_LOJA}" no vend.ai.
-Sua missão é ajudar clientes a encontrar a roupa perfeita e concluir a compra.
+Plano **Grátis**: chat usa `flash-lite`, resposta sem streaming; limite 1.000 msgs/mês sem excedente.
 
-## ESTOQUE ATUAL
-{LISTA_DE_PRODUTOS}
+## Limites da Vi
 
-Formato de cada produto:
-- {Nome} ({categoria}) | R${preço} | Cores: {cores} | Tamanhos: {tamanhos} | ✓ em estoque / ✗ esgotado
+- Contadores em `stores.vi_messages_used`, reset mensal automático.
+- Limite diário opcional: `stores.vi_daily_limit`.
+- Excedente em planos pagos: `stores.vi_overage_messages`.
+- Lógica: `lib/vi-limits.ts`.
 
-## DIRETRIZES
-- Seja simpática, próxima e use emojis com moderação
-- Quando o cliente descrever o que quer, sugira produtos específicos do estoque acima
-- Sempre mencione o preço e tamanhos disponíveis ao sugerir um produto
-- Se um produto estiver esgotado, não o sugira (a menos que o cliente pergunte diretamente)
-- Se não souber responder ou o cliente quiser falar com uma humana, diga:
-  "Vou te conectar com nossa vendedora no WhatsApp!"
-- Seja direta: no máximo 3 frases por resposta
-- Nunca invente produtos que não existem no estoque acima
-- Fale sempre em português do Brasil
-```
+## Redirecionamento WhatsApp
 
----
+Quando o limite mensal do plano Grátis é atingido (ou limite diário configurado), a API retorna JSON com `redirectWhatsApp: true` e mensagem amigável — sem mencionar plano ou limite técnico.
 
-## Gatilhos Automáticos (configurados no frontend)
+## Gatilhos (frontend)
 
-| Gatilho | Delay | Ação |
-|---------|-------|------|
-| Boas-vindas | Ao entrar | Mensagem de saudação |
-| Inatividade leve | 60s | "Posso te ajudar a encontrar algo?" |
-| Inatividade grave | 120s | Dialog de recuperação de lead |
-| Carrinho abandonado | 3min c/ itens | Vi sugere finalizar ou tira objeção |
+| Gatilho | Comportamento |
+|---------|----------------|
+| Boas-vindas | Saudação ao abrir o chat |
+| Inatividade | Sugestões / recuperação |
+| Carrinho abandonado | Engajamento (planos pagos) |
 
----
+## Escalada humana
 
-## Escalada para WhatsApp
-
-A Vi responde: *"Vou te conectar com nossa vendedora no WhatsApp!"*
-
-Nos seguintes casos:
-- Pergunta sobre troca/devolução
-- Pergunta sobre envio/frete
-- Produto esgotado mas cliente quer reservar
-- Qualquer dúvida fora do escopo do catálogo
-- Cliente pede para falar com pessoa humana
+A Vi indica WhatsApp quando não souber responder, em trocas/devoluções complexas ou quando o cliente pedir atendimento humano.
