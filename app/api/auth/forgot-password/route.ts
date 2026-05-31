@@ -4,10 +4,16 @@ import { sql } from '@/lib/db'
 import { sendPasswordResetEmail } from '@/lib/email'
 import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
 const schema = z.object({ email: z.string().email() })
 
 export async function POST(req: NextRequest) {
+  const ip = clientIp(req)
+  if (!checkRateLimit(`auth:forgot:${ip}`, 3, 3_600_000)) {
+    return NextResponse.json({ ok: true })
+  }
+
   try {
     const body = await req.json()
     const parsed = schema.safeParse(body)

@@ -175,9 +175,32 @@ export default function PrivacidadePage() {
         </p>
       </Section>
 
-      <Section title="9. Transferência internacional de dados">
+      <Section title="9. Subprocessadores (DPA) e transferência internacional">
         <p>
-          Alguns de nossos fornecedores (Cloudinary, OpenAI, Resend) podem processar dados em servidores fora do Brasil. Garantimos que essas transferências ocorrem apenas para países ou organizações que oferecem grau de proteção equivalente ao da LGPD, ou mediante cláusulas contratuais adequadas.
+          Para operar a plataforma, compartilhamos dados estritamente necessários com os seguintes subprocessadores, sob contratos ou termos que exigem proteção adequada dos dados:
+        </p>
+        <ul className="list-disc list-inside space-y-1 pl-1">
+          <li><strong className="text-foreground">Neon</strong> — banco de dados (hospedagem Postgres)</li>
+          <li><strong className="text-foreground">Vercel</strong> — hospedagem da aplicação</li>
+          <li><strong className="text-foreground">Asaas</strong> — pagamentos e subcontas (quando o lojista ativa checkout)</li>
+          <li><strong className="text-foreground">Google (Gemini)</strong> — assistente Vi e análise de produto</li>
+          <li><strong className="text-foreground">Cloudinary</strong> — armazenamento de imagens de produtos</li>
+          <li><strong className="text-foreground">Resend</strong> — e-mails transacionais (ex.: recuperação de senha)</li>
+        </ul>
+        <p>
+          Alguns desses fornecedores podem processar dados em servidores fora do Brasil. Garantimos que essas transferências ocorrem apenas com salvaguardas compatíveis com a LGPD (cláusulas contratuais, padrões equivalentes ou consentimento quando aplicável).
+        </p>
+      </Section>
+
+      <Section title="9.1. Dados de clientes finais (compradores)">
+        <p>
+          Quando um consumidor finaliza um pedido na vitrine de uma loja, o lojista é o controlador dos dados do pedido (nome, WhatsApp, endereço). O vend.ai atua como operador para armazenar e transmitir esses dados conforme instruções do lojista.
+        </p>
+        <p>
+          <strong className="text-foreground">Retenção:</strong> pedidos e dados de entrega são mantidos por até <strong className="text-foreground">24 meses</strong> após a última interação, salvo obrigação legal de guarda mais longa (fiscal/contábil). Após esse prazo, dados podem ser anonimizados automaticamente.
+        </p>
+        <p>
+          <strong className="text-foreground">Exclusão (Art. 18):</strong> o titular pode solicitar anonimização dos pedidos vinculados ao seu WhatsApp enviando a solicitação pela loja ou pelo canal indicado na vitrine. Lojistas autenticados podem anonimizar pedidos de um cliente em Configurações → Privacidade (API administrativa).
         </p>
       </Section>
 

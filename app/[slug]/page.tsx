@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { sql } from '@/lib/db'
 import { isReservedStoreSlug } from '@/lib/reserved-slugs'
-import type { Product, Store } from '@/types'
+import type { Product } from '@/types'
+import { toPublicStore, publicStoreAsStore } from '@/lib/public-store'
 import StoreClient from './StoreClient'
 
 interface Props {
@@ -25,21 +26,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function StorePage({ params }: Props) {
   if (isReservedStoreSlug(params.slug)) notFound()
 
-  let storeRows: Store[]
+  let storeRow: Record<string, unknown> | undefined
   try {
-    storeRows = (await sql`SELECT * FROM stores WHERE slug = ${params.slug} LIMIT 1`) as Store[]
+    const rows = await sql`
+      SELECT
+        id, slug, name, logo_url, whatsapp, settings_json, created_at,
+        cep, logradouro, numero, complemento, bairro, cidade, uf
+      FROM stores
+      WHERE slug = ${params.slug}
+      LIMIT 1
+    `
+    storeRow = rows[0] as Record<string, unknown> | undefined
   } catch {
     throw new Error('STORE_LOAD_FAILED')
   }
 
-  const store = storeRows[0]
-  if (!store) notFound()
+  if (!storeRow) notFound()
+  const storeId = String(storeRow.id)
+  const store = publicStoreAsStore(toPublicStore(storeRow))
 
   let products: Product[]
   try {
     products = (await sql`
       SELECT * FROM products
-      WHERE store_id = ${store.id} AND active = true
+      WHERE store_id = ${storeId} AND active = true
       ORDER BY created_at DESC
     `) as Product[]
   } catch {

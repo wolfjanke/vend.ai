@@ -6,8 +6,22 @@ import { calculateCheckoutPricing } from '@/lib/pricing'
 import { quoteDelivery } from '@/lib/delivery'
 import type { StoreSettings } from '@/types'
 import { logServerError } from '@/lib/logger'
+import { resolveOrderLines, amountsMatch, OrderValidationError, decrementStockForOrder } from '@/lib/order-pricing'
+import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+
+const PEDIDOS_IP_LIMIT = 10
+const PEDIDOS_IP_WINDOW = 60_000
+const PEDIDOS_STORE_LIMIT = 30
+const PEDIDOS_STORE_WINDOW = 60_000
 
 export async function POST(req: NextRequest) {
+  const ip = clientIp(req)
+
+  if (!checkRateLimit(`pedidos:ip:${ip}`, PEDIDOS_IP_LIMIT, PEDIDOS_IP_WINDOW)) {
+    return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
+  }
+
   try {
     let body: unknown
     try {
@@ -21,13 +35,12 @@ export async function POST(req: NextRequest) {
       const first =
         Object.values(parsed.error.flatten().fieldErrors).flat()[0]
         ?? parsed.error.issues[0]?.message
-        ?? 'Dados inválidos'
-      return NextResponse.json({ error: first }, { status: 400 })
+      return validationErrorResponse(first)
     }
 
     const {
       storeId,
-      items,
+      items: clientItems,
       customerName,
       customerWhatsapp,
       notes,
@@ -37,11 +50,24 @@ export async function POST(req: NextRequest) {
       deliveryFee: clientDeliveryFee,
       checkoutChannel,
     } = parsed.data
-    const orderNum = generateOrderNumber()
+
+    if (!checkRateLimit(`pedidos:store:${storeId}`, PEDIDOS_STORE_LIMIT, PEDIDOS_STORE_WINDOW)) {
+      return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
+    }
+
     const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${storeId} LIMIT 1`
     if (storeRows.length === 0) {
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 })
     }
+
+    let items
+    try {
+      items = await resolveOrderLines(storeId, clientItems)
+    } catch (e) {
+      if (e instanceof OrderValidationError) return orderReject422()
+      throw e
+    }
+
     const settings = (storeRows[0]?.settings_json as StoreSettings | null) ?? {}
     const paymentForPricing = paymentMethod === 'PIX' ? 'PIX' : 'OUTRO'
     const pricing = calculateCheckoutPricing({
@@ -60,14 +86,28 @@ export async function POST(req: NextRequest) {
     if (quote.outOfZone) {
       return NextResponse.json(
         { error: 'Entrega não disponível para o endereço informado.' },
-        { status: 400 }
+        { status: 400 },
       )
     }
     const fee = Number(quote.fee.toFixed(2))
-    if (Math.abs(fee - clientDeliveryFee) > 0.02) {
-      return NextResponse.json({ error: 'Valor do frete desatualizado. Atualize a página e tente novamente.' }, { status: 400 })
+    if (!amountsMatch(fee, clientDeliveryFee, 0.02)) {
+      return orderReject422()
     }
     const grandTotal = Math.max(0, Number((pricing.totalFinal + fee).toFixed(2)))
+
+    const clientSubtotal = clientItems.reduce((s, i) => s + i.price * i.qty, 0)
+    if (!amountsMatch(pricing.subtotal, clientSubtotal)) {
+      return orderReject422()
+    }
+
+    try {
+      await decrementStockForOrder(storeId, items)
+    } catch (e) {
+      if (e instanceof OrderValidationError) return orderReject422()
+      throw e
+    }
+
+    const orderNum = generateOrderNumber()
 
     const itemsJson = JSON.stringify(items.map(i => ({
       product_id: i.product_id,
@@ -76,6 +116,7 @@ export async function POST(req: NextRequest) {
       color:      i.color,
       qty:        i.qty,
       price:      i.price,
+      photo:      i.photo,
     })))
 
     const deliveryJson = JSON.stringify(deliveryAddress)

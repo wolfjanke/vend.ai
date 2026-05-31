@@ -4,8 +4,14 @@ import { sql } from '@/lib/db'
 import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const ip = clientIp(req)
+  if (!checkRateLimit(`auth:register:${ip}`, 5, 3_600_000)) {
+    return NextResponse.json({ error: 'Muitas tentativas. Tente novamente mais tarde.' }, { status: 429 })
+  }
+
   try {
     let body: unknown
     try {
@@ -16,8 +22,10 @@ export async function POST(req: NextRequest) {
 
     const parsed = registerSchema.safeParse(body)
     if (!parsed.success) {
-      const err = parsed.error.flatten().fieldErrors
-      const first = Object.values(err).flat()[0] ?? 'Dados inválidos'
+      const first =
+        process.env.NODE_ENV === 'production'
+          ? 'Não foi possível criar a conta. Verifique os dados e tente novamente.'
+          : (Object.values(parsed.error.flatten().fieldErrors).flat()[0] ?? 'Dados inválidos')
       return NextResponse.json({ error: first }, { status: 400 })
     }
 

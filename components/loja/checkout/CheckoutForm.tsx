@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import type { PlanSlug } from '@/types'
 import { calculateInstallmentQuote, getFaixa } from '@/lib/payments/installment-fees'
@@ -28,6 +29,7 @@ type Step = 'form' | 'pix_waiting' | 'confirmed'
 
 interface PixData {
   paymentId:     string
+  statusToken:   string
   pixQrCode:     string
   pixCopiaECola: string
   orderNumber:   string
@@ -48,6 +50,7 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
   const [error, setError]             = useState<string | null>(null)
   const [step, setStep]               = useState<Step>('form')
   const [pixData, setPixData]         = useState<PixData | null>(null)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
   const quote       = calculateInstallmentQuote(grossValue, installments, plan)
   const prevFaixa   = installments > 1 ? getFaixa(installments - 1) : null
@@ -57,6 +60,10 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) { setError('Informe seu nome'); return }
+    if (!privacyAccepted) {
+      setError('Aceite a política de privacidade para continuar')
+      return
+    }
     setLoading(true)
     setError(null)
 
@@ -69,8 +76,16 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
           billingType:  method,
           installments,
           grossValue,
+          cartItems: items.map(i => ({
+            product_id: i.product_id,
+            variant_id: i.variant_id,
+            size:       i.size,
+            color:      i.color,
+            qty:        i.qty,
+            name:       i.name,
+            photo:      i.photo,
+          })),
           customer: { name: name.trim(), cpfCnpj: cpf || undefined, email: email || undefined, mobilePhone: phone || undefined },
-          items: items.map(i => ({ description: `${i.qty}x ${i.name} (${i.color} ${i.size})`, quantity: i.qty, value: i.price })),
         }),
       })
 
@@ -84,6 +99,7 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
       if (method === 'PIX') {
         setPixData({
           paymentId:     data.asaas_payment_id,
+          statusToken:   data.statusToken ?? '',
           pixQrCode:     data.pixQrCode ?? '',
           pixCopiaECola: data.pixCopiaECola ?? '',
           orderNumber:   data.orderNumber,
@@ -103,6 +119,7 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
     return (
       <PixPayment
         paymentId={pixData.paymentId}
+        statusToken={pixData.statusToken}
         pixQrCode={pixData.pixQrCode}
         pixCopiaECola={pixData.pixCopiaECola}
         orderNumber={pixData.orderNumber}
@@ -247,6 +264,22 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
           ⚠ A taxa muda a partir de 4 parcelas. Verifique o total antes de confirmar.
         </div>
       )}
+
+      <label className="flex gap-2.5 items-start text-xs text-muted cursor-pointer min-w-0">
+        <input
+          type="checkbox"
+          checked={privacyAccepted}
+          onChange={e => setPrivacyAccepted(e.target.checked)}
+          className="mt-0.5 shrink-0 min-w-[18px] min-h-[18px]"
+        />
+        <span className="break-words min-w-0">
+          Li e aceito a{' '}
+          <Link href="/privacidade" target="_blank" className="text-primary underline">
+            Política de Privacidade
+          </Link>
+          {' '}para processar este pagamento.
+        </span>
+      </label>
 
       {error && (
         <div className="p-3 bg-warm/10 border border-warm/30 rounded-xl text-sm text-warm break-words">{error}</div>

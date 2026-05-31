@@ -26,7 +26,6 @@ export async function onAccountStatus(payload: AccountStatusPayload): Promise<vo
     return
   }
 
-  // Mapeamento de status Asaas → nosso enum
   const statusMap: Record<string, string> = {
     ACTIVE:     'APPROVED',
     APPROVED:   'APPROVED',
@@ -63,9 +62,10 @@ export async function onPaymentEvent(payload: PaymentEventPayload): Promise<void
     await sql`
       UPDATE orders
       SET
-        payment_status    = 'CONFIRMED',
+        payment_status     = 'CONFIRMED',
         asaas_split_status = 'DONE'
       WHERE asaas_payment_id = ${paymentId}
+        AND (payment_status IS NULL OR payment_status <> 'CONFIRMED')
     `
     return
   }
@@ -74,18 +74,17 @@ export async function onPaymentEvent(payload: PaymentEventPayload): Promise<void
     await sql`
       UPDATE orders
       SET
-        payment_status    = 'FAILED',
+        payment_status     = 'FAILED',
         asaas_split_status = 'CANCELLED'
       WHERE asaas_payment_id = ${paymentId}
+        AND (payment_status IS NULL OR payment_status NOT IN ('FAILED', 'CANCELLED'))
     `
-    return
   }
 }
 
 export async function onPaymentSplitDivergenceBlock(payload: PaymentEventPayload): Promise<void> {
   const paymentId = payload.payment?.id
   logServerError('[SPLIT_DIVERGENCE_BLOCK] Divergência no split detectada', { paymentId })
-  // Prazo: 2 dias úteis para ajuste antes do cancelamento automático pelo Asaas
 }
 
 export async function onPaymentSplitDivergenceBlockFinished(payload: PaymentEventPayload): Promise<void> {

@@ -34,7 +34,11 @@ export async function POST(req: NextRequest) {
 
   const parsed = subaccountSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Dados inválidos', details: parsed.error.flatten() }, { status: 422 })
+    const msg =
+      process.env.NODE_ENV === 'production'
+        ? 'Dados inválidos'
+        : (Object.values(parsed.error.flatten().fieldErrors).flat()[0] ?? 'Dados inválidos')
+    return NextResponse.json({ error: msg }, { status: 422 })
   }
 
   try {

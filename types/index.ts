@@ -94,6 +94,8 @@ export interface StoreSettings {
   freeShippingMin?: number | null
   /** Máximo de parcelas sem juros (vitrine: linha Nx R$ … no card). Vazio = não exibir. */
   installmentsMaxNoInterest?: number | null
+  /** Limite diário opcional de mensagens da Vi (lojista). */
+  viDailyLimit?: number | null
   /** Categorias extras da loja (slug + rótulo exibido na vitrine e no admin). */
   customCategories?: CustomCategory[]
 }
@@ -286,6 +288,7 @@ export interface ViMessage {
 }
 
 export interface StoreContext {
+  storeSlug?:     string
   name:           string
   freteInfo?:     string
   pagamentoInfo?: string

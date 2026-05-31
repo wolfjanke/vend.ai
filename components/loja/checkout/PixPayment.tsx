@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   paymentId:     string
+  statusToken:   string
   pixQrCode:     string
   pixCopiaECola: string
   orderNumber:   string
@@ -12,7 +13,7 @@ interface Props {
 
 const PIX_TIMEOUT = 30 * 60 // 30 minutos em segundos
 
-export default function PixPayment({ paymentId, pixQrCode, pixCopiaECola, orderNumber, onConfirmed }: Props) {
+export default function PixPayment({ paymentId, statusToken, pixQrCode, pixCopiaECola, orderNumber, onConfirmed }: Props) {
   const [copied, setCopied]     = useState(false)
   const [timeLeft, setTimeLeft] = useState(PIX_TIMEOUT)
   const [expired, setExpired]   = useState(false)
@@ -35,7 +36,8 @@ export default function PixPayment({ paymentId, pixQrCode, pixCopiaECola, orderN
     // Polling de status a cada 3 segundos
     pollingRef.current = setInterval(async () => {
       try {
-        const res  = await fetch(`/api/checkout/status?id=${paymentId}`)
+        const q = new URLSearchParams({ id: paymentId, token: statusToken })
+        const res  = await fetch(`/api/checkout/status?${q}`)
         const data = await res.json()
         if (data.status === 'CONFIRMED') {
           clearInterval(pollingRef.current!)
@@ -50,7 +52,7 @@ export default function PixPayment({ paymentId, pixQrCode, pixCopiaECola, orderN
       clearInterval(intervalRef.current!)
       clearInterval(pollingRef.current!)
     }
-  }, [paymentId, onConfirmed])
+  }, [paymentId, statusToken, onConfirmed])
 
   async function handleCopy() {
     try {

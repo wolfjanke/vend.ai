@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import type {
   CartItem,
@@ -66,6 +67,7 @@ export default function Carrinho({
   const [uf, setUf] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>('OUTRO')
   const [couponCode, setCouponCode] = useState('')
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors,  setErrors]  = useState<Record<string, string>>({})
 
@@ -160,6 +162,7 @@ export default function Carrinho({
       const d = phone.replace(/\D/g, '')
       if (d.length < 10 || d.length > 11) e.phone = 'WhatsApp inválido'
     }
+    if (!privacyAccepted) e.privacy = 'Aceite a política de privacidade para continuar'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -482,6 +485,25 @@ export default function Carrinho({
                   onChange={e => setCouponCode(e.target.value.toUpperCase())}
                 />
               </div>
+              <label className="flex gap-2.5 items-start text-xs text-muted cursor-pointer min-w-0">
+                <input
+                  type="checkbox"
+                  checked={privacyAccepted}
+                  onChange={e => {
+                    setPrivacyAccepted(e.target.checked)
+                    setErrors(p => { const n = { ...p }; delete n.privacy; return n })
+                  }}
+                  className="mt-0.5 shrink-0 min-w-[18px] min-h-[18px]"
+                />
+                <span className="break-words min-w-0">
+                  Li e aceito a{' '}
+                  <Link href="/privacidade" target="_blank" className="text-primary underline">
+                    Política de Privacidade
+                  </Link>
+                  {' '}e autorizo o tratamento dos meus dados para processar este pedido.
+                </span>
+              </label>
+              {errors.privacy && <p className="text-xs text-warm">{errors.privacy}</p>}
               <div className="rounded-xl border border-border bg-surface2 p-3 text-xs space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-muted">Subtotal</span>

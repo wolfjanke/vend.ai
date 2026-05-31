@@ -62,6 +62,7 @@ export default function StoreClient({ store, products }: Props) {
 
   // Build store context for Vi
   const storeContext: StoreContext = {
+    storeSlug:      store.slug,
     name:           store.name,
     freteInfo:      settings.freteInfo,
     pagamentoInfo:  settings.pagamentoInfo,
@@ -152,6 +153,7 @@ export default function StoreClient({ store, products }: Props) {
           deliveryAddress:  delivery,
           deliveryFee:      meta.deliveryFee,
           checkoutChannel:  meta.checkoutChannel,
+          privacyConsent:   true,
         }),
       })
 

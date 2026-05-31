@@ -6,30 +6,18 @@ import { calculateInstallmentQuote } from '@/lib/payments/installment-fees'
 import { createCheckoutPayment } from '@/lib/asaas/payments'
 import { AsaasApiError } from '@/lib/asaas/client'
 import type { Store, PlanSlug } from '@/types'
+import { resolveOrderLines, amountsMatch, OrderValidationError } from '@/lib/order-pricing'
+import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { signCheckoutStatusToken } from '@/lib/checkout-status-token'
 
-// Rate limiting simples em memória (por IP, máx 5 req/min)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 5
 const RATE_WINDOW = 60_000
 
-function checkRateLimit(ip: string): boolean {
-  const now   = Date.now()
-  const entry = rateLimitMap.get(ip)
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW })
-    return true
-  }
-
-  if (entry.count >= RATE_LIMIT) return false
-  entry.count++
-  return true
-}
-
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const ip = clientIp(req)
 
-  if (!checkRateLimit(ip)) {
+  if (!checkRateLimit(`checkout:ip:${ip}`, RATE_LIMIT, RATE_WINDOW)) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde 1 minuto.' }, { status: 429 })
   }
 
@@ -42,12 +30,20 @@ export async function POST(req: NextRequest) {
 
   const parsed = checkoutPaymentSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Dados inválidos', details: parsed.error.flatten() }, { status: 422 })
+    const first = parsed.error.issues[0]?.message
+    return validationErrorResponse(first)
   }
 
-  const { storeSlug, billingType, installments, grossValue, creditCardToken, customer, items } = parsed.data
+  const {
+    storeSlug,
+    billingType,
+    installments,
+    grossValue: clientGrossValue,
+    creditCardToken,
+    customer,
+    cartItems,
+  } = parsed.data
 
-  // Buscar loja
   const storeRows = await sql`
     SELECT
       id, slug, plan,
@@ -72,14 +68,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Loja sem conta de recebimento configurada' }, { status: 403 })
   }
 
+  let lines
+  try {
+    lines = await resolveOrderLines(store.id, cartItems)
+  } catch (e) {
+    if (e instanceof OrderValidationError) return orderReject422()
+    throw e
+  }
+
+  const serverGrossValue = Number(
+    lines.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2),
+  )
+
+  if (!amountsMatch(serverGrossValue, clientGrossValue)) {
+    return orderReject422()
+  }
+
   const plan = (store.plan ?? 'free') as PlanSlug
 
   let quote
   try {
-    quote = calculateInstallmentQuote(grossValue, installments, plan)
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 422 })
+    quote = calculateInstallmentQuote(serverGrossValue, installments, plan)
+  } catch {
+    return orderReject422()
   }
+
+  const asaasItems = lines.map(i => ({
+    description: `${i.qty}x ${i.name} (${i.color} ${i.size})`,
+    quantity:    i.qty,
+    value:       i.price,
+  }))
 
   let paymentResult
   try {
@@ -88,26 +106,37 @@ export async function POST(req: NextRequest) {
       quote,
       billingType,
       customer,
-      items,
+      asaasItems,
       creditCardToken,
     )
   } catch (err) {
     if (err instanceof AsaasApiError) {
       logServerError('[checkout/payment] AsaasApiError', { code: err.code, status: err.status })
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Erro ao processar pagamento.' }, { status: 502 })
+      }
       return NextResponse.json({ error: err.description, code: err.code }, { status: 502 })
     }
     logServerError('[checkout/payment] createCheckoutPayment', err)
     return NextResponse.json({ error: 'Erro ao criar cobrança' }, { status: 500 })
   }
 
-  // Gerar order_number
   const countRows = await sql`SELECT COUNT(*)::int as c FROM orders WHERE store_id = ${store.id}`
   const orderSeq  = (Number(countRows[0]?.c ?? 0) + 1).toString().padStart(4, '0')
   const orderNumber = `CHK-${orderSeq}`
 
-  const platformFeeAmount = Math.round(grossValue * (quote.platformTakePct / 100) * 100) / 100
+  const platformFeeAmount = Math.round(serverGrossValue * (quote.platformTakePct / 100) * 100) / 100
 
-  // INSERT atômico do pedido
+  const itemsJson = JSON.stringify(lines.map(i => ({
+    product_id: i.product_id,
+    name:       i.name,
+    size:       i.size,
+    color:      i.color,
+    qty:        i.qty,
+    price:      i.price,
+    photo:      i.photo,
+  })))
+
   try {
     await sql`
       INSERT INTO orders (
@@ -132,14 +161,14 @@ export async function POST(req: NextRequest) {
         ${orderNumber},
         ${customer.name},
         ${customer.mobilePhone ?? ''},
-        ${JSON.stringify(items)}::jsonb,
+        ${itemsJson}::jsonb,
         ${quote.totalComJuros},
         '',
         'NOVO',
         'CHECKOUT',
         'PENDING',
         ${paymentResult.asaas_payment_id},
-        ${grossValue},
+        ${serverGrossValue},
         ${installments},
         ${quote.installmentValue},
         ${quote.platformTakePct / 100},
@@ -148,13 +177,14 @@ export async function POST(req: NextRequest) {
     `
   } catch (err) {
     logServerError('[checkout/payment] INSERT order', err)
-    // Não retornar erro ao cliente — cobrança já foi criada no Asaas
-    // O webhook irá atualizar o status do pedido
   }
+
+  const statusToken = signCheckoutStatusToken(paymentResult.asaas_payment_id)
 
   return NextResponse.json({
     orderNumber,
     asaas_payment_id: paymentResult.asaas_payment_id,
+    statusToken,
     invoiceUrl:       paymentResult.invoiceUrl,
     pixQrCode:        paymentResult.pixQrCode,
     pixCopiaECola:    paymentResult.pixCopiaECola,

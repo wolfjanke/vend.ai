@@ -127,12 +127,23 @@ export const deliveryAddressSchema = z.object({
 
 export type DeliveryAddressInput = z.infer<typeof deliveryAddressSchema>
 
+const checkoutCartLineSchema = z.object({
+  product_id: z.string().uuid(),
+  variant_id: z.string(),
+  size:       z.string().min(1),
+  color:      z.string().optional(),
+  qty:        z.number().int().positive(),
+  name:       z.string().optional(),
+  photo:      z.string().optional(),
+})
+
 export const checkoutPaymentSchema = z.object({
   storeSlug:        z.string().min(2).max(40),
   billingType:      z.enum(['PIX', 'CREDIT_CARD']),
   installments:     z.number().int().min(1).max(12).default(1),
   grossValue:       z.number().positive(),
   creditCardToken:  z.string().optional(),
+  cartItems:        z.array(checkoutCartLineSchema).min(1),
   customer: z.object({
     name:        z.string().min(1).max(200),
     cpfCnpj:    z.string().optional(),
@@ -143,7 +154,7 @@ export const checkoutPaymentSchema = z.object({
     description: z.string(),
     quantity:    z.number().int().positive(),
     value:       z.number().nonnegative(),
-  })).min(1),
+  })).min(1).optional(),
 })
 
 export const orderCreateSchema = z.object({
@@ -167,4 +178,7 @@ export const orderCreateSchema = z.object({
   deliveryFee:      z.number().nonnegative(),
   checkoutChannel:  z.enum(['site', 'whatsapp']),
   payment_source:   z.enum(['WHATSAPP', 'CHECKOUT', 'PDV']).optional().default('WHATSAPP'),
+  privacyConsent:   z.literal(true, {
+    message: 'É necessário aceitar a política de privacidade',
+  }),
 })
