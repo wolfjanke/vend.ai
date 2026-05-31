@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { genAI, MODEL, buildViSystemPrompt } from '@/lib/gemini'
-import type { ViMessage, StoreContext, StoreSettings } from '@/types'
+import { buildViSystemPrompt, viChatResponse } from '@/lib/gemini'
+import type { ViMessage, StoreContext } from '@/types'
 import { logServerError } from '@/lib/logger'
 import { sql } from '@/lib/db'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
-import { checkAndIncrementViUsage, viIpLimit } from '@/lib/vi-limits'
-import type { PlanSlug } from '@/types'
+import {
+  checkViLimit,
+  checkViDailyLimit,
+  incrementViMessage,
+  incrementViDailyCount,
+  viIpLimit,
+  VI_WHATSAPP_REDIRECT_MESSAGE,
+  buildWhatsAppRedirectUrl,
+  viModelForPlan,
+  viStreamsForPlan,
+} from '@/lib/vi-limits'
+import type { PlanSlug } from '@/lib/plans'
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,60 +46,56 @@ export async function POST(req: NextRequest) {
     }
 
     const storeRows = await sql`
-      SELECT id, plan, settings_json FROM stores WHERE slug = ${slug} LIMIT 1
+      SELECT id, plan, whatsapp FROM stores WHERE slug = ${slug} LIMIT 1
     `
     const store = storeRows[0]
     if (!store) {
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 })
     }
 
+    const storeId = String(store.id)
     const plan = (store.plan ?? 'free') as PlanSlug
-    const settings = (store.settings_json as StoreSettings) ?? {}
-    const usage = await checkAndIncrementViUsage(String(store.id), plan, settings)
-    if (!usage.allowed) {
-      const msg =
-        usage.reason === 'plan'
-          ? 'A assistente Vi não está disponível neste plano da loja.'
-          : 'Limite de mensagens da Vi atingido. Tente mais tarde ou fale pelo WhatsApp.'
-      return NextResponse.json({ error: msg }, { status: 429 })
+    const whatsapp = String(storeContext.whatsapp ?? store.whatsapp ?? '')
+
+    const dailyOk = await checkViDailyLimit(storeId)
+    if (!dailyOk) {
+      return NextResponse.json({
+        redirectWhatsApp: true,
+        message:          VI_WHATSAPP_REDIRECT_MESSAGE,
+        whatsappUrl:      buildWhatsAppRedirectUrl(whatsapp),
+      })
     }
 
-    const model = genAI.getGenerativeModel({
-      model: MODEL,
-      systemInstruction: buildViSystemPrompt(storeContext),
+    const viCheck = await checkViLimit(storeId)
+    if (!viCheck.allowed && viCheck.redirect) {
+      return NextResponse.json({
+        redirectWhatsApp: true,
+        message:          VI_WHATSAPP_REDIRECT_MESSAGE,
+        whatsappUrl:      buildWhatsAppRedirectUrl(viCheck.whatsapp || whatsapp),
+      })
+    }
+
+    if (!viCheck.allowed) {
+      return NextResponse.json({ error: 'Indisponível no momento.' }, { status: 429 })
+    }
+
+    await incrementViMessage(storeId, viCheck.isOverage)
+    await incrementViDailyCount(storeId)
+
+    const systemPrompt = buildViSystemPrompt(storeContext)
+    const model = viModelForPlan(plan)
+    const stream = viStreamsForPlan(plan)
+
+    const result = await viChatResponse({
+      messages,
+      systemPrompt,
+      model,
+      stream,
     })
 
-    const contents = messages.map(m => ({
-      role: m.role === 'user' ? ('user' as const) : ('model' as const),
-      parts: [{ text: m.content }],
-    }))
+    if (result instanceof Response) return result
 
-    const result = await model.generateContentStream({ contents })
-
-    const encoder = new TextEncoder()
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of result.stream) {
-            const text =
-              (typeof (chunk as { text?: () => string }).text === 'function'
-                ? (chunk as { text: () => string }).text()
-                : (chunk as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }).candidates?.[0]?.content?.parts?.[0]?.text) ?? ''
-            if (text) controller.enqueue(encoder.encode(text))
-          }
-        } finally {
-          controller.close()
-        }
-      },
-    })
-
-    return new Response(readable, {
-      headers: {
-        'Content-Type':  'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-      },
-    })
+    return NextResponse.json({ text: result })
   } catch (error) {
     logServerError('[/api/vi]', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

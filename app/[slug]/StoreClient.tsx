@@ -63,6 +63,7 @@ export default function StoreClient({ store, products }: Props) {
   // Build store context for Vi
   const storeContext: StoreContext = {
     storeSlug:      store.slug,
+    whatsapp:       store.whatsapp,
     name:           store.name,
     freteInfo:      settings.freteInfo,
     pagamentoInfo:  settings.pagamentoInfo,

@@ -91,9 +91,38 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
         body:    JSON.stringify({ messages: nextMessages, storeContext }),
       })
 
+      const contentType = response.headers.get('content-type') ?? ''
+
+      if (contentType.includes('application/json')) {
+        const data = await response.json() as {
+          redirectWhatsApp?: boolean
+          message?:          string
+          whatsappUrl?:      string
+          text?:             string
+          error?:            string
+        }
+        if (!response.ok && !data.redirectWhatsApp) {
+          throw new Error(data.error ?? 'Erro na API')
+        }
+        if (data.redirectWhatsApp && data.message) {
+          const wa = data.whatsappUrl
+            ? `\n\n[Continuar no WhatsApp](${data.whatsappUrl})`
+            : ''
+          setMessages([...nextMessages, {
+            role:    'assistant',
+            content: `${data.message}${wa}`,
+          }])
+          return
+        }
+        if (data.text) {
+          setMessages([...nextMessages, { role: 'assistant', content: data.text }])
+          return
+        }
+        throw new Error('Resposta inválida')
+      }
+
       if (!response.ok || !response.body) throw new Error('Erro na API')
 
-      // Streaming
       const assistantMsg: ViMessage = { role: 'assistant', content: '' }
       setMessages([...nextMessages, assistantMsg])
 
@@ -128,7 +157,12 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
 
   function renderContent(text: string) {
     const safe = escapeHtml(text)
-    return safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    return safe
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-semibold">$1</a>',
+      )
   }
 
   const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
