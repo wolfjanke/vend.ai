@@ -13,6 +13,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 /** Modelos por função — override global legado: GEMINI_MODEL (aplica só ao viChat). */
 export const GEMINI_MODELS = {
   photoAnalysis: 'gemini-2.5-pro',
+  themeAnalysis: 'gemini-2.5-flash',
   viChat:        (process.env.GEMINI_MODEL ?? 'gemini-2.5-flash').trim(),
   stockSearch:   'gemini-2.5-flash-lite',
 } as const
