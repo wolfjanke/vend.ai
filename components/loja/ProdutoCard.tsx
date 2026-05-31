@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { Product, CartItem, CustomCategory } from '@/types'
 import { getCategoryDisplayLabel } from '@/types'
@@ -35,9 +35,11 @@ interface Props {
   displayVariantIndex?: number
   onAddToCart: (item: CartItem) => void
   onInteract?: () => void
+  onProductFocus?: (product: Product) => void
   /** Vitrine: só imagem + nome/preço/parcelas; cor, tamanho e compra no modal. */
   layout?:     'vitrine' | 'default'
   cardTheme?:  StoreThemeConfig
+  storeSlug?:  string
   installmentsMaxNoInterest?: number | null
   customCategories?: CustomCategory[]
 }
@@ -47,8 +49,10 @@ export default function ProdutoCard({
   displayVariantIndex,
   onAddToCart,
   onInteract,
+  onProductFocus,
   layout = 'default',
   cardTheme: cardThemeProp,
+  storeSlug,
   installmentsMaxNoInterest = null,
   customCategories = [],
 }: Props) {
@@ -63,10 +67,25 @@ export default function ProdutoCard({
   const [added,              setAdded]              = useState(false)
   const [detailOpen,         setDetailOpen]         = useState(false)
   const [portalReady,        setPortalReady]        = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setPortalReady(true)
   }, [])
+
+  useEffect(() => {
+    if (layout !== 'vitrine' || !onProductFocus) return
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) onProductFocus(product)
+      },
+      { threshold: 0.6 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [layout, onProductFocus, product])
 
   useEffect(() => {
     setSelectedVariantIdx(
@@ -230,9 +249,17 @@ export default function ProdutoCard({
               )}
             </p>
             <h3 className="font-syne font-semibold text-sm text-foreground mb-2">Descrição</h3>
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap break-words mb-5">
+            <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap break-words mb-3">
               {descTrimmed || 'Sem descrição adicional.'}
             </p>
+            {storeSlug && product.slug && (
+              <a
+                href={`/${storeSlug}/produto/${product.slug}`}
+                className="inline-block text-sm text-primary font-medium mb-5 min-h-[44px] leading-[44px]"
+              >
+                Ver página do produto →
+              </a>
+            )}
 
             {!isSoldOut && (
               <>
@@ -318,7 +345,7 @@ export default function ProdutoCard({
 
   if (layout === 'vitrine') {
     return (
-      <>
+      <div ref={cardRef} className="h-full min-w-0">
         <VitrineProductCard
           product={product}
           variant={variant}
@@ -330,12 +357,12 @@ export default function ProdutoCard({
           onOpenDetail={openDetail}
         />
         {detailModal}
-      </>
+      </div>
     )
   }
 
   return (
-    <div className="group bg-surface border border-border rounded-[20px] overflow-hidden hover:-translate-y-1 hover:border-primary hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)] transition-all duration-300 h-full flex flex-col min-h-0">
+    <div ref={cardRef} className="group bg-surface border border-border rounded-[20px] overflow-hidden hover:-translate-y-1 hover:border-primary hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)] transition-all duration-300 h-full flex flex-col min-h-0">
 
       {/* Image — caixa fixa 3:4; imagem preenche com crop uniforme */}
       <button

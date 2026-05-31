@@ -22,6 +22,7 @@ interface Props {
   cardTheme:   StoreThemeConfig
   onAddToCart: (item: CartItem) => void
   onInteract?: () => void
+  onProductFocus?: (product: import('@/types').Product) => void
   installmentsMaxNoInterest?: number | null
 }
 
@@ -105,6 +106,7 @@ export default function Catalogo({
   cardTheme,
   onAddToCart,
   onInteract,
+  onProductFocus,
   installmentsMaxNoInterest = null,
 }: Props) {
   const [search, setSearch] = useState('')
@@ -234,6 +236,7 @@ export default function Catalogo({
                 cardTheme={cardTheme}
                 onAddToCart={onAddToCart}
                 onInteract={onInteract}
+                onProductFocus={onProductFocus}
                 installmentsMaxNoInterest={installmentsMaxNoInterest}
                 customCategories={customCategories}
               />
@@ -258,6 +261,7 @@ export default function Catalogo({
                   cardTheme={cardTheme}
                   onAddToCart={onAddToCart}
                   onInteract={onInteract}
+                  onProductFocus={onProductFocus}
                   installmentsMaxNoInterest={installmentsMaxNoInterest}
                   customCategories={customCategories}
                 />

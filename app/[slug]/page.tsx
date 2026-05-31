@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { sql } from '@/lib/db'
 import { isReservedStoreSlug } from '@/lib/reserved-slugs'
-import type { Product } from '@/types'
+import type { Product, Store } from '@/types'
+import type { PlanSlug } from '@/lib/plans'
 import { toPublicStore, publicStoreAsStore } from '@/lib/public-store'
 import { resolveStoreTheme } from '@/lib/theme-css'
 import StoreClient from './StoreClient'
@@ -34,7 +35,8 @@ export default async function StorePage({ params }: Props) {
         id, slug, name, logo_url, whatsapp, settings_json, created_at,
         cep, logradouro, numero, complemento, bairro, cidade, uf,
         theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-        theme_background, theme_shimmer, theme_logo_url
+        theme_background, theme_shimmer, theme_logo_url,
+        plan, assistant_name, assistant_welcome_message, assistant_tone
       FROM stores
       WHERE slug = ${params.slug}
       LIMIT 1
@@ -47,9 +49,15 @@ export default async function StorePage({ params }: Props) {
   if (!storeRow) notFound()
   const storeId = String(storeRow.id)
   const publicStore = toPublicStore(storeRow)
-  const store = publicStoreAsStore(publicStore)
   const themeResolved = resolveStoreTheme(storeRow)
-  const displayLogo = themeResolved.displayLogo ?? store.logo_url
+  const store: Store = {
+    ...publicStoreAsStore(publicStore),
+    logo_url:                themeResolved.displayLogo ?? publicStore.logo_url,
+    plan:                    (storeRow.plan as PlanSlug) ?? 'free',
+    assistant_name:          (storeRow.assistant_name as string) ?? 'Vi',
+    assistant_welcome_message: (storeRow.assistant_welcome_message as string | null) ?? null,
+    assistant_tone:          (storeRow.assistant_tone as Store['assistant_tone']) ?? 'friendly',
+  }
 
   let products: Product[]
   try {
@@ -64,9 +72,10 @@ export default async function StorePage({ params }: Props) {
 
   return (
     <StoreClient
-      store={{ ...store, logo_url: displayLogo }}
+      store={store}
       products={products}
       cardTheme={themeResolved.cardTheme}
+      plan={store.plan ?? 'free'}
     />
   )
 }

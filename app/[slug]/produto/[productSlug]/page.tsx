@@ -1,0 +1,111 @@
+import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import { sql } from '@/lib/db'
+import { isReservedStoreSlug } from '@/lib/reserved-slugs'
+import type { Product, Store } from '@/types'
+import { toPublicStore, publicStoreAsStore } from '@/lib/public-store'
+import { resolveStoreTheme } from '@/lib/theme-css'
+import LojaShell from '@/components/loja/LojaShell'
+import ProductDetailClient from '@/components/loja/ProductDetailClient'
+import type { PlanSlug } from '@/lib/plans'
+
+interface Props {
+  params: { slug: string; productSlug: string }
+}
+
+function appBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://vendai.club'
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (isReservedStoreSlug(params.slug)) return { title: 'vend.ai' }
+
+  const storeRows = await sql`
+    SELECT name FROM stores WHERE slug = ${params.slug} LIMIT 1
+  `
+  if (!storeRows[0]) return { title: 'Loja não encontrada' }
+
+  const storeRowsFull = await sql`SELECT id FROM stores WHERE slug = ${params.slug} LIMIT 1`
+  const storeId = storeRowsFull[0]?.id
+  if (!storeId) return { title: storeRows[0].name }
+
+  const products = await sql`
+    SELECT name, description, price, promo_price, variants_json, slug
+    FROM products
+    WHERE store_id = ${storeId} AND slug = ${params.productSlug} AND active = true
+    LIMIT 1
+  `
+  const product = products[0] as Product | undefined
+  if (!product) return { title: storeRows[0].name }
+
+  const price = Number(product.promo_price ?? product.price)
+  const variants = product.variants_json as Product['variants_json']
+  const mainPhoto = variants?.[0]?.photos?.[0]
+  const base = appBaseUrl()
+  const url = `${base}/${params.slug}/produto/${params.productSlug}`
+
+  return {
+    title: `${product.name} — ${storeRows[0].name}`,
+    description: product.description?.slice(0, 160) || `${product.name} disponível em ${storeRows[0].name}`,
+    openGraph: {
+      title:       `${product.name} — R$${price.toFixed(2).replace('.', ',')}`,
+      description: `Disponível em ${storeRows[0].name}. Compre pelo WhatsApp!`,
+      images:      mainPhoto ? [{ url: mainPhoto }] : undefined,
+      url,
+    },
+  }
+}
+
+export default async function ProductPage({ params }: Props) {
+  if (isReservedStoreSlug(params.slug)) notFound()
+
+  const storeRows = await sql`
+    SELECT
+      id, slug, name, logo_url, whatsapp, settings_json, created_at, plan,
+      cep, logradouro, numero, complemento, bairro, cidade, uf,
+      theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
+      theme_background, theme_shimmer, theme_logo_url,
+      assistant_name, assistant_welcome_message, assistant_tone
+    FROM stores
+    WHERE slug = ${params.slug}
+    LIMIT 1
+  `
+  const storeRow = storeRows[0] as Record<string, unknown> | undefined
+  if (!storeRow) notFound()
+
+  const storeId = String(storeRow.id)
+  const productRows = await sql`
+    SELECT * FROM products
+    WHERE store_id = ${storeId} AND slug = ${params.productSlug} AND active = true
+    LIMIT 1
+  `
+  const product = productRows[0] as Product | undefined
+  if (!product) notFound()
+
+  const allProducts = (await sql`
+    SELECT * FROM products WHERE store_id = ${storeId} AND active = true ORDER BY created_at DESC
+  `) as Product[]
+
+  const publicStore = toPublicStore(storeRow)
+  const store = {
+    ...publicStoreAsStore(publicStore),
+    plan:                    (storeRow.plan as PlanSlug) ?? 'free',
+    assistant_name:          (storeRow.assistant_name as string) ?? 'Vi',
+    assistant_welcome_message: (storeRow.assistant_welcome_message as string | null) ?? null,
+    assistant_tone:          (storeRow.assistant_tone as Store['assistant_tone']) ?? 'friendly',
+    logo_url:                resolveStoreTheme(storeRow).displayLogo ?? publicStore.logo_url,
+  }
+
+  const themeResolved = resolveStoreTheme(storeRow)
+
+  return (
+    <LojaShell
+      store={store}
+      products={allProducts}
+      cardTheme={themeResolved.cardTheme}
+      plan={store.plan ?? 'free'}
+    >
+      <ProductDetailClient product={product} />
+    </LojaShell>
+  )
+}

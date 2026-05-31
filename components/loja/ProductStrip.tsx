@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CartItem, CustomCategory, ProductVariantDisplay } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import ProdutoCard from './ProdutoCard'
+import { useLoja } from './LojaContext'
 
 interface Props {
   sectionId:   string
@@ -13,6 +14,7 @@ interface Props {
   cardTheme:   StoreThemeConfig
   onAddToCart: (item: CartItem) => void
   onInteract?: () => void
+  onProductFocus?: (product: import('@/types').Product) => void
   installmentsMaxNoInterest?: number | null
   customCategories?: CustomCategory[]
 }
@@ -25,10 +27,12 @@ export default function ProductStrip({
   displayItems,
   onAddToCart,
   onInteract,
+  onProductFocus,
   cardTheme,
   installmentsMaxNoInterest = null,
   customCategories = [],
 }: Props) {
+  const { store } = useLoja()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [activeDot, setActiveDot] = useState(0)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -131,8 +135,10 @@ export default function ProductStrip({
                 displayVariantIndex={variantIndex}
                 onAddToCart={onAddToCart}
                 onInteract={onInteract}
+                onProductFocus={onProductFocus}
                 layout="vitrine"
                 cardTheme={cardTheme}
+                storeSlug={store.slug}
                 installmentsMaxNoInterest={installmentsMaxNoInterest}
                 customCategories={customCategories}
               />
