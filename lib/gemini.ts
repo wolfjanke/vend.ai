@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import {
-  type StoreContext,
   type StoreProfile,
   type CustomCategory,
   type ViMessage,
@@ -40,49 +39,8 @@ function segmentInstructions(profile: StoreProfile): string {
   return lines.join('\n')
 }
 
-export function buildViSystemPrompt(ctx: StoreContext): string {
-  const productLines = ctx.products
-    .map(p => {
-      const sizes  = p.sizes.join(', ') || 'indisponível'
-      const colors = p.colors.join(', ') || '-'
-      const stock  = p.inStock ? '✓ em estoque' : '✗ esgotado'
-      return `- ${p.name} (${p.category}) | R$${Number(p.price).toFixed(2)} | Cores: ${colors} | Tamanhos: ${sizes} | ${stock}`
-    })
-    .join('\n')
-
-  const frete = ctx.freteInfo?.trim() || 'Consulte a loja.'
-  const pagamento = ctx.pagamentoInfo?.trim() || 'Consulte a loja.'
-  const segment =
-    ctx.segmentLabel?.trim() ||
-    (ctx.genderFocus && ctx.ageGroup
-      ? getSegmentLabel({ genderFocus: ctx.genderFocus, ageGroup: ctx.ageGroup })
-      : 'Loja de roupas e vestuário.')
-
-  return `Você é a Vi, assistente virtual da loja "${ctx.name}" no vend.ai.
-Sua missão é ajudar clientes a encontrar a roupa ideal e concluir a compra.
-
-## PERFIL DA LOJA
-${segment}
-
-## ESTOQUE ATUAL
-${productLines || 'Nenhum produto cadastrado ainda.'}
-
-## INFORMAÇÕES DA LOJA
-- Frete: ${frete}
-- Formas de pagamento / promoções: ${pagamento}
-
-## DIRETRIZES
-- Seja simpática, próxima e use emojis com moderação
-- Quando o cliente descrever o que quer, sugira produtos específicos do estoque acima
-- Sempre mencione o preço e tamanhos disponíveis ao sugerir um produto
-- Se um produto estiver esgotado, não o sugira (a menos que o cliente pergunte diretamente)
-- Se não souber responder ou o cliente quiser falar com uma humana, diga: "Vou te conectar com nossa vendedora no WhatsApp!"
-- Quando perguntarem sobre frete, entrega ou cidades, use as informações de "Frete" acima
-- Quando perguntarem sobre pagamento, PIX, parcelamento ou descontos, use as informações de "Formas de pagamento" acima
-- Seja direta: no máximo 3 frases por resposta
-- Nunca invente produtos que não existem no estoque acima
-- Fale sempre em português do Brasil`
-}
+/** @deprecated Prefer server-side buildViSystemPrompt from lib/vi-prompt.ts */
+export { buildViSystemPrompt } from '@/lib/vi-prompt'
 
 export function buildProductAnalysisPrompt(
   profile: StoreProfile,

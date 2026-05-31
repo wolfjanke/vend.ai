@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { buildViSystemPrompt, viChatResponse } from '@/lib/gemini'
-import type { ViMessage, StoreContext } from '@/types'
+import { viChatResponse } from '@/lib/gemini'
+import { buildViSystemPrompt, type AssistantTone } from '@/lib/vi-prompt'
+import type { ViMessage, StoreContext, Product, StoreSettings } from '@/types'
 import { logServerError } from '@/lib/logger'
 import { sql } from '@/lib/db'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
@@ -46,7 +47,12 @@ export async function POST(req: NextRequest) {
     }
 
     const storeRows = await sql`
-      SELECT id, plan, whatsapp FROM stores WHERE slug = ${slug} LIMIT 1
+      SELECT
+        id, plan, whatsapp, name, slug, settings_json,
+        assistant_name, assistant_welcome_message, assistant_tone
+      FROM stores
+      WHERE slug = ${slug}
+      LIMIT 1
     `
     const store = storeRows[0]
     if (!store) {
@@ -56,6 +62,36 @@ export async function POST(req: NextRequest) {
     const storeId = String(store.id)
     const plan = (store.plan ?? 'free') as PlanSlug
     const whatsapp = String(storeContext.whatsapp ?? store.whatsapp ?? '')
+    const settings = (store.settings_json as StoreSettings) ?? {}
+
+    const productRows = await sql`
+      SELECT id, name, slug, description, category, price, promo_price, variants_json
+      FROM products
+      WHERE store_id = ${storeId} AND active = true
+      ORDER BY created_at DESC
+    `
+    const dbProducts = productRows as Product[]
+
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://vendai.club'
+    const assistantName =
+      String(store.assistant_name ?? '').trim() || 'Vi'
+
+    const systemPrompt = buildViSystemPrompt(
+      {
+        name:            String(store.name),
+        assistantName,
+        whatsapp,
+        storeSlug:       String(store.slug),
+        baseUrl,
+        plan,
+        paymentMethods:  settings.pagamentoInfo,
+        deliveryInfo:    settings.freteInfo,
+        assistantTone:   (store.assistant_tone as AssistantTone) ?? 'friendly',
+      },
+      dbProducts,
+      settings,
+    )
 
     const dailyOk = await checkViDailyLimit(storeId)
     if (!dailyOk) {
@@ -82,7 +118,6 @@ export async function POST(req: NextRequest) {
     await incrementViMessage(storeId, viCheck.isOverage)
     await incrementViDailyCount(storeId)
 
-    const systemPrompt = buildViSystemPrompt(storeContext)
     const model = viModelForPlan(plan)
     const stream = viStreamsForPlan(plan)
 
