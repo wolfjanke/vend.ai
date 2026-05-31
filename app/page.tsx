@@ -19,7 +19,7 @@ import {
 import LandingHeader from '@/components/landing/LandingHeader'
 import LandingHeroDevices from '@/components/landing/LandingHeroDevices'
 import ScrollReveal from '@/components/landing/ScrollReveal'
-import NumberCounter from '@/components/landing/NumberCounter'
+import LandingPlans from '@/components/landing/LandingPlans'
 
 /** Padding horizontal seguro no mobile (evita texto colado na borda / cortado) */
 const sectionX = 'px-4 sm:px-6 md:px-12 lg:px-16'
@@ -72,59 +72,47 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* social proof inline */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted">
-            <div className="flex items-center gap-1.5">
-              <div className="flex -space-x-1">
-                {['🧕', '👩', '👩‍🦱', '👩‍🦳'].map((e, i) => (
-                  <span key={i} className="text-lg leading-none">{e}</span>
+          <div className="text-sm text-muted space-y-2 max-w-md">
+            <p className="font-syne font-bold text-foreground text-base break-words">
+              Junte-se a quem já vende mais
+            </p>
+            <p className="break-words leading-relaxed">
+              Lojistas de todo o Brasil usando o vend.ai para vender mais com menos esforço.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <span className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={12} className="fill-accent text-accent" />
                 ))}
-              </div>
-              <span><strong className="text-foreground">+1.200</strong> lojistas</span>
+                <span className="ml-1">4,9/5</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle2 size={13} className="text-accent" />
+                Sem cartão de crédito
+              </span>
             </div>
-            <div className="flex items-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} size={12} className="fill-accent text-accent" />
-              ))}
-              <span className="ml-1">4,9/5</span>
-            </div>
-            <span className="flex items-center gap-1">
-              <CheckCircle2 size={13} className="text-accent" />
-              Sem cartão de crédito
-            </span>
           </div>
         </div>
 
         <LandingHeroDevices />
       </section>
 
-      {/* ── Numbers ───────────────────────────────────────────── */}
+      {/* ── Benefícios ────────────────────────────────────────── */}
       <section className={`${sectionX} py-14 border-t border-border bg-surface/40`}>
-        <ScrollReveal className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center max-w-4xl mx-auto min-w-0">
-          <div>
-            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0 break-all">
-              <NumberCounter target={1200} suffix="+" />
+        <ScrollReveal className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto min-w-0">
+          {[
+            '✓ Loja no ar em 2 minutos',
+            '✓ Sem cartão de crédito',
+            '✓ Cancele quando quiser',
+            '✓ Vi atendendo 24h',
+          ].map(line => (
+            <div
+              key={line}
+              className="text-sm sm:text-base text-foreground font-medium py-3 px-4 rounded-xl border border-border bg-surface text-center break-words"
+            >
+              {line}
             </div>
-            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Lojistas ativos</p>
-          </div>
-          <div>
-            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0">
-              <NumberCounter target={2} suffix=" min" />
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Para montar a loja</p>
-          </div>
-          <div>
-            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0">
-              <NumberCounter target={95} suffix="%" />
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Pedidos via WhatsApp</p>
-          </div>
-          <div>
-            <div className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl text-grad mb-1 tabular-nums min-w-0">
-              <NumberCounter target={24} suffix="h" />
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted leading-snug px-0.5">Vi atendendo pra você</p>
-          </div>
+          ))}
         </ScrollReveal>
       </section>
 
@@ -515,120 +503,7 @@ export default function LandingPage() {
           <p className="text-muted text-sm mb-10 sm:mb-14">Sem fidelidade. Cancele quando quiser.</p>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 min-w-0">
-          {/* Grátis */}
-          <ScrollReveal delay={0}>
-            <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
-              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Grátis</h3>
-              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
-                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 0</p>
-                <p className="text-sm text-muted font-medium">por mês</p>
-              </div>
-              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para começar e testar</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Até 10 produtos', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
-                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
-                    <span className="min-w-0 break-words leading-snug">{f}</span>
-                  </li>
-                ))}
-                {['IA no cadastro', 'Vi — atendente IA 24h', 'Mini PDV'].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-muted min-w-0">
-                    <XCircle size={13} className="shrink-0 mt-0.5" />
-                    <span className="min-w-0 break-words leading-snug">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl border border-border text-foreground text-sm font-semibold hover:border-primary hover:text-primary transition-all min-h-[44px] flex items-center justify-center">
-                Começar grátis
-              </Link>
-            </div>
-          </ScrollReveal>
-
-          {/* Starter */}
-          <ScrollReveal delay={100}>
-            <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
-              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Starter</h3>
-              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
-                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 49,90</p>
-                <p className="text-sm text-muted font-medium">por mês</p>
-              </div>
-              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para começar a vender</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Até 50 produtos', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'IA no cadastro de produto', 'Pedidos via WhatsApp', 'Painel de pedidos'].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
-                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
-                    <span className="min-w-0 break-words leading-snug">{f}</span>
-                  </li>
-                ))}
-                {['Vi — atendente IA 24h', 'Mini PDV'].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-muted min-w-0">
-                    <XCircle size={13} className="shrink-0 mt-0.5" />
-                    <span className="min-w-0 break-words leading-snug">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10 transition-all min-h-[44px] flex items-center justify-center">
-                Começar e escolher Starter
-              </Link>
-            </div>
-          </ScrollReveal>
-
-          {/* Pro - Mais popular */}
-          <ScrollReveal delay={200}>
-            <div className="bg-surface border border-primary rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0 shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]">
-              <span className="inline-flex bg-primary text-white text-xs font-bold px-3 py-1 rounded-full self-start mb-3">
-                Mais popular
-              </span>
-              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Pro</h3>
-              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
-                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 99,90</p>
-                <p className="text-sm text-muted font-medium">por mês</p>
-              </div>
-              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para lojas em crescimento</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Até 200 produtos', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'IA no cadastro de produto', 'Vi — atendente IA 24h', 'Recuperação de pedido', 'Métricas avançadas', 'Suporte prioritário'].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
-                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
-                    <span className="min-w-0 break-words leading-snug">{f}</span>
-                  </li>
-                ))}
-                {['Mini PDV'].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-muted min-w-0">
-                    <XCircle size={13} className="shrink-0 mt-0.5" />
-                    <span className="min-w-0 break-words leading-snug">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/cadastro" className="shimmer block text-center w-full py-3 rounded-xl bg-primary text-white font-syne font-bold text-sm hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all min-h-[44px] flex items-center justify-center">
-                Começar e escolher Pro
-              </Link>
-            </div>
-          </ScrollReveal>
-
-          {/* Loja */}
-          <ScrollReveal delay={300}>
-            <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 w-full flex flex-col h-full min-w-0">
-              <h3 className="font-syne font-bold text-lg mb-2 ps-[calc(13px+0.5rem)]">Loja</h3>
-              <div className="mb-2 min-w-0 space-y-0.5 ps-[calc(13px+0.5rem)]">
-                <p className="font-syne font-extrabold text-3xl sm:text-4xl text-accent tabular-nums leading-tight break-words">R$ 199,90</p>
-                <p className="text-sm text-muted font-medium">por mês</p>
-              </div>
-              <p className="text-xs text-muted mb-6 ps-[calc(13px+0.5rem)] break-words">Para quem já vende muito</p>
-              <ul className="flex flex-col gap-2.5 mb-7 flex-1 text-sm min-w-0">
-                {['Produtos ilimitados', 'Checkout integrado', 'Link de pagamento', 'Parcelamento em até 12x', 'IA no cadastro de produto', 'Vi — atendente IA 24h', 'Mini PDV (venda presencial)', 'Link de pagamento pelo PDV', 'Métricas completas', 'Suporte prioritário'].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-foreground min-w-0">
-                    <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
-                    <span className="min-w-0 break-words leading-snug">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/cadastro" className="block text-center w-full py-3 rounded-xl border border-border text-foreground text-sm font-semibold hover:border-primary hover:text-primary transition-all min-h-[44px] flex items-center justify-center">
-                Começar e escolher Loja
-              </Link>
-            </div>
-          </ScrollReveal>
-        </div>
+        <LandingPlans />
       </section>
 
       {/* ── FAQ ───────────────────────────────────────────────── */}
@@ -655,12 +530,16 @@ export default function LandingPage() {
               a: 'A Vi é uma assistente com IA que atende seus clientes na loja: sugere produtos por estilo, cor ou tamanho, responde dúvidas e indica como finalizar o pedido pelo WhatsApp.',
             },
             {
+              q: 'Tem limite de mensagens da Vi?',
+              a: 'Cada plano inclui um volume de mensagens da Vi por mês. No plano Grátis, ao atingir o limite a Vi direciona o cliente para seu WhatsApp. Nos planos pagos, você continua sendo atendido com cobrança proporcional do excedente. Você acompanha o consumo em tempo real no painel.',
+            },
+            {
               q: 'Qual o limite de produtos em cada plano?',
-              a: 'Grátis: 10 produtos. Starter: 50. Pro: 200. Loja: ilimitado. Importante: cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
+              a: 'Grátis: 10 produtos. Starter: 25. Pro: 200. Loja e Enterprise: ilimitado. Cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
             },
             {
               q: 'Como faço upgrade de plano?',
-              a: 'Você começa criando sua loja grátis. Quando precisar de mais produtos e recursos, é só fazer upgrade para Starter, Pro ou Loja diretamente no painel.',
+              a: 'Você começa criando sua loja grátis. Quando precisar de mais produtos e recursos, faça upgrade para Starter, Pro, Loja ou Enterprise no painel.',
             },
             {
               q: 'Onde ficam meus dados? Vocês vendem meus dados?',
