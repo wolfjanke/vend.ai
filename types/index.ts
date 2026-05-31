@@ -170,6 +170,14 @@ export interface Store extends StoreAddress {
   settings_json: StoreSettings
   created_at:    string
   user_id:       string
+  theme_name?:              string
+  theme_primary_color?:     string | null
+  theme_secondary_color?:   string | null
+  theme_accent_color?:      string | null
+  theme_background?:        string
+  theme_shimmer?:           boolean
+  theme_logo_url?:          string | null
+  theme_onboarding_done?:   boolean
   plan?:         PlanSlug
   asaas_account_id?:       string
   asaas_wallet_id?:        string

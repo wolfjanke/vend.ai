@@ -1,4 +1,5 @@
 import type { Store, StoreSettings } from '@/types'
+import type { ThemeBackground, ThemeName } from '@/lib/themes'
 
 /** Campos expostos na vitrine pública (nunca enviar asaas_*, user_id, plan, chaves). */
 export type PublicStore = {
@@ -9,6 +10,13 @@ export type PublicStore = {
   whatsapp:      string
   settings_json: StoreSettings
   created_at:    string
+  theme_name?:              ThemeName
+  theme_primary_color?:     string | null
+  theme_secondary_color?:   string | null
+  theme_accent_color?:      string | null
+  theme_background?:        ThemeBackground
+  theme_shimmer?:           boolean
+  theme_logo_url?:          string | null
   cep?:          string | null
   logradouro?:   string | null
   numero?:       string | null
@@ -34,6 +42,13 @@ export function toPublicStore(row: Record<string, unknown>): PublicStore {
     bairro:        (row.bairro as string | null) ?? null,
     cidade:        (row.cidade as string | null) ?? null,
     uf:            (row.uf as string | null) ?? null,
+    theme_name:            (row.theme_name as ThemeName) ?? 'default',
+    theme_primary_color:   (row.theme_primary_color as string | null) ?? null,
+    theme_secondary_color: (row.theme_secondary_color as string | null) ?? null,
+    theme_accent_color:    (row.theme_accent_color as string | null) ?? null,
+    theme_background:      (row.theme_background as ThemeBackground) ?? 'dark',
+    theme_shimmer:         Boolean(row.theme_shimmer),
+    theme_logo_url:        (row.theme_logo_url as string | null) ?? null,
   }
 }
 
