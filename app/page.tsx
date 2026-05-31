@@ -24,6 +24,11 @@ import LandingPlans from '@/components/landing/LandingPlans'
 /** Padding horizontal seguro no mobile (evita texto colado na borda / cortado) */
 const sectionX = 'px-4 sm:px-6 md:px-12 lg:px-16'
 
+const demoStoreHref =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
+    ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/urban-mix`
+    : '/urban-mix'
+
 export default function LandingPage() {
   return (
     <main className="relative z-10 min-w-0 overflow-x-hidden">
@@ -63,13 +68,20 @@ export default function LandingPage() {
               Criar minha loja grátis
               <ArrowRight size={16} />
             </Link>
-            <Link
-              href="/urban-mix"
-              className="font-medium px-6 py-4 rounded-xl border border-border text-foreground hover:border-primary hover:text-primary transition-all text-center min-h-[48px] flex items-center justify-center"
-              title="Ver loja de exemplo com a Vi em ação"
-            >
-              Ver demonstração ao vivo
-            </Link>
+            <div className="flex flex-col items-center sm:items-start gap-1 w-full sm:w-auto">
+              <Link
+                href={demoStoreHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium px-6 py-4 rounded-xl border border-border text-foreground hover:border-primary hover:text-primary transition-all text-center min-h-[48px] flex items-center justify-center w-full sm:w-auto"
+                title="Ver loja de exemplo Urban Mix"
+              >
+                Ver demonstração ao vivo
+              </Link>
+              <p className="text-[11px] text-muted text-center sm:text-left break-words">
+                Explore a Urban Mix — nossa loja de exemplo
+              </p>
+            </div>
           </div>
 
           <div className="text-sm text-muted space-y-2 max-w-md">
@@ -592,7 +604,9 @@ export default function LandingPage() {
               <ArrowRight size={18} />
             </Link>
             <Link
-              href="/urban-mix"
+              href={demoStoreHref}
+              target="_blank"
+              rel="noopener noreferrer"
               className="font-medium px-7 py-4 rounded-xl border border-border text-foreground hover:border-primary hover:text-primary transition-all text-center min-h-[52px] flex items-center justify-center"
             >
               Ver demonstração
