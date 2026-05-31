@@ -435,9 +435,12 @@ export default function LandingPage() {
       <section className={`${sectionX} py-16 sm:py-20 border-t border-border`}>
         <ScrollReveal>
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Depoimentos</p>
-          <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-12 leading-tight">
-            +1.200 lojistas já vendem<br />com o vend.ai
+          <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-4 leading-tight break-words">
+            Junte-se a quem já vende mais
           </h2>
+          <p className="text-muted text-sm sm:text-base mb-12 max-w-xl break-words">
+            Lojistas de todo o Brasil usando o vend.ai para vender mais com menos esforço.
+          </p>
         </ScrollReveal>
 
         <div className="grid md:grid-cols-3 gap-4 sm:gap-5 min-w-0">
