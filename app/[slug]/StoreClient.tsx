@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import type { Product, Store, CartItem, StoreContext, BannerMessage, DeliveryAddress, CheckoutChannel, CheckoutPaymentMethod } from '@/types'
+import type { StoreThemeConfig } from '@/lib/themes'
 import { getStoreProfile, getSegmentLabel } from '@/types'
 import Catalogo    from '@/components/loja/Catalogo'
 import Carrinho    from '@/components/loja/Carrinho'
@@ -35,11 +36,12 @@ function filterActiveBanners(messages: BannerMessage[] | undefined): BannerMessa
 }
 
 interface Props {
-  store:    Store
-  products: Product[]
+  store:     Store
+  products:  Product[]
+  cardTheme: StoreThemeConfig
 }
 
-export default function StoreClient({ store, products }: Props) {
+export default function StoreClient({ store, products, cardTheme }: Props) {
   const [cart,          setCart]          = useState<CartItem[]>([])
   const [cartOpen,      setCartOpen]      = useState(false)
   const [viOpen,        setViOpen]        = useState(false)
@@ -246,6 +248,7 @@ export default function StoreClient({ store, products }: Props) {
         products={products}
         profile={storeProfile}
         customCategories={settings.customCategories ?? []}
+        cardTheme={cardTheme}
         onAddToCart={addToCart}
         onInteract={resetInactivity}
         installmentsMaxNoInterest={installmentsMaxFromSettings(settings.installmentsMaxNoInterest)}

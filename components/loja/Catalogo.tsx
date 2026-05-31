@@ -11,6 +11,7 @@ import {
 } from '@/types'
 import { expandProductsByVariant } from '@/lib/catalog-display'
 
+import type { StoreThemeConfig } from '@/lib/themes'
 import ProductStrip from './ProductStrip'
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
   profile:     StoreProfile
   /** Categorias extras da loja (rótulos nos chips e seções). */
   customCategories?: CustomCategory[]
+  cardTheme:   StoreThemeConfig
   onAddToCart: (item: CartItem) => void
   onInteract?: () => void
   installmentsMaxNoInterest?: number | null
@@ -100,6 +102,7 @@ export default function Catalogo({
   products,
   profile,
   customCategories = [],
+  cardTheme,
   onAddToCart,
   onInteract,
   installmentsMaxNoInterest = null,
@@ -228,6 +231,7 @@ export default function Catalogo({
                 title={filteredTitle}
                 countLabel={`${filtered.length} ${filtered.length === 1 ? 'peça' : 'peças'}`}
                 displayItems={filtered}
+                cardTheme={cardTheme}
                 onAddToCart={onAddToCart}
                 onInteract={onInteract}
                 installmentsMaxNoInterest={installmentsMaxNoInterest}
@@ -251,6 +255,7 @@ export default function Catalogo({
                   title={sec.title}
                   countLabel={`${sec.items.length} ${sec.items.length === 1 ? 'peça' : 'peças'}`}
                   displayItems={sec.items}
+                  cardTheme={cardTheme}
                   onAddToCart={onAddToCart}
                   onInteract={onInteract}
                   installmentsMaxNoInterest={installmentsMaxNoInterest}

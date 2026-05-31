@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CartItem, CustomCategory, ProductVariantDisplay } from '@/types'
+import type { StoreThemeConfig } from '@/lib/themes'
 import ProdutoCard from './ProdutoCard'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   title:       string
   countLabel?: string
   displayItems: ProductVariantDisplay[]
+  cardTheme:   StoreThemeConfig
   onAddToCart: (item: CartItem) => void
   onInteract?: () => void
   installmentsMaxNoInterest?: number | null
@@ -23,6 +25,7 @@ export default function ProductStrip({
   displayItems,
   onAddToCart,
   onInteract,
+  cardTheme,
   installmentsMaxNoInterest = null,
   customCategories = [],
 }: Props) {
@@ -129,6 +132,7 @@ export default function ProductStrip({
                 onAddToCart={onAddToCart}
                 onInteract={onInteract}
                 layout="vitrine"
+                cardTheme={cardTheme}
                 installmentsMaxNoInterest={installmentsMaxNoInterest}
                 customCategories={customCategories}
               />
