@@ -84,3 +84,21 @@ export function formatOverageLine(slug: PlanSlug): string | null {
 export function isPaidViPlan(plan: PlanSlug): boolean {
   return plan !== 'free'
 }
+
+export type AssistantFeature = 'customName' | 'customWelcome' | 'customTone'
+
+export const PLAN_ASSISTANT_FEATURES: Record<
+  PlanSlug,
+  { customName: boolean; customWelcome: boolean; customTone: boolean }
+> = {
+  free:       { customName: false, customWelcome: false, customTone: false },
+  starter:    { customName: true,  customWelcome: false, customTone: false },
+  pro:        { customName: true,  customWelcome: true,  customTone: true  },
+  loja:       { customName: true,  customWelcome: true,  customTone: true  },
+  enterprise: { customName: true,  customWelcome: true,  customTone: true  },
+}
+
+export function canUseAssistantFeature(plan: string, feature: AssistantFeature): boolean {
+  const p = (plan in PLAN_ASSISTANT_FEATURES ? plan : 'free') as PlanSlug
+  return PLAN_ASSISTANT_FEATURES[p][feature]
+}

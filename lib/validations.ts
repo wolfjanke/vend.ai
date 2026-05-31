@@ -84,6 +84,13 @@ export const storeSettingsPatchSchema = z.object({
   freeShippingMin: z.number().nonnegative().nullable().optional(),
   installmentsMaxNoInterest: z.number().int().min(1).max(48).nullable().optional(),
   viDailyLimit: z.number().int().min(1).max(100_000).nullable().optional(),
+  assistant_name: z
+    .string()
+    .max(20, 'Máximo 20 caracteres')
+    .regex(/^[A-Za-zÀ-ÿ\s]+$/, 'Use apenas letras e espaços')
+    .optional(),
+  assistant_welcome_message: z.string().max(500).nullable().optional(),
+  assistant_tone: z.enum(['friendly', 'formal', 'playful', 'professional']).optional(),
 }).superRefine((data, ctx) => {
   const couponRules = data.couponRules ?? []
   for (let idx = 0; idx < couponRules.length; idx++) {

@@ -3,6 +3,8 @@ import { sql } from '@/lib/db'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
+import type { PlanSlug } from '@/lib/plans'
+import { canUseAssistantFeature } from '@/lib/plans'
 
 function emptyToNull(s: string | undefined | null): string | null {
   if (s == null || String(s).trim() === '') return null
@@ -51,9 +53,48 @@ export async function PATCH(req: NextRequest) {
       freeShippingMin,
       installmentsMaxNoInterest,
       viDailyLimit,
+      assistant_name,
+      assistant_welcome_message,
+      assistant_tone,
     } = parsed.data
 
-    const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const storeRows = await sql`
+      SELECT settings_json, plan, assistant_name, assistant_welcome_message, assistant_tone
+      FROM stores WHERE id = ${session.storeId} LIMIT 1
+    `
+    const plan = (storeRows[0]?.plan ?? 'free') as PlanSlug
+
+    if (assistant_name !== undefined && !canUseAssistantFeature(plan, 'customName')) {
+      return NextResponse.json(
+        { error: 'Personalize o nome da assistente a partir do plano Starter.' },
+        { status: 403 },
+      )
+    }
+    if (assistant_welcome_message !== undefined && !canUseAssistantFeature(plan, 'customWelcome')) {
+      return NextResponse.json(
+        { error: 'Mensagem de boas-vindas disponível a partir do plano Pro.' },
+        { status: 403 },
+      )
+    }
+    if (assistant_tone !== undefined && !canUseAssistantFeature(plan, 'customTone')) {
+      return NextResponse.json(
+        { error: 'Tom da assistente disponível a partir do plano Pro.' },
+        { status: 403 },
+      )
+    }
+
+    const assistantName =
+      assistant_name !== undefined
+        ? assistant_name.trim() || 'Vi'
+        : (storeRows[0]?.assistant_name as string) ?? 'Vi'
+    const assistantWelcome =
+      assistant_welcome_message !== undefined
+        ? (assistant_welcome_message?.trim() || null)
+        : (storeRows[0]?.assistant_welcome_message as string | null) ?? null
+    const assistantToneVal =
+      assistant_tone !== undefined
+        ? assistant_tone
+        : (storeRows[0]?.assistant_tone as string) ?? 'friendly'
     const current = (storeRows[0]?.settings_json as Record<string, unknown>) ?? {}
     const merged = {
       ...current,
@@ -91,7 +132,10 @@ export async function PATCH(req: NextRequest) {
           cidade = ${emptyToNull(cidade)},
           uf = ${emptyToNull(uf?.toUpperCase())},
           settings_json = ${JSON.stringify(merged)}::jsonb,
-          vi_daily_limit = ${viDailyLimit}
+          vi_daily_limit = ${viDailyLimit},
+          assistant_name = ${assistantName},
+          assistant_welcome_message = ${assistantWelcome},
+          assistant_tone = ${assistantToneVal}
         WHERE id = ${session.storeId}
       `
     } else {
@@ -107,7 +151,10 @@ export async function PATCH(req: NextRequest) {
           bairro = ${emptyToNull(bairro)},
           cidade = ${emptyToNull(cidade)},
           uf = ${emptyToNull(uf?.toUpperCase())},
-          settings_json = ${JSON.stringify(merged)}::jsonb
+          settings_json = ${JSON.stringify(merged)}::jsonb,
+          assistant_name = ${assistantName},
+          assistant_welcome_message = ${assistantWelcome},
+          assistant_tone = ${assistantToneVal}
         WHERE id = ${session.storeId}
       `
     }

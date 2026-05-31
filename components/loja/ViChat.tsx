@@ -39,12 +39,21 @@ function buildViSuggestions(ctx: StoreContext): Array<{ label: string; text: str
 }
 
 interface Props {
-  isOpen:       boolean
-  onToggle:     () => void
-  storeContext: StoreContext
+  isOpen:                 boolean
+  onToggle:               () => void
+  storeContext:           StoreContext
+  pendingMessage?:        string | null
+  onPendingMessageShown?: () => void
 }
 
-export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
+export default function ViChat({
+  isOpen,
+  onToggle,
+  storeContext,
+  pendingMessage,
+  onPendingMessageShown,
+}: Props) {
+  const assistantName = storeContext.assistantName?.trim() || 'Vi'
   const suggestions = useMemo(() => buildViSuggestions(storeContext), [
     storeContext.genderFocus,
     storeContext.ageGroup,
@@ -65,12 +74,24 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
     if (isOpen && messages.length === 0) {
       const welcome: ViMessage = {
         role:    'assistant',
-        content: `Olá! 👋 Sou a **Vi**, assistente da ${storeContext.name}. Me conta o que você está procurando hoje? Posso buscar por estilo, ocasião, cor ou tamanho!`,
+        content:
+          storeContext.welcomeMessage?.trim() ||
+          `Olá! 👋 Sou a **${assistantName}**, assistente da ${storeContext.name}. Me conta o que você está procurando hoje? Posso buscar por estilo, ocasião, cor ou tamanho!`,
       }
       setTimeout(() => setMessages([welcome]), 400)
     }
     if (isOpen) inputRef.current?.focus()
-  }, [isOpen, messages.length, storeContext.name])
+  }, [isOpen, messages.length, storeContext.name, storeContext.welcomeMessage, assistantName])
+
+  useEffect(() => {
+    if (!pendingMessage?.trim()) return
+    setMessages(prev => {
+      if (prev.some(m => m.content === pendingMessage)) return prev
+      return [...prev, { role: 'assistant', content: pendingMessage }]
+    })
+    setShowSuggestions(false)
+    onPendingMessageShown?.()
+  }, [pendingMessage, onPendingMessageShown])
 
   async function sendMessage(text?: string) {
     const content = (text ?? input).trim()
@@ -173,7 +194,9 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
       <button
         type="button"
         onClick={onToggle}
-        className="fixed z-[150] w-14 h-14 bg-grad rounded-full border-none flex items-center justify-center shadow-[0_4px_20px_var(--primary-glow)] hover:scale-110 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all right-4 sm:right-7 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))]"
+        title={`Conversar com ${assistantName}`}
+        aria-label={`Abrir chat com ${assistantName}`}
+        className="fixed z-[150] w-14 h-14 min-h-[44px] min-w-[44px] bg-grad rounded-full border-none flex items-center justify-center shadow-[0_4px_20px_var(--primary-glow)] hover:scale-110 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all right-4 sm:right-7 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))]"
         style={{ animation: 'floatIn 0.6s 0.5s both' }}
       >
         <div className="absolute inset-[-4px] rounded-full border-2 border-primary animate-pulse2 opacity-0" />
@@ -187,7 +210,7 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
         <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-border" style={{ background: 'linear-gradient(135deg, #7B6EFF22, #00E5A011)' }}>
           <div className="w-9 h-9 bg-grad rounded-full flex items-center justify-center text-lg">✦</div>
           <div>
-            <div className="font-syne font-bold text-sm">Vi — Assistente</div>
+            <div className="font-syne font-bold text-sm truncate">{assistantName} — Assistente</div>
             <div className="flex items-center gap-1 text-accent text-[11px]">
               <span className="w-1.5 h-1.5 bg-accent rounded-full animate-blink" />
               Online agora
@@ -241,7 +264,7 @@ export default function ViChat({ isOpen, onToggle, storeContext }: Props) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendMessage()}
             className="flex-1 px-3 py-2 bg-surface2 border border-border rounded-[10px] text-foreground text-[13px] outline-none focus:border-primary transition-all placeholder:text-muted"
-            placeholder="Pergunte para a Vi…"
+            placeholder={`Pergunte para a ${assistantName}…`}
           />
           <button
             onClick={() => sendMessage()}

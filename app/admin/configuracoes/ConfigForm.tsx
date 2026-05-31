@@ -4,6 +4,9 @@ import { useState, useRef } from 'react'
 import { signOut } from 'next-auth/react'
 import { Info, Loader2, Trash2 } from 'lucide-react'
 import type { Store, AgeGroup, GenderFocus, DeliveryZone } from '@/types'
+import { canUseAssistantFeature, type PlanSlug } from '@/lib/plans'
+import Link from 'next/link'
+import { Lock } from 'lucide-react'
 import { getStoreProfile } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
@@ -95,6 +98,17 @@ export default function ConfigForm({ store, viStats }: Props) {
   const [viDailyLimitStr, setViDailyLimitStr] = useState(() =>
     initialDaily != null && initialDaily > 0 ? String(initialDaily) : '200',
   )
+
+  const plan = (store.plan ?? 'free') as PlanSlug
+  const canName = canUseAssistantFeature(plan, 'customName')
+  const canWelcome = canUseAssistantFeature(plan, 'customWelcome')
+  const canTone = canUseAssistantFeature(plan, 'customTone')
+
+  const [assistantName, setAssistantName] = useState(store.assistant_name?.trim() || 'Vi')
+  const [assistantWelcome, setAssistantWelcome] = useState(store.assistant_welcome_message ?? '')
+  const [assistantTone, setAssistantTone] = useState<
+    'friendly' | 'formal' | 'playful' | 'professional'
+  >((store.assistant_tone as 'friendly' | 'formal' | 'playful' | 'professional') ?? 'friendly')
 
   async function uploadLogoFile(file: File) {
     setLogoUploading(true)
@@ -190,6 +204,9 @@ export default function ConfigForm({ store, viStats }: Props) {
       viDailyLimit: viDailyEnabled
         ? Math.max(1, parseInt(viDailyLimitStr.trim(), 10) || 1)
         : null,
+      assistant_name:          canName ? assistantName.trim() || 'Vi' : undefined,
+      assistant_welcome_message: canWelcome ? (assistantWelcome.trim() || null) : undefined,
+      assistant_tone:          canTone ? assistantTone : undefined,
     }
     const parsed = storeSettingsPatchSchema.safeParse(body)
     if (!parsed.success) {
@@ -689,8 +706,69 @@ export default function ConfigForm({ store, viStats }: Props) {
           <span>mensagens/dia</span>
         </label>
         <p className="text-[11px] text-muted">
-          Útil para controlar consumo em dias de alto tráfego. Quando atingido, a Vi direciona para o WhatsApp.
+          Útil para controlar consumo em dias de alto tráfego. Quando atingido, a assistente direciona para o WhatsApp.
         </p>
+
+        <div className="border-t border-border pt-4 space-y-3">
+          <p className="text-sm font-medium">Nome da assistente</p>
+          {!canName && (
+            <p className="text-xs text-muted flex items-center gap-1.5 break-words">
+              <Lock size={14} className="shrink-0" aria-hidden />
+              Personalize o nome a partir do plano Starter.{' '}
+              <Link href="/#planos" className="text-primary underline">Fazer upgrade</Link>
+            </p>
+          )}
+          <input
+            type="text"
+            maxLength={20}
+            disabled={!canName}
+            value={assistantName}
+            onChange={e => setAssistantName(e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, ''))}
+            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm disabled:opacity-50"
+            placeholder="Vi"
+          />
+          <p className="text-[11px] text-muted break-words">
+            Prévia: Olá! Sou a {assistantName || 'Vi'}, assistente da {name.trim() || store.name} 👋
+          </p>
+        </div>
+
+        {canWelcome && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Mensagem de boas-vindas personalizada</p>
+            <textarea
+              value={assistantWelcome}
+              onChange={e => setAssistantWelcome(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Olá! Posso te ajudar a encontrar algo especial hoje? 😊"
+              className="w-full px-4 py-3 bg-surface2 border border-border rounded-xl text-sm resize-y min-h-[88px]"
+            />
+            <p className="text-[11px] text-muted">Deixe vazio para usar a mensagem padrão.</p>
+          </div>
+        )}
+
+        {canTone && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Tom da assistente</p>
+            {[
+              { value: 'friendly', label: 'Simpático e próximo (padrão)' },
+              { value: 'formal', label: 'Formal e profissional' },
+              { value: 'playful', label: 'Divertido e jovial' },
+              { value: 'professional', label: 'Técnico e informativo' },
+            ].map(opt => (
+              <label key={opt.value} className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+                <input
+                  type="radio"
+                  name="assistantTone"
+                  checked={assistantTone === opt.value}
+                  onChange={() => setAssistantTone(opt.value as typeof assistantTone)}
+                  className="shrink-0"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 bg-surface border border-warm/20 rounded-2xl p-6">
