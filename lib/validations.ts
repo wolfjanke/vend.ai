@@ -6,6 +6,10 @@ const phoneDigits = z
   .transform(s => digitsOnly(s))
   .refine(d => isValidBrazilPhoneDigits(d), 'WhatsApp inválido (use DDD + número)')
 
+const themeNameRegister = z.enum([
+  'default', 'boutique', 'street', 'editorial', 'pop', 'fitness', 'lumiere',
+]).optional()
+
 export const registerSchema = z.object({
   email:     z.string().email('E-mail inválido'),
   password:  z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
@@ -13,6 +17,14 @@ export const registerSchema = z.object({
   whatsapp:  phoneDigits,
   genderFocus: z.enum(['feminine', 'masculine', 'unisex', 'mixed']).optional(),
   ageGroup:    z.enum(['adult', 'kids', 'all']).optional(),
+  theme_name:            themeNameRegister,
+  theme_primary_color:   z.string().nullable().optional(),
+  theme_secondary_color: z.string().nullable().optional(),
+  theme_accent_color:    z.string().nullable().optional(),
+  theme_background:      z.enum(['light', 'dark']).optional(),
+  theme_shimmer:         z.boolean().optional(),
+  theme_logo_url:        z.string().nullable().optional(),
+  theme_onboarding_done: z.boolean().optional(),
 })
 
 export const storeAddressSchema = z.object({

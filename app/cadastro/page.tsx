@@ -92,6 +92,8 @@ export default function CadastroPage() {
           whatsapp:  wpp,
           genderFocus,
           ageGroup,
+          theme_name:            'default',
+          theme_onboarding_done: true,
         }),
       })
 

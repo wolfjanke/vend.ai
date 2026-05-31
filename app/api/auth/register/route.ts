@@ -29,11 +29,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: first }, { status: 400 })
     }
 
-    const { email, password, storeName, whatsapp, genderFocus, ageGroup } = parsed.data
+    const {
+      email,
+      password,
+      storeName,
+      whatsapp,
+      genderFocus,
+      ageGroup,
+      theme_name,
+      theme_primary_color,
+      theme_secondary_color,
+      theme_accent_color,
+      theme_background,
+      theme_shimmer,
+      theme_logo_url,
+      theme_onboarding_done,
+    } = parsed.data
     const initialSettings = {
       genderFocus: genderFocus ?? 'feminine',
       ageGroup:    ageGroup ?? 'adult',
     }
+
+    const resolvedThemeName = theme_name ?? 'default'
+    const resolvedShimmer = Boolean(theme_shimmer)
+    const resolvedOnboarding = theme_onboarding_done ?? true
 
     const existing = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`
     if (existing.length > 0) {
@@ -53,8 +72,22 @@ export async function POST(req: NextRequest) {
     `
 
     const [store] = await sql`
-      INSERT INTO stores (user_id, slug, name, whatsapp, settings_json)
-      VALUES (${newUser.id}, ${finalSlug}, ${storeName}, ${whatsapp}, ${JSON.stringify(initialSettings)}::jsonb)
+      INSERT INTO stores (
+        user_id, slug, name, whatsapp, settings_json,
+        theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
+        theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done
+      )
+      VALUES (
+        ${newUser.id}, ${finalSlug}, ${storeName}, ${whatsapp}, ${JSON.stringify(initialSettings)}::jsonb,
+        ${resolvedThemeName},
+        ${theme_primary_color ?? null},
+        ${theme_secondary_color ?? null},
+        ${theme_accent_color ?? null},
+        ${theme_background ?? 'dark'},
+        ${resolvedShimmer},
+        ${theme_logo_url ?? null},
+        ${resolvedOnboarding}
+      )
       RETURNING id, slug
     `
 
