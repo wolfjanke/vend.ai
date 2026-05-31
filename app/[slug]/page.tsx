@@ -4,6 +4,7 @@ import { sql } from '@/lib/db'
 import { isReservedStoreSlug } from '@/lib/reserved-slugs'
 import type { Product } from '@/types'
 import { toPublicStore, publicStoreAsStore } from '@/lib/public-store'
+import { resolveStoreTheme } from '@/lib/theme-css'
 import StoreClient from './StoreClient'
 
 interface Props {
@@ -31,7 +32,9 @@ export default async function StorePage({ params }: Props) {
     const rows = await sql`
       SELECT
         id, slug, name, logo_url, whatsapp, settings_json, created_at,
-        cep, logradouro, numero, complemento, bairro, cidade, uf
+        cep, logradouro, numero, complemento, bairro, cidade, uf,
+        theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
+        theme_background, theme_shimmer, theme_logo_url
       FROM stores
       WHERE slug = ${params.slug}
       LIMIT 1
@@ -43,7 +46,10 @@ export default async function StorePage({ params }: Props) {
 
   if (!storeRow) notFound()
   const storeId = String(storeRow.id)
-  const store = publicStoreAsStore(toPublicStore(storeRow))
+  const publicStore = toPublicStore(storeRow)
+  const store = publicStoreAsStore(publicStore)
+  const themeResolved = resolveStoreTheme(storeRow)
+  const displayLogo = themeResolved.displayLogo ?? store.logo_url
 
   let products: Product[]
   try {
@@ -56,5 +62,11 @@ export default async function StorePage({ params }: Props) {
     throw new Error('STORE_LOAD_FAILED')
   }
 
-  return <StoreClient store={store} products={products} />
+  return (
+    <StoreClient
+      store={{ ...store, logo_url: displayLogo }}
+      products={products}
+      cardTheme={themeResolved.cardTheme}
+    />
+  )
 }

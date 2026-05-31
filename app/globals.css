@@ -215,3 +215,43 @@ body::after {
   mask-composite: exclude;
   pointer-events: none;
 }
+
+/* ─── Vitrine: tema por loja (sem flash no SSR) ───────────────────────────── */
+.store-theme-root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+.store-theme-root::before,
+.store-theme-root::after {
+  display: none;
+}
+
+.store-theme-root .font-syne {
+  font-family: var(--theme-font-display), var(--font-syne), sans-serif;
+}
+
+@keyframes theme-shimmer {
+  0%   { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(200%) skewX(-12deg); }
+}
+
+.store-theme-root .produto-card[data-shimmer='true'] {
+  position: relative;
+  overflow: hidden;
+}
+
+.store-theme-root .produto-card[data-shimmer='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 60%
+  );
+  animation: theme-shimmer 2.8s ease-in-out infinite;
+}
