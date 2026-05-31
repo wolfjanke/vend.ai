@@ -18,14 +18,9 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
 }
 
 // ─── Plan ─────────────────────────────────────────────────────────────────────
-export type PlanSlug = 'free' | 'starter' | 'pro' | 'loja'
-
-export const PLAN_PRODUCT_LIMITS: Record<PlanSlug, number | null> = {
-  free:    10,
-  starter: 50,
-  pro:     200,
-  loja:    null, // ilimitado
-}
+export type { PlanSlug } from '@/lib/plans'
+export { PLAN_PRODUCT_LIMITS, PLANS, getPlan, formatPlanPrice, formatOverageLine, isPaidViPlan } from '@/lib/plans'
+import type { PlanSlug } from '@/lib/plans'
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 export interface BannerMessage {
@@ -180,6 +175,11 @@ export interface Store extends StoreAddress {
   asaas_wallet_id?:        string
   asaas_onboarding_status?: AsaasOnboardingStatus
   asaas_approved_at?:      string
+  vi_messages_used?:       number
+  vi_messages_reset_at?:   string
+  vi_overage_messages?:    number
+  vi_daily_limit?:         number | null
+  photo_analysis_used?:    number
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────────
@@ -289,6 +289,7 @@ export interface ViMessage {
 
 export interface StoreContext {
   storeSlug?:     string
+  whatsapp?:      string
   name:           string
   freteInfo?:     string
   pagamentoInfo?: string

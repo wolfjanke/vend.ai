@@ -39,7 +39,7 @@ describe('Casos obrigatórios do plano', () => {
 })
 
 describe('merchantSharePct + platformTakePct === 100 para todas as combinações', () => {
-  const plans: PlanSlug[]     = ['free', 'starter', 'pro', 'loja']
+  const plans: PlanSlug[]     = ['free', 'starter', 'pro', 'loja', 'enterprise']
   const installmentSets       = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
   for (const plan of plans) {
@@ -63,7 +63,7 @@ describe('Validações de range', () => {
 })
 
 describe('Todas as 16 combinações plano × faixa (sem falhas de arredondamento)', () => {
-  const plans: PlanSlug[] = ['free', 'starter', 'pro', 'loja']
+  const plans: PlanSlug[] = ['free', 'starter', 'pro', 'loja', 'enterprise']
   const faixaRepresentatives = [1, 4, 7, 10] // um por faixa
 
   for (const plan of plans) {

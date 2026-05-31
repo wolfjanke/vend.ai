@@ -8,10 +8,11 @@ import OnboardingForm    from './OnboardingForm'
 import OnboardingPending from './OnboardingPending'
 
 const PLAN_TAKE_PCT: Record<PlanSlug, number> = {
-  free:    4.5,
-  starter: 4.0,
-  pro:     2.5,
-  loja:    1.7,
+  free:       4.5,
+  starter:    4.0,
+  pro:        2.5,
+  loja:       1.7,
+  enterprise: 1.5,
 }
 
 export default async function PagamentosPage() {

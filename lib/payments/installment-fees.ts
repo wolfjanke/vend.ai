@@ -1,22 +1,25 @@
-import type { PlanSlug, InstallmentQuote } from '@/types'
+import type { InstallmentQuote } from '@/types'
+import type { PlanSlug } from '@/lib/plans'
 
 type FaixaKey = '1-3' | '4-6' | '7-9' | '10-12'
 
 // Taxa aplicada ao cliente (juros embutidos no installmentValue)
 // O merchant recebe o valor cheio; a plataforma retém o percentual
 const FAIXAS: Record<PlanSlug, Record<FaixaKey, number>> = {
-  free:    { '1-3': 0.045, '4-6': 0.085, '7-9': 0.125, '10-12': 0.165 },
-  starter: { '1-3': 0.040, '4-6': 0.075, '7-9': 0.110, '10-12': 0.145 },
-  pro:     { '1-3': 0.036, '4-6': 0.065, '7-9': 0.095, '10-12': 0.125 },
-  loja:    { '1-3': 0.035, '4-6': 0.055, '7-9': 0.080, '10-12': 0.105 },
+  free:       { '1-3': 0.045, '4-6': 0.085, '7-9': 0.125, '10-12': 0.165 },
+  starter:    { '1-3': 0.040, '4-6': 0.075, '7-9': 0.110, '10-12': 0.145 },
+  pro:        { '1-3': 0.036, '4-6': 0.065, '7-9': 0.095, '10-12': 0.125 },
+  loja:       { '1-3': 0.035, '4-6': 0.055, '7-9': 0.080, '10-12': 0.105 },
+  enterprise: { '1-3': 0.033, '4-6': 0.050, '7-9': 0.075, '10-12': 0.100 },
 }
 
 // Taxa à vista (1x): platform take rate
 const SPLIT_A_VISTA: Record<PlanSlug, number> = {
-  free:    0.045,
-  starter: 0.040,
-  pro:     0.025,
-  loja:    0.017,
+  free:       0.045,
+  starter:    0.040,
+  pro:        0.025,
+  loja:       0.017,
+  enterprise: 0.015,
 }
 
 export function getFaixa(installments: number): FaixaKey {
