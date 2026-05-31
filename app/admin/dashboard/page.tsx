@@ -18,6 +18,9 @@ import PedidoCard from '@/components/admin/PedidoCard'
 import RecoveryCard from '@/components/admin/RecoveryCard'
 import RecoveryInfoModal from '@/components/admin/RecoveryInfoModal'
 import OnboardingChecklist from '@/components/admin/OnboardingChecklist'
+import ViUsageCard from '@/components/admin/ViUsageCard'
+import ViLimitBanner from '@/components/admin/ViLimitBanner'
+import { getViUsageStats } from '@/lib/vi-limits'
 import type { Order } from '@/types'
 import type { PlanSlug } from '@/types'
 
@@ -70,7 +73,8 @@ export default async function DashboardPage() {
   const storeRows = await sql`SELECT name, plan, logo_url, slug FROM stores WHERE id = ${storeId} LIMIT 1`
   const store = storeRows[0] as { name: string; plan?: PlanSlug; logo_url: string | null; slug: string } | undefined
   const plan = store?.plan ?? 'free'
-  const showRecovery = plan === 'pro' || plan === 'loja'
+  const showRecovery = plan === 'pro' || plan === 'loja' || plan === 'enterprise'
+  const viStats = await getViUsageStats(storeId)
 
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''
   const storePublicUrl = baseUrl && store?.slug ? `${baseUrl}/${store.slug}` : ''
@@ -122,6 +126,8 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      <ViLimitBanner percent={viStats.percent} />
+
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <MetricCard
@@ -151,7 +157,8 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+        <ViUsageCard used={viStats.used} limit={viStats.limit} percent={viStats.percent} />
         <div className="bg-surface border border-border rounded-2xl p-4 flex items-start gap-3">
           <TrendingUp size={20} className="text-muted shrink-0 mt-0.5" aria-hidden />
           <div className="min-w-0">

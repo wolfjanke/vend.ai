@@ -71,6 +71,7 @@ export const storeSettingsPatchSchema = z.object({
   })).optional(),
   freeShippingMin: z.number().nonnegative().nullable().optional(),
   installmentsMaxNoInterest: z.number().int().min(1).max(48).nullable().optional(),
+  viDailyLimit: z.number().int().min(1).max(100_000).nullable().optional(),
 }).superRefine((data, ctx) => {
   const couponRules = data.couponRules ?? []
   for (let idx = 0; idx < couponRules.length; idx++) {

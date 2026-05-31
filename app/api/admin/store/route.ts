@@ -50,6 +50,7 @@ export async function PATCH(req: NextRequest) {
       deliveryZones,
       freeShippingMin,
       installmentsMaxNoInterest,
+      viDailyLimit,
     } = parsed.data
 
     const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
@@ -76,21 +77,40 @@ export async function PATCH(req: NextRequest) {
 
     const logo = logo_url === '' || logo_url == null ? null : logo_url
 
-    await sql`
-      UPDATE stores SET
-        name = ${name},
-        whatsapp = ${whatsapp},
-        logo_url = ${logo},
-        cep = ${emptyToNull(cep)},
-        logradouro = ${emptyToNull(logradouro)},
-        numero = ${emptyToNull(numero)},
-        complemento = ${emptyToNull(complemento)},
-        bairro = ${emptyToNull(bairro)},
-        cidade = ${emptyToNull(cidade)},
-        uf = ${emptyToNull(uf?.toUpperCase())},
-        settings_json = ${JSON.stringify(merged)}::jsonb
-      WHERE id = ${session.storeId}
-    `
+    if (viDailyLimit !== undefined) {
+      await sql`
+        UPDATE stores SET
+          name = ${name},
+          whatsapp = ${whatsapp},
+          logo_url = ${logo},
+          cep = ${emptyToNull(cep)},
+          logradouro = ${emptyToNull(logradouro)},
+          numero = ${emptyToNull(numero)},
+          complemento = ${emptyToNull(complemento)},
+          bairro = ${emptyToNull(bairro)},
+          cidade = ${emptyToNull(cidade)},
+          uf = ${emptyToNull(uf?.toUpperCase())},
+          settings_json = ${JSON.stringify(merged)}::jsonb,
+          vi_daily_limit = ${viDailyLimit}
+        WHERE id = ${session.storeId}
+      `
+    } else {
+      await sql`
+        UPDATE stores SET
+          name = ${name},
+          whatsapp = ${whatsapp},
+          logo_url = ${logo},
+          cep = ${emptyToNull(cep)},
+          logradouro = ${emptyToNull(logradouro)},
+          numero = ${emptyToNull(numero)},
+          complemento = ${emptyToNull(complemento)},
+          bairro = ${emptyToNull(bairro)},
+          cidade = ${emptyToNull(cidade)},
+          uf = ${emptyToNull(uf?.toUpperCase())},
+          settings_json = ${JSON.stringify(merged)}::jsonb
+        WHERE id = ${session.storeId}
+      `
+    }
     return NextResponse.json({ ok: true })
   } catch (error) {
     logServerError('[/api/admin/store]', error)

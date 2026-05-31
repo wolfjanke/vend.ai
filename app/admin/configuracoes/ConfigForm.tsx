@@ -18,11 +18,19 @@ function initialWppDisplay(w: string) {
   return maskPhone(local)
 }
 
-interface Props {
-  store: Store
+type ViStats = {
+  used:      number
+  limit:     number
+  overage:   number
+  daysReset: number
 }
 
-export default function ConfigForm({ store }: Props) {
+interface Props {
+  store:    Store
+  viStats?: ViStats
+}
+
+export default function ConfigForm({ store, viStats }: Props) {
   const settings = store.settings_json ?? {}
   const initialProfile = getStoreProfile(settings)
   const [genderFocus, setGenderFocus] = useState<GenderFocus>(initialProfile.genderFocus)
@@ -81,6 +89,12 @@ export default function ConfigForm({ store }: Props) {
     if (v == null || v === undefined) return ''
     return String(v)
   })
+
+  const initialDaily = store.vi_daily_limit
+  const [viDailyEnabled, setViDailyEnabled] = useState(() => initialDaily != null && initialDaily > 0)
+  const [viDailyLimitStr, setViDailyLimitStr] = useState(() =>
+    initialDaily != null && initialDaily > 0 ? String(initialDaily) : '200',
+  )
 
   async function uploadLogoFile(file: File) {
     setLogoUploading(true)
@@ -173,6 +187,9 @@ export default function ConfigForm({ store }: Props) {
       deliveryZones:    zonesPayload,
       freeShippingMin,
       installmentsMaxNoInterest,
+      viDailyLimit: viDailyEnabled
+        ? Math.max(1, parseInt(viDailyLimitStr.trim(), 10) || 1)
+        : null,
     }
     const parsed = storeSettingsPatchSchema.safeParse(body)
     if (!parsed.success) {
@@ -626,6 +643,55 @@ export default function ConfigForm({ store }: Props) {
           </div>
         </div>
       )}
+
+      <div className="mt-6 bg-surface border border-border rounded-2xl p-6 space-y-4">
+        <SectionHeader title="Vi — Assistente IA" />
+        {viStats && (
+          <div className="text-sm space-y-1 text-muted break-words">
+            <p>
+              Mensagens usadas este mês:{' '}
+              <strong className="text-foreground tabular-nums">
+                {viStats.used.toLocaleString('pt-BR')} / {viStats.limit.toLocaleString('pt-BR')}
+              </strong>
+            </p>
+            <p>Excedente acumulado: <strong className="text-foreground tabular-nums">{viStats.overage.toLocaleString('pt-BR')}</strong> mensagens</p>
+            <p>Reset em: <strong className="text-foreground">{viStats.daysReset}</strong> dias</p>
+          </div>
+        )}
+        <p className="text-xs text-muted">Limite diário de mensagens (opcional)</p>
+        <label className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+          <input
+            type="radio"
+            name="viDaily"
+            checked={!viDailyEnabled}
+            onChange={() => setViDailyEnabled(false)}
+            className="shrink-0"
+          />
+          Sem limite diário (padrão)
+        </label>
+        <label className="flex flex-wrap items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+          <input
+            type="radio"
+            name="viDaily"
+            checked={viDailyEnabled}
+            onChange={() => setViDailyEnabled(true)}
+            className="shrink-0"
+          />
+          Definir limite:
+          <input
+            type="number"
+            min={1}
+            disabled={!viDailyEnabled}
+            value={viDailyLimitStr}
+            onChange={e => setViDailyLimitStr(e.target.value)}
+            className="w-24 min-h-[44px] px-2 py-2 bg-surface2 border border-border rounded-lg text-sm disabled:opacity-50"
+          />
+          <span>mensagens/dia</span>
+        </label>
+        <p className="text-[11px] text-muted">
+          Útil para controlar consumo em dias de alto tráfego. Quando atingido, a Vi direciona para o WhatsApp.
+        </p>
+      </div>
 
       <div className="mt-6 bg-surface border border-warm/20 rounded-2xl p-6">
         <h3 className="font-syne font-bold text-sm text-warm mb-2">Zona de risco</h3>
