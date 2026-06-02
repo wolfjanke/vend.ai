@@ -75,16 +75,16 @@ export default function StoreThemePreview({
       data-info-position={card.infoPosition}
       style={{ fontFamily: `var(--theme-font-body), sans-serif` }}
     >
-      <header className="loja-header px-3 py-2.5 border-b border-border flex items-center gap-2.5 min-w-0">
+      <header className="loja-header px-3 py-2.5 border-b border-border flex items-center gap-[10px] min-w-0">
         {logoUrl ? (
           <img
             src={logoUrl}
             alt=""
-            className="h-11 w-auto max-w-[100px] shrink-0 rounded-lg object-contain"
+            className="h-10 w-auto max-w-[120px] shrink-0 rounded-lg object-contain"
           />
         ) : (
           <div
-            className="w-11 h-11 shrink-0 rounded-[10px] flex items-center justify-center text-xs font-bold text-white"
+            className="w-10 h-10 shrink-0 rounded-[10px] flex items-center justify-center text-xs font-bold text-white"
             style={{ background: 'var(--theme-vi-avatar)' }}
             aria-hidden
           >
@@ -93,8 +93,12 @@ export default function StoreThemePreview({
         )}
         <div className="min-w-0">
           <span
-            className="loja-brand-name block text-sm font-bold truncate"
-            style={{ fontFamily: 'var(--theme-font-display), sans-serif' }}
+            className="loja-brand-name block truncate font-bold"
+            style={{
+              fontFamily: 'var(--theme-font-display), sans-serif',
+              fontSize:   '18px',
+              fontWeight: 700,
+            }}
           >
             {storeName}
           </span>

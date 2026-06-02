@@ -12,7 +12,7 @@ import {
   type ThemeBackground,
 } from '@/lib/themes'
 import { deriveThemeColors } from '@/lib/theme-derive'
-import { isValidHex, validateThemeColors } from '@/lib/theme-contrast'
+import { getThemeContrastWarnings, isValidHex, validateThemeColors } from '@/lib/theme-contrast'
 const themeNameSchema = z.enum([
   'default', 'boutique', 'street', 'editorial', 'pop', 'fitness', 'lumiere',
 ])
@@ -82,10 +82,12 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const contrast = validateThemeColors(colors, background, bgHex)
-    if (!contrast.ok) {
-      return NextResponse.json({ error: contrast.message }, { status: 400 })
+    const formatCheck = validateThemeColors(colors, background, bgHex)
+    if (!formatCheck.ok) {
+      return NextResponse.json({ error: formatCheck.message }, { status: 400 })
     }
+
+    const contrastWarnings = getThemeContrastWarnings(colors, background, bgHex)
 
     const derivedSecondary =
       colors.primary && colors.accent
@@ -121,7 +123,10 @@ export async function PUT(req: NextRequest) {
       WHERE id = ${session.storeId}
     `
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({
+      ok: true,
+      ...(contrastWarnings.length > 0 ? { contrastWarnings } : {}),
+    })
   } catch (error) {
     logServerError('[PUT /api/admin/theme]', error)
     return NextResponse.json({ error: 'Erro ao salvar tema' }, { status: 500 })

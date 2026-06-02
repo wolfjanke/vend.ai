@@ -46,22 +46,15 @@ export function meetsWcagAA(fg: string, bg: string): boolean {
   return contrastRatio(fg, bg) >= 4.5
 }
 
-export function validateThemeColors(
+/** Avisos de contraste WCAG — informativos; não bloqueiam salvamento. */
+export function getThemeContrastWarnings(
   colors: { primary?: string; accent?: string },
   background: ThemeBackground,
   pageBgHex: string,
-): { ok: true } | { ok: false; message: string } {
-
-  for (const [key, value] of Object.entries(colors)) {
-    if (value == null || value === '') continue
-    if (!isValidHex(value)) {
-      return { ok: false, message: `Cor ${key} inválida (use formato #RRGGBB)` }
-    }
-  }
-
+): string[] {
   const primary = colors.primary?.trim()
   const accent = colors.accent?.trim()
-  if (!primary || !accent) return { ok: true }
+  if (!primary || !accent) return []
 
   const derived = deriveThemeColors(primary, accent, background, pageBgHex)
 
@@ -73,15 +66,27 @@ export function validateThemeColors(
     ['destaque', derived.accent, pageBgHex],
   ]
 
+  const warnings: string[] = []
   for (const [label, fg, bg] of pairs) {
     if (!meetsWcagAA(fg, bg)) {
-      return {
-        ok:      false,
-        message: `Contraste insuficiente em ${label} (mínimo WCAG AA 4.5:1)`,
-      }
+      warnings.push(`Contraste insuficiente em ${label} (mínimo WCAG AA 4.5:1)`)
     }
   }
+  return warnings
+}
 
+/** Valida apenas formato hex — erros de formato ainda bloqueiam o save. */
+export function validateThemeColors(
+  colors: { primary?: string; accent?: string },
+  _background: ThemeBackground,
+  _pageBgHex: string,
+): { ok: true } | { ok: false; message: string } {
+  for (const [key, value] of Object.entries(colors)) {
+    if (value == null || value === '') continue
+    if (!isValidHex(value)) {
+      return { ok: false, message: `Cor ${key} inválida (use formato #RRGGBB)` }
+    }
+  }
   return { ok: true }
 }
 

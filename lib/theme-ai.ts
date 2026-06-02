@@ -62,13 +62,28 @@ Analise o logo da loja e o contexto abaixo. Retorne APENAS JSON válido:
   ]
 }
 
-Regras:
+Regras gerais:
 - Exatamente 3 sugestões em "suggestions", themeName diferentes quando possível
-- Cores harmonizadas com o logo; secondary pode repetir tom da primária
 - logo_background.color: cor dominante de fundo detectada na logo
+- secondary pode repetir tom da primária com variação de luminosidade
 - segmento: ${input.segment}
 - público: ${input.audience}
 - personalidade: ${input.personality}
+
+Cores (obrigatório):
+- A cor "primary" de cada sugestão DEVE ser derivada da cor principal da marca na logo (dourado, bronze, cobre, preto, etc.) — nunca invente uma cor que não exista visualmente na logo
+- Antes de definir primary/secondary/accent, identifique as 2–3 cores mais visíveis na logo; use-as como base
+- Se a cor sugerida não existir na logo, escolha a cor mais próxima que exista na logo
+- accent e secondary devem harmonizar com primary extraída da logo
+
+Estilo visual → tema (identifique pelo conjunto da logo, não só pelo segmento):
+- Fundo escuro + cores quentes (dourado, bronze, cobre, âmbar) = luxo/premium → prefira themeName "lumiere" ou "boutique"; cores derivadas do dourado/bronze da logo
+- Preto + dourado/âmbar = luxo elegante → "lumiere" com primary no tom dourado da logo
+- Branco/claro + tons pastel ou delicados = delicado → "boutique"
+- Cores vibrantes, neon ou muito saturadas = jovem/urbano → "pop" ou "street"
+- NUNCA sugira verde neon (#00FF87, #39FF14, etc.) nem amarelo vibrante/neon (#FFE500, #FFFF00) para logos com estilo premium, luxo, elegante ou sóbrio (preto + dourado/bronze)
+- Para logos premium/luxo, evite themeName "fitness" e "pop" a menos que a logo tenha cores esportivas/neon
+
 Sem markdown.`
 }
 

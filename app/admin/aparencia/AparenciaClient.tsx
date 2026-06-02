@@ -192,6 +192,7 @@ export default function AparenciaClient({
 
   const [saving,  setSaving]  = useState(false)
   const [message, setMessage] = useState('')
+  const [wcagWarning, setWcagWarning] = useState('')
   const [error,   setError]   = useState('')
 
   const [analyzeOpen,  setAnalyzeOpen]  = useState(false)
@@ -353,6 +354,7 @@ export default function AparenciaClient({
     setSaving(true)
     setError('')
     setMessage('')
+    setWcagWarning('')
     try {
       const res  = await fetch('/api/admin/theme', {
         method:  'PUT',
@@ -367,9 +369,12 @@ export default function AparenciaClient({
           theme_onboarding_done: true,
         }),
       })
-      const data = await res.json() as { error?: string }
+      const data = await res.json() as { error?: string; contrastWarnings?: string[] }
       if (!res.ok) throw new Error(data.error ?? 'Erro ao salvar')
       setMessage('Tema salvo com sucesso!')
+      if (data.contrastWarnings?.length) {
+        setWcagWarning(data.contrastWarnings.join(' · '))
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao salvar')
     } finally {
@@ -584,6 +589,11 @@ export default function AparenciaClient({
         </div>
 
         {message && <p className="text-sm text-accent break-words">{message}</p>}
+        {wcagWarning && (
+          <p className="text-sm text-warm break-words" role="status">
+            Acessibilidade: {wcagWarning}. Você pode ajustar as cores depois.
+          </p>
+        )}
         {error   && <p className="text-sm text-warm  break-words">{error}</p>}
       </div>
 
