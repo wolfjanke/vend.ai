@@ -255,3 +255,166 @@ body::after {
   );
   animation: theme-shimmer 2.8s ease-in-out infinite;
 }
+
+/* ─── Vitrine: cards, tipografia e chips por tema ─────────────────────────── */
+.store-theme-root .produto-card {
+  aspect-ratio: var(--theme-card-ratio);
+  border-radius: var(--theme-card-radius);
+  background: var(--theme-card-bg);
+  border: 1px solid var(--theme-card-border);
+  box-shadow: var(--theme-shadow);
+  font-family: var(--theme-font-body);
+  transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.store-theme-root .produto-card:hover {
+  border-color: var(--theme-card-border-hover);
+  background: var(--theme-card-bg-hover);
+  transform: translateY(-4px);
+}
+
+.store-theme-root .produto-nome {
+  font-family: var(--theme-font-display);
+  font-weight: var(--theme-font-weight-display);
+  color: var(--theme-text);
+}
+
+.store-theme-root .produto-preco {
+  color: var(--theme-price);
+}
+
+.store-theme-root .produto-preco-old {
+  color: var(--theme-price-old);
+  text-decoration: line-through;
+}
+
+.store-theme-root .btn-adicionar {
+  background: var(--theme-primary-surface);
+  border: 1px solid var(--theme-primary-border);
+  color: var(--theme-primary);
+  border-radius: calc(var(--theme-card-radius) * 0.75);
+}
+
+.store-theme-root .btn-adicionar:hover {
+  background: var(--theme-btn-bg);
+  color: var(--theme-btn-text);
+}
+
+.store-theme-root .card-info-below {
+  padding: 12px;
+  background: var(--theme-card-bg);
+}
+
+.store-theme-root .card-info-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 60%);
+  color: #fff;
+}
+
+.store-theme-root .card-info-overlay .produto-nome,
+.store-theme-root .card-info-overlay .produto-preco,
+.store-theme-root .card-info-overlay .produto-preco-old {
+  color: #fff;
+}
+
+.store-theme-root .card-info-overlay .produto-preco-old {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.store-theme-root .card-info-hover {
+  position: absolute;
+  inset: 0;
+  background: var(--theme-primary-surface);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+}
+
+.store-theme-root .produto-card:hover .card-info-hover,
+.store-theme-root .produto-card:focus-within .card-info-hover {
+  opacity: 1;
+}
+
+.store-theme-root .card-info-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: var(--theme-primary);
+  color: var(--theme-btn-text);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  z-index: 2;
+}
+
+.store-theme-root .card-info-sidebar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  top: 0;
+  width: 45%;
+  min-width: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px;
+  color: #fff;
+}
+
+.store-theme-root .card-info-sidebar .produto-nome,
+.store-theme-root .card-info-sidebar .produto-preco {
+  color: #fff;
+}
+
+.store-theme-root .filter-chip {
+  background: var(--theme-chip-bg);
+  color: var(--theme-chip-text);
+  border: 1px solid var(--theme-card-border);
+  border-radius: calc(var(--theme-card-radius) * 1.5);
+}
+
+.store-theme-root .filter-chip.active {
+  background: var(--theme-chip-bg-active);
+  color: var(--theme-chip-text-active);
+  border-color: var(--theme-primary-border);
+}
+
+.store-theme-root .loja-header {
+  background: var(--theme-header-bg);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--theme-primary-border);
+}
+
+.store-theme-root .loja-brand-name {
+  font-family: var(--theme-font-display);
+  font-weight: var(--theme-font-weight-display);
+  color: var(--theme-header-text);
+}
+
+.store-theme-root[data-theme='street'] .produto-card {
+  border-radius: 0;
+}
+
+.store-theme-root[data-theme='pop'] .produto-card {
+  border-radius: 24px;
+}
+
+.store-theme-root[data-theme='editorial'] .produto-card {
+  border-radius: 4px;
+}
+
+.store-theme-root[data-theme='street'] .filter-chip {
+  border-radius: 0;
+}
+
+.store-theme-root[data-theme='pop'] .filter-chip {
+  border-radius: 20px;
+}

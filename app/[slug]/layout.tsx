@@ -34,7 +34,13 @@ export default async function StoreLayout({ children, params }: Props) {
             __html: `.store-theme-root { ${resolved.css} }`,
           }}
         />
-        <div className="store-theme-root min-h-screen font-dm">{children}</div>
+        <div
+          className="store-theme-root min-h-screen font-dm"
+          data-theme={resolved.themeName}
+          data-info-position={resolved.cardTheme.infoPosition}
+        >
+          {children}
+        </div>
       </>
     )
   } catch (e) {

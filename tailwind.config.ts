@@ -9,23 +9,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg:        '#08080F',
-        surface:   '#11111C',
-        surface2:  '#1A1A2E',
-        surface3:  '#22223A',
-        border:    '#2A2A45',
-        faint:     '#33334A',
-        muted:     '#7777AA',
-        foreground:'#EEEEFF',
+        bg:         'var(--bg)',
+        surface:    'var(--surface)',
+        surface2:   'var(--surface2)',
+        surface3:   'var(--surface3)',
+        border:     'var(--border)',
+        faint:      'var(--faint)',
+        muted:      'var(--muted)',
+        foreground: 'var(--text)',
         primary: {
-          DEFAULT: '#7B6EFF',
-          dim:     '#7B6EFF22',
-          glow:    '#7B6EFF55',
+          DEFAULT: 'var(--primary)',
+          dim:     'var(--primary-dim)',
+          glow:    'var(--primary-glow)',
         },
         accent: {
-          DEFAULT: '#00E5A0',
-          dim:     '#00E5A015',
-          glow:    '#00E5A044',
+          DEFAULT: 'var(--accent)',
+          dim:     'var(--accent-dim)',
+          glow:    'var(--accent-glow)',
         },
         warm: {
           DEFAULT: '#FF6B6B',
