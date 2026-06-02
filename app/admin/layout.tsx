@@ -3,6 +3,7 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import SandboxBanner from '@/components/admin/SandboxBanner'
+import AuthSessionProvider from '@/components/AuthSessionProvider'
 
 /** Obrigatório com getServerSession/cookies — sem isto o build pode pré-renderizar e `cookies()` lança em produção. */
 export const dynamic = 'force-dynamic'
@@ -12,13 +13,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return await AdminLayoutInner({ children })
   } catch (e) {
     console.error('[admin/layout] fatal', e)
-    return <>{children}</>
+    return <AuthSessionProvider>{children}</AuthSessionProvider>
   }
 }
 
 async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const session = await getSessionSafe()
-  if (!session?.storeId) return <>{children}</>
+  if (!session?.storeId) return <AuthSessionProvider>{children}</AuthSessionProvider>
 
   let store: { name: string; slug: string; plan?: string } | undefined
   let newOrdersCount = 0
@@ -38,12 +39,13 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           Não foi possível carregar os dados da loja. Confira <code className="font-mono text-xs">DATABASE_URL</code> no
           ambiente de produção e os logs do servidor.
         </div>
-        {children}
+        <AuthSessionProvider>{children}</AuthSessionProvider>
       </div>
     )
   }
 
   return (
+    <AuthSessionProvider>
     <div className="relative z-10 min-h-screen">
       {/* Top Header */}
       <header className="sticky top-0 z-50 glass border-b border-border h-16 flex items-center justify-between px-4 md:px-6">
@@ -86,5 +88,6 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+    </AuthSessionProvider>
   )
 }

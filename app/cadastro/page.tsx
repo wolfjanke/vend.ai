@@ -8,6 +8,7 @@ import MaskedInput from '@/components/ui/MaskedInput'
 import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
 import type { AgeGroup, GenderFocus } from '@/types'
+import AuthSessionProvider from '@/components/AuthSessionProvider'
 
 type Step = 1 | 2 | 3
 
@@ -29,7 +30,7 @@ const step1Schema = z.object({
   pass:  z.string().min(6, 'Senha mínimo 6 caracteres'),
 })
 
-export default function CadastroPage() {
+function CadastroPage() {
   const [step,      setStep]      = useState<Step>(1)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
@@ -325,5 +326,13 @@ export default function CadastroPage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function CadastroPageWithAuth() {
+  return (
+    <AuthSessionProvider>
+      <CadastroPage />
+    </AuthSessionProvider>
   )
 }

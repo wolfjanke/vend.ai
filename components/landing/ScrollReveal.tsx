@@ -21,20 +21,42 @@ export default function ScrollReveal({
     const el = ref.current
     if (!el) return
 
+    document.documentElement.classList.add('js')
+
+    const reveal = () => {
+      setTimeout(() => el.classList.add('is-visible'), delay)
+    }
+
+    // Já na viewport no carregamento (ex.: refresh no meio da página)
+    const rect = el.getBoundingClientRect()
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      reveal()
+      return
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      reveal()
+      return
+    }
+
+    const fallback = window.setTimeout(reveal, 2_500)
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setTimeout(() => {
-            el.classList.add('is-visible')
-          }, delay)
+          window.clearTimeout(fallback)
+          reveal()
           observer.unobserve(el)
         }
       },
-      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+      { threshold: 0.08, rootMargin: '0px 0px -24px 0px' },
     )
 
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => {
+      window.clearTimeout(fallback)
+      observer.disconnect()
+    }
   }, [delay])
 
   const dirClass =

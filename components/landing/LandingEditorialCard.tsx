@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Check, X } from 'lucide-react'
 
 const cardShell =
   'relative overflow-hidden bg-[#161616] border border-[#252525] rounded-[2px] px-5 py-6 sm:px-5 sm:py-6 min-w-0'
@@ -44,11 +45,11 @@ export function LandingPainLines({ negative, positive }: PainLineProps) {
   return (
     <div className="flex flex-col gap-2 min-w-0">
       <div className="flex gap-2 text-xs leading-relaxed text-[#555555] min-w-0">
-        <span className="text-[#FF4444] shrink-0" aria-hidden>✕</span>
+        <X size={14} className="text-[#FF4444] shrink-0 mt-0.5" aria-hidden />
         <span className="break-words">{negative}</span>
       </div>
       <div className="flex gap-2 text-xs leading-relaxed text-[#CCCCCC] min-w-0">
-        <span className="text-accent shrink-0" aria-hidden>✓</span>
+        <Check size={14} className="text-accent shrink-0 mt-0.5" aria-hidden />
         <span className="break-words">{positive}</span>
       </div>
     </div>

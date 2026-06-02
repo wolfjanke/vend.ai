@@ -95,42 +95,47 @@ body::after {
   background: linear-gradient(135deg, #7B6EFF, #00E5A0);
 }
 
-/* ─── Scroll reveal animations ──────────────────────────────────────────────── */
-.reveal {
-  opacity: 0;
-  transform: translateY(28px);
+/* ─── Scroll reveal — visível por padrão; anima só com JS (.js no html) ─────── */
+.reveal,
+.reveal-left,
+.reveal-right,
+.reveal-none {
+  opacity: 1;
+  transform: none;
   transition: opacity 0.6s ease, transform 0.6s ease;
 }
-.reveal.is-visible {
+
+html.js .reveal:not(.is-visible) {
+  opacity: 0;
+  transform: translateY(28px);
+}
+html.js .reveal.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-.reveal-left {
+html.js .reveal-left:not(.is-visible) {
   opacity: 0;
   transform: translateX(-32px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
 }
-.reveal-left.is-visible {
+html.js .reveal-left.is-visible {
   opacity: 1;
   transform: translateX(0);
 }
 
-.reveal-right {
+html.js .reveal-right:not(.is-visible) {
   opacity: 0;
   transform: translateX(32px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
 }
-.reveal-right.is-visible {
+html.js .reveal-right.is-visible {
   opacity: 1;
   transform: translateX(0);
 }
 
-.reveal-none {
+html.js .reveal-none:not(.is-visible) {
   opacity: 0;
-  transition: opacity 0.6s ease;
 }
-.reveal-none.is-visible {
+html.js .reveal-none.is-visible {
   opacity: 1;
 }
 

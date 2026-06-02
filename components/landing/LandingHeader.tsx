@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 export default function LandingHeader() {
@@ -36,7 +37,7 @@ export default function LandingHeader() {
           aria-label={open ? 'Fechar menu' : 'Abrir menu'}
           onClick={() => setOpen(o => !o)}
         >
-          {open ? '✕' : '☰'}
+          {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
         </button>
       </div>
 
