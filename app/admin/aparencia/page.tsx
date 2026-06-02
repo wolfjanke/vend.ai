@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import type { Store } from '@/types'
+import type { Product, Store } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
+import { toStorePreviewProducts } from '@/lib/preview-products'
 import AdminPageError from '@/components/admin/AdminPageError'
 import AparenciaClient from './AparenciaClient'
 
@@ -11,10 +12,12 @@ export default async function AparenciaPage() {
   if (!session) redirect('/admin')
 
   let store: Store | undefined
+  let previewProducts = toStorePreviewProducts([])
+
   try {
     const rows = await sql`
       SELECT
-        slug, plan, logo_url,
+        slug, name, plan, logo_url, tagline, assistant_name,
         theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
         theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done
       FROM stores
@@ -22,19 +25,33 @@ export default async function AparenciaPage() {
       LIMIT 1
     `
     store = rows[0] as Store | undefined
+
+    if (store) {
+      const products = (await sql`
+        SELECT id, name, category, price, promo_price, variants_json
+        FROM products
+        WHERE store_id = ${session.storeId} AND active = true
+        ORDER BY created_at DESC
+        LIMIT 12
+      `) as Product[]
+      previewProducts = toStorePreviewProducts(products, 4)
+    }
   } catch (e) {
     console.error('[admin/aparencia] query stores:', e)
     return (
       <AdminPageError title="Aparência">
         Não foi possível carregar os dados de tema. Execute as migrations{' '}
-        <code className="font-mono text-xs">008_themes.sql</code> e{' '}
-        <code className="font-mono text-xs">010_assistant.sql</code> no banco de produção
+        <code className="font-mono text-xs">008_themes.sql</code>,{' '}
+        <code className="font-mono text-xs">010_assistant.sql</code> e{' '}
+        <code className="font-mono text-xs">015_store_tagline.sql</code> no banco de produção
         (Neon SQL Editor) e tente novamente.
       </AdminPageError>
     )
   }
 
   if (!store) redirect('/cadastro')
+
+  const displayLogo = store.theme_logo_url?.trim() || store.logo_url?.trim() || null
 
   return (
     <div className="animate-fade-up max-w-6xl min-w-0">
@@ -47,6 +64,11 @@ export default async function AparenciaPage() {
       <AparenciaClient
         slug={store.slug}
         plan={(store.plan ?? 'free') as PlanSlug}
+        storeName={store.name}
+        logoUrl={displayLogo}
+        products={previewProducts}
+        assistantName={store.assistant_name?.trim() || 'Vi'}
+        tagline={store.tagline ?? null}
         initial={{
           theme_name:            (store.theme_name as string) ?? 'default',
           theme_primary_color:   store.theme_primary_color ?? null,

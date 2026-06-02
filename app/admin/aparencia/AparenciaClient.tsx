@@ -15,7 +15,8 @@ import {
 import type { PlanSlug } from '@/lib/plans'
 import StoreThemePreview from '@/components/admin/StoreThemePreview'
 import ThemeSuggestionCards from '@/components/admin/ThemeSuggestionCards'
-import type { ThemeAnalysisSuggestion } from '@/lib/theme-ai'
+import type { StorePreviewProduct } from '@/lib/preview-products'
+import type { LogoBackgroundAnalysis, ThemeAnalysisSuggestion } from '@/lib/theme-ai'
 
 type Initial = {
   theme_name:            string
@@ -28,9 +29,14 @@ type Initial = {
 }
 
 type Props = {
-  slug:    string
-  plan:    PlanSlug
-  initial: Initial
+  slug:           string
+  plan:           PlanSlug
+  storeName:      string
+  logoUrl:        string | null
+  products:       StorePreviewProduct[]
+  assistantName:  string
+  tagline?:       string | null
+  initial:        Initial
 }
 
 /** Debounce: retorna valor atualizado após `delay` ms de inatividade */
@@ -45,7 +51,131 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced
 }
 
-export default function AparenciaClient({ slug, plan, initial }: Props) {
+const STORE_CONTEXT_SUGGESTIONS = {
+  segment: [
+    'Moda',
+    'Moda street',
+    'Fitness',
+    'Beleza',
+    'Infantil',
+    'Perfumaria',
+  ],
+  audience: [
+    'Adulto',
+    'Masculino',
+    'Feminino',
+    'Unissex',
+    'Teen',
+  ],
+  personality: [
+    'Casual',
+    'Elegante',
+    'Moderna',
+    'Fitness',
+    'Minimalista',
+    'Pop',
+  ],
+} as const
+
+const ANALYZE_STEPS = [
+  'Lendo sua logo…',
+  'Cruzando segmento, público e estilo…',
+  'Gerando 3 sugestões de tema com IA…',
+] as const
+
+function AnalyzeAiFeedback({ phase }: { phase: number }) {
+  const stepIndex = Math.min(phase, ANALYZE_STEPS.length - 1)
+  const progress = ((stepIndex + 1) / ANALYZE_STEPS.length) * 100
+
+  return (
+    <div
+      className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3 min-w-0"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex items-start gap-3 min-w-0">
+        <span
+          className="inline-block w-5 h-5 mt-0.5 shrink-0 rounded-full border-2 border-primary border-t-transparent animate-spin"
+          aria-hidden
+        />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground break-words">
+            Analisando seu logo com IA
+          </p>
+          <p className="text-xs text-muted mt-1 break-words">
+            {ANALYZE_STEPS[stepIndex]}
+          </p>
+        </div>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-surface2 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-[11px] text-muted break-words">
+        Isso costuma levar alguns segundos. Não feche esta janela.
+      </p>
+    </div>
+  )
+}
+
+function ContextField({
+  label,
+  value,
+  onChange,
+  suggestions,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  suggestions: readonly string[]
+}) {
+  const normalized = value.trim().toLowerCase()
+
+  return (
+    <div>
+      <label className="text-xs text-muted block mb-1">{label}</label>
+      <div className="flex flex-wrap gap-2 mb-2 min-w-0">
+        {suggestions.map(s => {
+          const selected = normalized === s.toLowerCase()
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onChange(s)}
+              className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors break-words ${
+                selected
+                  ? 'border-primary bg-primary/15 text-primary'
+                  : 'border-border bg-surface2 text-muted hover:border-primary/40 hover:text-foreground'
+              }`}
+            >
+              {s}
+            </button>
+          )
+        })}
+      </div>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Ou digite outro…"
+        className="w-full min-h-[44px] px-3 rounded-xl bg-surface2 border border-border text-sm min-w-0"
+      />
+    </div>
+  )
+}
+
+export default function AparenciaClient({
+  slug,
+  plan,
+  storeName,
+  logoUrl: storeLogoUrl,
+  products,
+  assistantName,
+  tagline,
+  initial,
+}: Props) {
   const available  = getAvailableThemes(plan)
   const canShimmer = canUseShimmer(plan)
   const canAnalyze = plan !== 'free'
@@ -53,9 +183,8 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
   const [themeName, setThemeName] = useState<ThemeName>((initial.theme_name as ThemeName) || 'default')
   const themeDef = getTheme(themeName)
 
-  const [primary,   setPrimary]   = useState(initial.theme_primary_color   || themeDef.defaultColors.primary)
-  const [secondary, setSecondary] = useState(initial.theme_secondary_color || themeDef.defaultColors.secondary)
-  const [accent,    setAccent]    = useState(initial.theme_accent_color    || themeDef.defaultColors.accent)
+  const [primary, setPrimary] = useState(initial.theme_primary_color || themeDef.defaultColors.primary)
+  const [accent,  setAccent]  = useState(initial.theme_accent_color  || themeDef.defaultColors.accent)
   const [background, setBackground] = useState<ThemeBackground>(initial.theme_background)
   const [shimmer,   setShimmer]   = useState(initial.theme_shimmer)
   const [logoUrl,   setLogoUrl]   = useState<string | null>(initial.theme_logo_url)
@@ -70,31 +199,73 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
   const [audience,     setAudience]     = useState('adulto')
   const [personality,  setPersonality]  = useState('moderna')
   const [analyzing,    setAnalyzing]    = useState(false)
+  const [analyzePhase, setAnalyzePhase] = useState(0)
   const [suggestions,  setSuggestions]  = useState<ThemeAnalysisSuggestion[]>([])
+  const [logoHarmony,    setLogoHarmony]  = useState<LogoBackgroundAnalysis | null>(null)
+  const [uploadConfigured, setUploadConfigured] = useState<boolean | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Debounce de 300ms nos inputs hex para não recalcular preview a cada tecla
-  const previewPrimary   = useDebounce(primary,   300)
-  const previewSecondary = useDebounce(secondary, 300)
-  const previewAccent    = useDebounce(accent,    300)
+  const showLogoSection = canAnalyze && uploadConfigured === true
 
-  // Só cria novo objeto de props se algo do preview realmente mudou
+  useEffect(() => {
+    if (!canAnalyze) {
+      setUploadConfigured(false)
+      return
+    }
+    let cancelled = false
+    fetch('/api/upload/status')
+      .then(res => res.json())
+      .then((data: { configured?: boolean }) => {
+        if (!cancelled) setUploadConfigured(Boolean(data.configured))
+      })
+      .catch(() => {
+        if (!cancelled) setUploadConfigured(false)
+      })
+    return () => { cancelled = true }
+  }, [canAnalyze])
+
+  useEffect(() => {
+    if (!analyzing) {
+      setAnalyzePhase(0)
+      return
+    }
+    setAnalyzePhase(0)
+    const t1 = setTimeout(() => setAnalyzePhase(1), 1_200)
+    const t2 = setTimeout(() => setAnalyzePhase(2), 2_800)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [analyzing])
+
+  // Debounce de 300ms nos inputs hex para não recalcular preview a cada tecla
+  const previewPrimary = useDebounce(primary, 300)
+  const previewAccent  = useDebounce(accent,  300)
+
+  const previewLogo = logoUrl ?? storeLogoUrl
+
   const previewProps = useMemo(() => ({
     themeName,
-    primary:   previewPrimary,
-    secondary: previewSecondary,
-    accent:    previewAccent,
+    primary:       previewPrimary,
+    accent:        previewAccent,
     background,
-    shimmer:   shimmer && canShimmer,
-  }), [themeName, previewPrimary, previewSecondary, previewAccent, background, shimmer, canShimmer])
+    shimmer:         shimmer && canShimmer,
+    storeName,
+    logoUrl:         previewLogo,
+    products,
+    assistantName,
+    tagline,
+  }), [
+    themeName, previewPrimary, previewAccent, background, shimmer, canShimmer,
+    storeName, previewLogo, products, assistantName, tagline,
+  ])
 
   const selectTheme = useCallback((name: ThemeName) => {
     if (!available.includes(name)) return
     const t = getTheme(name)
     setThemeName(name)
     setPrimary(t.defaultColors.primary)
-    setSecondary(t.defaultColors.secondary)
     setAccent(t.defaultColors.accent)
     setBackground(t.defaultBackground)
     if (defaultShimmerForTheme(name)) setShimmer(true)
@@ -104,7 +275,6 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
     if (!available.includes(s.themeName)) return
     setThemeName(s.themeName)
     setPrimary(s.primary)
-    setSecondary(s.secondary)
     setAccent(s.accent)
     setBackground(s.background)
     setAnalyzeOpen(false)
@@ -163,9 +333,14 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ logo: b64, mimeType: blob.type || 'image/png', segment, audience, personality }),
       })
-      const data = await res.json() as { suggestions?: ThemeAnalysisSuggestion[]; error?: string }
+      const data = await res.json() as {
+        suggestions?:     ThemeAnalysisSuggestion[]
+        logo_background?: LogoBackgroundAnalysis
+        error?:           string
+      }
       if (!res.ok) throw new Error(data.error ?? 'Erro na análise')
       setSuggestions(data.suggestions ?? [])
+      setLogoHarmony(data.logo_background ?? null)
       setAnalyzeOpen(false)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro na análise')
@@ -184,9 +359,8 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
           theme_name:            themeName,
-          theme_primary_color:   primary,
-          theme_secondary_color: secondary,
-          theme_accent_color:    accent,
+          theme_primary_color: primary,
+          theme_accent_color:  accent,
           theme_background:      background,
           theme_shimmer:         canShimmer ? shimmer : false,
           theme_logo_url:        logoUrl,
@@ -238,27 +412,27 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
         {/* ── Cores ── */}
         <section className="space-y-3">
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Cores</h2>
-          {(['primary', 'secondary', 'accent'] as const).map(key => {
-            const val = key === 'primary' ? primary : key === 'secondary' ? secondary : accent
-            const set = key === 'primary' ? setPrimary : key === 'secondary' ? setSecondary : setAccent
-            return (
+          {([
+            { key: 'primary' as const, label: 'Primária', val: primary, set: setPrimary },
+            { key: 'accent' as const, label: 'Destaque', val: accent, set: setAccent },
+          ]).map(({ key, label, val, set }) => (
               <div key={key} className="flex items-center gap-3 min-w-0">
                 <input
                   type="color"
                   value={val}
                   onChange={e => set(e.target.value)}
                   className="w-11 h-11 min-h-[44px] rounded-lg border border-border shrink-0 cursor-pointer"
-                  aria-label={key}
+                  aria-label={label}
                 />
                 <input
                   type="text"
                   value={val}
                   onChange={e => set(e.target.value)}
                   className="flex-1 min-w-0 min-h-[44px] px-3 rounded-xl bg-surface2 border border-border text-sm font-mono break-all"
+                  aria-label={label}
                 />
               </div>
-            )
-          })}
+            ))}
         </section>
 
         {/* ── Fundo ── */}
@@ -303,10 +477,17 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
           </label>
         )}
 
-        {/* ── Logo & IA — apenas planos pagos ── */}
-        {canAnalyze ? (
+        {/* ── Logo & IA — plano pago + Cloudinary configurado no servidor ── */}
+        {showLogoSection ? (
           <section className="space-y-2 border-t border-border pt-4">
             <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Logo & IA</h2>
+            <p className="text-xs text-muted break-words rounded-lg border border-border bg-surface2/80 px-3 py-2">
+              A logo principal da loja (WhatsApp e compartilhamentos) fica em{' '}
+              <Link href="/admin/configuracoes" className="text-primary underline">
+                Configurações
+              </Link>
+              . Aqui você envia uma versão para análise de tema e preview.
+            </p>
 
             {/* Input de arquivo customizado */}
             <div
@@ -336,27 +517,52 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
               <img src={logoUrl} alt="Logo atual" className="h-12 w-auto max-w-full object-contain rounded" />
             )}
 
+            {analyzing && !analyzeOpen && (
+              <AnalyzeAiFeedback phase={analyzePhase} />
+            )}
+
             <button
               type="button"
               onClick={() => setAnalyzeOpen(true)}
               disabled={!logoUrl || analyzing}
               className="w-full min-h-[44px] rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10 disabled:opacity-50"
             >
-              {analyzing ? 'Analisando…' : 'Analisar com IA'}
+              {analyzing ? 'Analisando seu logo…' : 'Analisar com IA'}
             </button>
           </section>
-        ) : (
-          /* Plano free: exibir mensagem de upsell em vez de esconder */
+        ) : !canAnalyze ? (
           <div className="border-t border-border pt-4">
             <div className="flex items-center gap-2 text-sm text-muted">
               <span>📸</span>
               <span>Upload de logo disponível nos planos pagos</span>
             </div>
           </div>
-        )}
+        ) : null}
 
         {suggestions.length > 0 && (
           <ThemeSuggestionCards suggestions={suggestions} onApply={applySuggestion} />
+        )}
+
+        {logoHarmony && (
+          <div className="rounded-xl border border-border bg-surface2 p-4 space-y-3 min-w-0">
+            <h3 className="font-syne font-semibold text-sm">Dica de harmonização</h3>
+            <p className="text-xs text-muted break-words">{logoHarmony.harmony_note}</p>
+            <p className="text-[11px] text-muted break-words">
+              Fundo detectado na logo:{' '}
+              <span className="font-mono" style={{ color: logoHarmony.color }}>
+                {logoHarmony.color}
+              </span>
+              {logoHarmony.is_transparent ? ' (transparente)' : ''}
+            </p>
+            <button
+              type="button"
+              onClick={() => setBackground(logoHarmony.suggested_store_background)}
+              className="w-full min-h-[44px] rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10"
+            >
+              Aplicar fundo sugerido (
+              {logoHarmony.suggested_store_background === 'light' ? 'claro' : 'escuro'})
+            </button>
+          </div>
         )}
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -394,31 +600,45 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
             type="button"
             className="absolute inset-0 bg-bg/80"
             aria-label="Fechar"
-            onClick={() => setAnalyzeOpen(false)}
+            disabled={analyzing}
+            onClick={() => !analyzing && setAnalyzeOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-md max-w-[calc(100vw-16px)] rounded-2xl bg-surface border border-border p-4 space-y-3">
+          <div className="relative z-10 w-full max-w-md max-w-[calc(100vw-16px)] max-h-[calc(100dvh-32px)] overflow-y-auto rounded-2xl bg-surface border border-border p-4 space-y-3">
             <h3 className="font-syne font-bold text-lg">Contexto da loja</h3>
-            {[
-              { label: 'Segmento',      value: segment,     set: setSegment     },
-              { label: 'Público',       value: audience,    set: setAudience    },
-              { label: 'Personalidade', value: personality, set: setPersonality },
-            ].map(({ label, value, set }) => (
-              <div key={label}>
-                <label className="text-xs text-muted block mb-1">{label}</label>
-                <input
-                  value={value}
-                  onChange={e => set(e.target.value)}
-                  className="w-full min-h-[44px] px-3 rounded-xl bg-surface2 border border-border text-sm"
-                />
-              </div>
-            ))}
+            {analyzing ? (
+              <AnalyzeAiFeedback phase={analyzePhase} />
+            ) : (
+              <p className="text-xs text-muted break-words">
+                Toque em uma sugestão ou personalize no campo abaixo.
+              </p>
+            )}
+            <div className={analyzing ? 'opacity-50 pointer-events-none space-y-3' : 'space-y-3'}>
+            <ContextField
+              label="Segmento"
+              value={segment}
+              onChange={setSegment}
+              suggestions={STORE_CONTEXT_SUGGESTIONS.segment}
+            />
+            <ContextField
+              label="Público"
+              value={audience}
+              onChange={setAudience}
+              suggestions={STORE_CONTEXT_SUGGESTIONS.audience}
+            />
+            <ContextField
+              label="Personalidade"
+              value={personality}
+              onChange={setPersonality}
+              suggestions={STORE_CONTEXT_SUGGESTIONS.personality}
+            />
+            </div>
             <button
               type="button"
               onClick={runAnalyze}
               disabled={analyzing}
-              className="w-full min-h-[44px] rounded-xl bg-primary text-white font-semibold text-sm"
+              className="w-full min-h-[44px] rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-70"
             >
-              {analyzing ? 'Analisando…' : 'Gerar sugestões'}
+              {analyzing ? 'Aguarde a análise…' : 'Gerar sugestões'}
             </button>
           </div>
         </div>
