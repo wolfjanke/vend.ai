@@ -11,7 +11,7 @@ export default async function PlanoPage() {
       <div className="mb-6">
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Plano</h1>
         <p className="text-sm text-muted break-words">
-          Gerencie sua assinatura, trial e limites de uso
+          Gerencie sua assinatura, período de trial gratuito e limites de uso
         </p>
       </div>
       <PlanoClient />
