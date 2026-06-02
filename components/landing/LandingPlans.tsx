@@ -54,7 +54,7 @@ export default function LandingPlans() {
         return (
           <ScrollReveal key={slug} delay={i * 80}>
             <div
-              className={`bg-surface border rounded-2xl p-5 sm:p-6 w-full flex flex-col h-full min-w-0 ${
+              className={`bg-[#161616] border rounded-[2px] p-5 sm:p-6 w-full flex flex-col h-full min-w-0 ${
                 popular ? 'border-primary shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]' : 'border-border'
               }`}
             >
