@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   THEMES,
@@ -28,42 +28,71 @@ type Initial = {
 }
 
 type Props = {
-  slug:     string
-  plan:     PlanSlug
-  initial:  Initial
+  slug:    string
+  plan:    PlanSlug
+  initial: Initial
+}
+
+/** Debounce simples: retorna valor atualizado após `delay` ms de inatividade */
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const update = useCallback((v: T) => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => setDebounced(v), delay)
+  }, [delay])
+
+  return useMemo(() => {
+    update(value)
+    return debounced
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
 }
 
 export default function AparenciaClient({ slug, plan, initial }: Props) {
-  const available = getAvailableThemes(plan)
+  const available  = getAvailableThemes(plan)
   const canShimmer = canUseShimmer(plan)
   const canAnalyze = plan !== 'free'
 
   const [themeName, setThemeName] = useState<ThemeName>((initial.theme_name as ThemeName) || 'default')
   const themeDef = getTheme(themeName)
 
-  const [primary, setPrimary] = useState(
-    initial.theme_primary_color || themeDef.defaultColors.primary,
-  )
-  const [secondary, setSecondary] = useState(
-    initial.theme_secondary_color || themeDef.defaultColors.secondary,
-  )
-  const [accent, setAccent] = useState(
-    initial.theme_accent_color || themeDef.defaultColors.accent,
-  )
+  const [primary,   setPrimary]   = useState(initial.theme_primary_color   || themeDef.defaultColors.primary)
+  const [secondary, setSecondary] = useState(initial.theme_secondary_color || themeDef.defaultColors.secondary)
+  const [accent,    setAccent]    = useState(initial.theme_accent_color    || themeDef.defaultColors.accent)
   const [background, setBackground] = useState<ThemeBackground>(initial.theme_background)
-  const [shimmer, setShimmer] = useState(initial.theme_shimmer)
-  const [logoUrl, setLogoUrl] = useState<string | null>(initial.theme_logo_url)
+  const [shimmer,   setShimmer]   = useState(initial.theme_shimmer)
+  const [logoUrl,   setLogoUrl]   = useState<string | null>(initial.theme_logo_url)
+  const [fileName,  setFileName]  = useState<string | null>(null)
 
-  const [saving, setSaving] = useState(false)
+  const [saving,  setSaving]  = useState(false)
   const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const [error,   setError]   = useState('')
 
-  const [analyzeOpen, setAnalyzeOpen] = useState(false)
-  const [segment, setSegment] = useState('moda')
-  const [audience, setAudience] = useState('adulto')
-  const [personality, setPersonality] = useState('moderna')
-  const [analyzing, setAnalyzing] = useState(false)
-  const [suggestions, setSuggestions] = useState<ThemeAnalysisSuggestion[]>([])
+  const [analyzeOpen,  setAnalyzeOpen]  = useState(false)
+  const [segment,      setSegment]      = useState('moda')
+  const [audience,     setAudience]     = useState('adulto')
+  const [personality,  setPersonality]  = useState('moderna')
+  const [analyzing,    setAnalyzing]    = useState(false)
+  const [suggestions,  setSuggestions]  = useState<ThemeAnalysisSuggestion[]>([])
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Debounce de 300ms nos inputs hex para não recalcular preview a cada tecla
+  const previewPrimary   = useDebounce(primary,   300)
+  const previewSecondary = useDebounce(secondary, 300)
+  const previewAccent    = useDebounce(accent,    300)
+
+  // Só cria novo objeto de props se algo do preview realmente mudou
+  const previewProps = useMemo(() => ({
+    themeName,
+    primary:   previewPrimary,
+    secondary: previewSecondary,
+    accent:    previewAccent,
+    background,
+    shimmer:   shimmer && canShimmer,
+  }), [themeName, previewPrimary, previewSecondary, previewAccent, background, shimmer, canShimmer])
 
   const selectTheme = useCallback((name: ThemeName) => {
     if (!available.includes(name)) return
@@ -89,41 +118,57 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
   async function handleLogoUpload(file: File) {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error ?? 'Falha no upload')
-    setLogoUrl(data.url)
-    return data.url as string
+    const res  = await fetch('/api/upload', { method: 'POST', body: fd })
+    const data = await res.json() as { url?: string; error?: string }
+    if (!res.ok) {
+      // Erro de configuração do servidor — não expor ao lojista
+      if (data.error === 'cloudinary_not_configured' || res.status === 503) {
+        throw new Error('upload_config_error')
+      }
+      throw new Error(data.error ?? 'Falha no upload')
+    }
+    setLogoUrl(data.url!)
+    return data.url!
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFileName(f.name)
+    setError('')
+    try {
+      await handleLogoUpload(f)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload falhou'
+      if (msg === 'upload_config_error') {
+        // Erro de configuração: mostrar só no console, nunca para o lojista
+        console.warn('[upload] Cloudinary não configurado no servidor.')
+        setError('Upload temporariamente indisponível. Tente novamente mais tarde.')
+      } else {
+        setError(msg)
+      }
+    }
   }
 
   async function runAnalyze() {
-    if (!logoUrl) {
-      setError('Envie um logo antes de analisar.')
-      return
-    }
+    if (!logoUrl) { setError('Envie um logo antes de analisar.'); return }
     setAnalyzing(true)
     setError('')
     try {
       const imgRes = await fetch(logoUrl)
-      const blob = await imgRes.blob()
-      const b64 = await new Promise<string>((resolve, reject) => {
+      const blob   = await imgRes.blob()
+      const b64    = await new Promise<string>((resolve, reject) => {
         const r = new FileReader()
-        r.onload = () => resolve(String(r.result))
+        r.onload  = () => resolve(String(r.result))
         r.onerror = reject
         r.readAsDataURL(blob)
       })
-      const res = await fetch('/api/theme/analyze', {
+      const res  = await fetch('/api/theme/analyze', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          logo: b64,
-          mimeType: blob.type || 'image/png',
-          segment,
-          audience,
-          personality,
-        }),
+        body:    JSON.stringify({ logo: b64, mimeType: blob.type || 'image/png', segment, audience, personality }),
       })
-      const data = await res.json()
+      const data = await res.json() as { suggestions?: ThemeAnalysisSuggestion[]; error?: string }
       if (!res.ok) throw new Error(data.error ?? 'Erro na análise')
       setSuggestions(data.suggestions ?? [])
       setAnalyzeOpen(false)
@@ -139,7 +184,7 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
     setError('')
     setMessage('')
     try {
-      const res = await fetch('/api/admin/theme', {
+      const res  = await fetch('/api/admin/theme', {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
@@ -153,7 +198,7 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
           theme_onboarding_done: true,
         }),
       })
-      const data = await res.json()
+      const data = await res.json() as { error?: string }
       if (!res.ok) throw new Error(data.error ?? 'Erro ao salvar')
       setMessage('Tema salvo com sucesso!')
     } catch (e: unknown) {
@@ -166,11 +211,13 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 min-w-0">
       <div className="lg:col-span-2 space-y-5 min-w-0">
+
+        {/* ── Tema ── */}
         <section className="space-y-3">
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Tema</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {THEME_NAMES.map(name => {
-              const t = THEMES[name]
+              const t      = THEMES[name]
               const locked = !available.includes(name)
               return (
                 <button
@@ -186,15 +233,14 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
                 >
                   <span className="font-syne font-semibold text-sm block truncate">{t.label}</span>
                   <span className="text-[11px] text-muted line-clamp-2 break-words">{t.description}</span>
-                  {locked && (
-                    <span className="text-[10px] text-primary mt-1 inline-block">Starter+</span>
-                  )}
+                  {locked && <span className="text-[10px] text-primary mt-1 inline-block">Starter+</span>}
                 </button>
               )
             })}
           </div>
         </section>
 
+        {/* ── Cores ── */}
         <section className="space-y-3">
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Cores</h2>
           {(['primary', 'secondary', 'accent'] as const).map(key => {
@@ -220,6 +266,7 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
           })}
         </section>
 
+        {/* ── Fundo ── */}
         <section className="space-y-2">
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Fundo</h2>
           <div className="flex flex-wrap gap-2">
@@ -248,6 +295,7 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
           </div>
         </section>
 
+        {/* ── Shimmer ── */}
         {canShimmer && (
           <label className="flex items-center gap-3 min-h-[44px] cursor-pointer">
             <input
@@ -260,26 +308,39 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
           </label>
         )}
 
-        {canAnalyze && (
+        {/* ── Logo & IA — apenas planos pagos ── */}
+        {canAnalyze ? (
           <section className="space-y-2 border-t border-border pt-4">
             <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Logo & IA</h2>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full text-sm min-h-[44px]"
-              onChange={async e => {
-                const f = e.target.files?.[0]
-                if (!f) return
-                try {
-                  await handleLogoUpload(f)
-                } catch (err: unknown) {
-                  setError(err instanceof Error ? err.message : 'Upload falhou')
-                }
-              }}
-            />
+
+            {/* Input de arquivo customizado */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={e => e.key === 'Enter' && fileInputRef.current?.click()}
+              className="flex items-center gap-3 p-3 bg-surface2 border border-dashed border-border rounded-xl cursor-pointer hover:border-primary/60 transition-colors min-h-[44px]"
+            >
+              <span className="text-2xl shrink-0">📷</span>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">
+                  {fileName ?? 'Clique para escolher a logo'}
+                </div>
+                <div className="text-xs text-muted">PNG, JPG ou SVG — recomendado 200×200 px</div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
             {logoUrl && (
-              <img src={logoUrl} alt="" className="h-12 w-auto max-w-full object-contain rounded" />
+              <img src={logoUrl} alt="Logo atual" className="h-12 w-auto max-w-full object-contain rounded" />
             )}
+
             <button
               type="button"
               onClick={() => setAnalyzeOpen(true)}
@@ -289,6 +350,14 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
               {analyzing ? 'Analisando…' : 'Analisar com IA'}
             </button>
           </section>
+        ) : (
+          /* Plano free: exibir mensagem de upsell em vez de esconder */
+          <div className="border-t border-border pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <span>📸</span>
+              <span>Upload de logo disponível nos planos pagos</span>
+            </div>
+          </div>
         )}
 
         {suggestions.length > 0 && (
@@ -312,22 +381,18 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
             Ver loja completa
           </Link>
         </div>
+
         {message && <p className="text-sm text-accent break-words">{message}</p>}
-        {error && <p className="text-sm text-warm break-words">{error}</p>}
+        {error   && <p className="text-sm text-warm  break-words">{error}</p>}
       </div>
 
+      {/* ── Preview ao vivo ── props memoizadas para evitar re-render desnecessário */}
       <div className="lg:col-span-3 min-w-0 sticky top-20 self-start">
         <p className="text-xs text-muted mb-2">Preview ao vivo</p>
-        <StoreThemePreview
-          themeName={themeName}
-          primary={primary}
-          secondary={secondary}
-          accent={accent}
-          background={background}
-          shimmer={shimmer && canShimmer}
-        />
+        <StoreThemePreview {...previewProps} />
       </div>
 
+      {/* ── Modal IA ── */}
       {analyzeOpen && (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4">
           <button
@@ -339,8 +404,8 @@ export default function AparenciaClient({ slug, plan, initial }: Props) {
           <div className="relative z-10 w-full max-w-md max-w-[calc(100vw-16px)] rounded-2xl bg-surface border border-border p-4 space-y-3">
             <h3 className="font-syne font-bold text-lg">Contexto da loja</h3>
             {[
-              { label: 'Segmento', value: segment, set: setSegment },
-              { label: 'Público', value: audience, set: setAudience },
+              { label: 'Segmento',      value: segment,     set: setSegment     },
+              { label: 'Público',       value: audience,    set: setAudience    },
               { label: 'Personalidade', value: personality, set: setPersonality },
             ].map(({ label, value, set }) => (
               <div key={label}>

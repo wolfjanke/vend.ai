@@ -22,24 +22,35 @@ export async function POST(req: NextRequest) {
 
   if (!cloudName || !apiKey || !apiSecret) {
     return NextResponse.json(
-      { error: 'Upload indisponível. Configure Cloudinary no servidor.' },
+      { error: 'cloudinary_not_configured' },
       { status: 503 },
     )
   }
 
   try {
-    const { base64 } = await req.json()
-    if (!base64 || typeof base64 !== 'string') {
+    const contentType = req.headers.get('content-type') ?? ''
+    let base64: string
+
+    if (contentType.includes('multipart/form-data')) {
+      const fd = await req.formData()
+      const file = fd.get('file') as File | null
+      if (!file) return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 400 })
+      const arrayBuffer = await file.arrayBuffer()
+      const b64 = Buffer.from(arrayBuffer).toString('base64')
+      base64 = `data:${file.type || 'image/png'};base64,${b64}`
+    } else {
+      const body = await req.json() as { base64?: string }
+      base64 = body.base64 ?? ''
+    }
+
+    if (!base64) {
       return NextResponse.json({ error: 'Imagem inválida' }, { status: 400 })
     }
 
-    const folder = `vendai/${session.storeId}/products`
+    const folder = `vendai/${session.storeId}/logos`
     const timestamp = Math.floor(Date.now() / 1000).toString()
 
-    const signParams: Record<string, string> = {
-      folder,
-      timestamp,
-    }
+    const signParams: Record<string, string> = { folder, timestamp }
     const signature = cloudinarySignature(signParams, apiSecret)
 
     const formData = new FormData()
@@ -53,7 +64,7 @@ export async function POST(req: NextRequest) {
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       { method: 'POST', body: formData },
     )
-    const data = await res.json()
+    const data = await res.json() as { secure_url?: string; error?: { message?: string } }
 
     if (!res.ok) throw new Error(data.error?.message ?? 'Upload falhou')
     return NextResponse.json({ url: data.secure_url })
