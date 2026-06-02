@@ -2,6 +2,7 @@ import { Globe } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import SandboxBanner from '@/components/admin/SandboxBanner'
 
 /** Obrigatório com getServerSession/cookies — sem isto o build pode pré-renderizar e `cookies()` lança em produção. */
 export const dynamic = 'force-dynamic'
@@ -80,6 +81,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">
+          <SandboxBanner />
           {children}
         </main>
       </div>
