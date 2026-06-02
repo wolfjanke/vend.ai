@@ -1,3 +1,6 @@
+import { deriveThemeColors } from '@/lib/theme-derive'
+import type { ThemeBackground } from '@/lib/themes'
+
 const HEX_RE = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/
 
 export function isValidHex(color: string): boolean {
@@ -44,21 +47,41 @@ export function meetsWcagAA(fg: string, bg: string): boolean {
 }
 
 export function validateThemeColors(
-  colors: { primary?: string; secondary?: string; accent?: string },
-  backgroundHex: string,
+  colors: { primary?: string; accent?: string },
+  background: ThemeBackground,
+  pageBgHex: string,
 ): { ok: true } | { ok: false; message: string } {
+
   for (const [key, value] of Object.entries(colors)) {
     if (value == null || value === '') continue
     if (!isValidHex(value)) {
       return { ok: false, message: `Cor ${key} inválida (use formato #RRGGBB)` }
     }
-    if (!meetsWcagAA(value, backgroundHex)) {
+  }
+
+  const primary = colors.primary?.trim()
+  const accent = colors.accent?.trim()
+  if (!primary || !accent) return { ok: true }
+
+  const derived = deriveThemeColors(primary, accent, background, pageBgHex)
+
+  const pairs: [string, string, string][] = [
+    ['texto principal', derived.textPrimary, derived.cardBg],
+    ['botão', derived.buttonText, derived.buttonBg],
+    ['preço', derived.pricePrimary, derived.cardBg],
+    ['primária', derived.primary, pageBgHex],
+    ['destaque', derived.accent, pageBgHex],
+  ]
+
+  for (const [label, fg, bg] of pairs) {
+    if (!meetsWcagAA(fg, bg)) {
       return {
         ok:      false,
-        message: `Contraste insuficiente entre ${key} e o fundo (mínimo WCAG AA 4.5:1)`,
+        message: `Contraste insuficiente em ${label} (mínimo WCAG AA 4.5:1)`,
       }
     }
   }
+
   return { ok: true }
 }
 

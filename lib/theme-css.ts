@@ -7,6 +7,7 @@ import {
   type StoreThemeConfig,
 } from '@/lib/themes'
 import { getGoogleFontsUrl } from '@/lib/theme-fonts'
+import { deriveThemeColors } from '@/lib/theme-derive'
 import { hexWithAlpha } from '@/lib/theme-contrast'
 
 export type StoreThemeRow = {
@@ -23,63 +24,98 @@ export type StoreThemeRow = {
 export function generateThemeCss(
   theme: ThemeDefinition,
   customColors: {
-    primary?:   string | null
-    secondary?: string | null
-    accent?:    string | null
+    primary?: string | null
+    accent?:   string | null
   },
   background: ThemeBackground,
   shimmer: boolean,
 ): string {
   const primary = customColors.primary?.trim() || theme.defaultColors.primary
-  const secondary = customColors.secondary?.trim() || theme.defaultColors.secondary
   const accent = customColors.accent?.trim() || theme.defaultColors.accent
+  const pageBg =
+    background === 'dark'
+      ? theme.defaultColors.background
+      : theme.defaultColors.backgroundLight
 
-  const isDark = background === 'dark'
-  const lightPaletteThemes = new Set<ThemeName>(['boutique', 'editorial', 'pop'])
-  const bg = isDark ? theme.defaultColors.background : theme.defaultColors.backgroundLight
-  const surface = isDark
-    ? (lightPaletteThemes.has(theme.name) ? '#1A1A1A' : theme.defaultColors.surface)
-    : theme.defaultColors.surface
-  const surface2 = isDark ? '#1A1A2E' : '#EDE8E4'
-  const border = isDark ? '#2A2A45' : '#D8D0C8'
-  const text = isDark
-    ? (lightPaletteThemes.has(theme.name) ? '#F5F5F5' : theme.defaultColors.text)
-    : theme.defaultColors.text
-  const muted = isDark && lightPaletteThemes.has(theme.name)
-    ? '#AAAAAA'
-    : theme.defaultColors.textMuted
-  const faint = isDark ? '#33334A' : '#C8C0B8'
+  const c = deriveThemeColors(primary, accent, background, pageBg)
+  const shadow =
+    background === 'dark'
+      ? '0 4px 20px rgba(0,0,0,0.4)'
+      : '0 4px 20px rgba(0,0,0,0.08)'
+  const popShadow =
+    theme.name === 'pop'
+      ? `0 8px 32px ${hexWithAlpha(accent, '44')}`
+      : shadow
 
   return `
-    --theme-primary: ${primary};
-    --theme-secondary: ${secondary};
-    --theme-accent: ${accent};
-    --theme-bg: ${bg};
-    --theme-surface: ${surface};
-    --theme-text: ${text};
-    --theme-text-muted: ${muted};
-    --theme-radius: ${theme.card.borderRadius};
+    --theme-primary: ${c.primary};
+    --theme-secondary: ${c.secondary};
+    --theme-accent: ${c.accent};
+    --theme-bg: ${c.pageBg};
+
+    --theme-primary-dark: ${c.primaryDark};
+    --theme-primary-light: ${c.primaryLight};
+    --theme-primary-muted: ${c.primaryMuted};
+    --theme-primary-surface: ${c.primarySurface};
+    --theme-primary-border: ${c.primaryBorder};
+
+    --theme-text: ${c.textPrimary};
+    --theme-text-secondary: ${c.textSecondary};
+    --theme-text-muted: ${c.textMuted};
+
+    --theme-card-bg: ${c.cardBg};
+    --theme-card-bg-hover: ${c.cardBgHover};
+    --theme-card-border: ${c.cardBorder};
+    --theme-card-border-hover: ${c.cardBorderHover};
+    --theme-card-radius: ${theme.card.borderRadius};
+    --theme-card-ratio: ${theme.card.aspectRatio};
+
+    --theme-header-bg: ${c.headerBg};
+    --theme-header-text: ${c.headerText};
+
+    --theme-chip-bg: ${c.chipBg};
+    --theme-chip-bg-active: ${c.chipBgActive};
+    --theme-chip-text: ${c.chipText};
+    --theme-chip-text-active: ${c.chipTextActive};
+
+    --theme-btn-bg: ${c.buttonBg};
+    --theme-btn-text: ${c.buttonText};
+    --theme-btn-hover: ${c.buttonHover};
+
+    --theme-price: ${c.pricePrimary};
+    --theme-price-old: ${c.priceOld};
+
+    --theme-vi-avatar: ${c.viAvatar};
+    --theme-vi-bubble: ${c.viBubbleBg};
+
     --theme-font-display: '${theme.fonts.display}', sans-serif;
     --theme-font-body: '${theme.fonts.body}', sans-serif;
     --theme-font-weight: ${theme.fonts.displayWeight};
+    --theme-font-weight-display: ${theme.fonts.displayWeight};
+
     --theme-shimmer: ${shimmer ? '1' : '0'};
-    --theme-card-ratio: ${theme.card.aspectRatio};
-    --bg: ${bg};
-    --surface: ${surface};
-    --surface2: ${surface2};
-    --surface3: ${isDark ? '#22223A' : '#E5E0DA'};
-    --border: ${border};
-    --primary: ${primary};
-    --primary-dim: ${hexWithAlpha(primary, '22')};
-    --primary-glow: ${hexWithAlpha(primary, '55')};
-    --accent: ${accent};
-    --accent-dim: ${hexWithAlpha(accent, '15')};
-    --accent-glow: ${hexWithAlpha(accent, '44')};
-    --text: ${text};
-    --muted: ${muted};
-    --faint: ${faint};
-    background-color: ${bg};
-    color: ${text};
+    --theme-shadow: ${popShadow};
+
+    --theme-radius: ${theme.card.borderRadius};
+    --theme-surface: ${c.surface};
+    --theme-text-muted: ${c.textMuted};
+
+    --bg: ${c.pageBg};
+    --surface: ${c.surface};
+    --surface2: ${c.surface2};
+    --surface3: ${c.surface3};
+    --border: ${c.border};
+    --primary: ${c.primary};
+    --primary-dim: ${hexWithAlpha(c.primary, '22')};
+    --primary-glow: ${hexWithAlpha(c.primary, '55')};
+    --accent: ${c.accent};
+    --accent-dim: ${hexWithAlpha(c.accent, '15')};
+    --accent-glow: ${hexWithAlpha(c.accent, '44')};
+    --text: ${c.textPrimary};
+    --muted: ${c.textMuted};
+    --faint: ${c.faint};
+    background-color: ${c.pageBg};
+    color: ${c.textPrimary};
   `.trim()
 }
 
@@ -101,9 +137,8 @@ export function resolveStoreTheme(row: StoreThemeRow): {
   const css = generateThemeCss(
     theme,
     {
-      primary:   row.theme_primary_color,
-      secondary: row.theme_secondary_color,
-      accent:    row.theme_accent_color,
+      primary: row.theme_primary_color,
+      accent:  row.theme_accent_color,
     },
     background,
     shimmer,

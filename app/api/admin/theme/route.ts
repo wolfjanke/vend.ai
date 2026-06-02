@@ -11,6 +11,7 @@ import {
   getTheme,
   type ThemeBackground,
 } from '@/lib/themes'
+import { deriveThemeColors } from '@/lib/theme-derive'
 import { isValidHex, validateThemeColors } from '@/lib/theme-contrast'
 const themeNameSchema = z.enum([
   'default', 'boutique', 'street', 'editorial', 'pop', 'fitness', 'lumiere',
@@ -71,9 +72,8 @@ export async function PUT(req: NextRequest) {
         : theme.defaultColors.backgroundLight
 
     const colors = {
-      primary:   data.theme_primary_color ?? undefined,
-      secondary: data.theme_secondary_color ?? undefined,
-      accent:    data.theme_accent_color ?? undefined,
+      primary: data.theme_primary_color ?? undefined,
+      accent:  data.theme_accent_color ?? undefined,
     }
 
     for (const [key, value] of Object.entries(colors)) {
@@ -82,10 +82,15 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const contrast = validateThemeColors(colors, bgHex)
+    const contrast = validateThemeColors(colors, background, bgHex)
     if (!contrast.ok) {
       return NextResponse.json({ error: contrast.message }, { status: 400 })
     }
+
+    const derivedSecondary =
+      colors.primary && colors.accent
+        ? deriveThemeColors(colors.primary, colors.accent, background, bgHex).secondary
+        : null
 
     let shimmer = data.theme_shimmer
     if (shimmer === undefined) {
@@ -107,7 +112,7 @@ export async function PUT(req: NextRequest) {
       UPDATE stores SET
         theme_name = ${data.theme_name},
         theme_primary_color = ${data.theme_primary_color ?? null},
-        theme_secondary_color = ${data.theme_secondary_color ?? null},
+        theme_secondary_color = ${derivedSecondary},
         theme_accent_color = ${data.theme_accent_color ?? null},
         theme_background = ${background},
         theme_shimmer = ${Boolean(shimmer)},
