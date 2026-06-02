@@ -166,6 +166,7 @@ export interface Store extends StoreAddress {
   slug:          string
   name:          string
   logo_url:      string | null
+  tagline?:      string | null
   whatsapp:      string
   settings_json: StoreSettings
   created_at:    string

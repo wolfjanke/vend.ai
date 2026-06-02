@@ -39,6 +39,7 @@ export const storeAddressSchema = z.object({
 
 export const storeSettingsPatchSchema = z.object({
   name:           z.string().min(1).max(200),
+  tagline:        z.string().max(60).nullable().optional(),
   whatsapp:       phoneDigits,
   logo_url:       z.string().nullable().optional(),
   freteInfo:      z.string().optional(),

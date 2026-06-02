@@ -7,6 +7,7 @@ export type PublicStore = {
   slug:          string
   name:          string
   logo_url:      string | null
+  tagline?:      string | null
   whatsapp:      string
   settings_json: StoreSettings
   created_at:    string
@@ -32,6 +33,7 @@ export function toPublicStore(row: Record<string, unknown>): PublicStore {
     slug:          String(row.slug),
     name:          String(row.name),
     logo_url:      (row.logo_url as string | null) ?? null,
+    tagline:       (row.tagline as string | null) ?? null,
     whatsapp:      String(row.whatsapp),
     settings_json: (row.settings_json as StoreSettings) ?? {},
     created_at:    String(row.created_at),

@@ -32,6 +32,7 @@ export async function PATCH(req: NextRequest) {
 
     const {
       name,
+      tagline,
       whatsapp,
       logo_url,
       freteInfo,
@@ -59,7 +60,7 @@ export async function PATCH(req: NextRequest) {
     } = parsed.data
 
     const storeRows = await sql`
-      SELECT settings_json, plan, assistant_name, assistant_welcome_message, assistant_tone
+      SELECT settings_json, plan, tagline, assistant_name, assistant_welcome_message, assistant_tone
       FROM stores WHERE id = ${session.storeId} LIMIT 1
     `
     const plan = (storeRows[0]?.plan ?? 'free') as PlanSlug
@@ -117,11 +118,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     const logo = logo_url === '' || logo_url == null ? null : logo_url
+    const taglineSaved =
+      tagline !== undefined
+        ? (tagline?.trim() ? tagline.trim().slice(0, 60) : null)
+        : (storeRows[0]?.tagline as string | null) ?? null
 
     if (viDailyLimit !== undefined) {
       await sql`
         UPDATE stores SET
           name = ${name},
+          tagline = ${taglineSaved},
           whatsapp = ${whatsapp},
           logo_url = ${logo},
           cep = ${emptyToNull(cep)},
@@ -142,6 +148,7 @@ export async function PATCH(req: NextRequest) {
       await sql`
         UPDATE stores SET
           name = ${name},
+          tagline = ${taglineSaved},
           whatsapp = ${whatsapp},
           logo_url = ${logo},
           cep = ${emptyToNull(cep)},

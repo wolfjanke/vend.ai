@@ -39,6 +39,7 @@ export default function ConfigForm({ store, viStats }: Props) {
   const [genderFocus, setGenderFocus] = useState<GenderFocus>(initialProfile.genderFocus)
   const [ageGroup, setAgeGroup]       = useState<AgeGroup>(initialProfile.ageGroup)
   const [name,          setName]          = useState(store.name)
+  const [tagline,       setTagline]       = useState(store.tagline ?? '')
   const [wpp,           setWpp]           = useState(() => initialWppDisplay(store.whatsapp))
   const [logoUrl,       setLogoUrl]       = useState(store.logo_url ?? '')
   const [freteInfo,     setFreteInfo]     = useState(settings.freteInfo ?? '')
@@ -181,6 +182,7 @@ export default function ConfigForm({ store, viStats }: Props) {
 
     const body = {
       name:           name.trim(),
+      tagline:        tagline.trim() ? tagline.trim().slice(0, 60) : null,
       whatsapp:       wpp,
       logo_url:       logoUrl.trim() || null,
       freteInfo:      freteInfo.trim(),
@@ -269,6 +271,19 @@ export default function ConfigForm({ store, viStats }: Props) {
             value={name}
             onChange={e => setName(e.target.value)}
           />
+        </div>
+        <div>
+          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+            Slogan / tagline <span className="font-normal normal-case">(opcional)</span>
+          </label>
+          <input
+            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all"
+            value={tagline}
+            maxLength={60}
+            placeholder="Ex.: Moda feminina com estilo"
+            onChange={e => setTagline(e.target.value)}
+          />
+          <p className="text-[11px] text-muted mt-1">{tagline.length}/60 — aparece abaixo do nome na vitrine</p>
         </div>
 
         <SectionHeader

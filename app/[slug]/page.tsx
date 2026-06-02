@@ -32,7 +32,7 @@ export default async function StorePage({ params }: Props) {
   try {
     const rows = await sql`
       SELECT
-        id, slug, name, logo_url, whatsapp, settings_json, created_at,
+        id, slug, name, logo_url, tagline, whatsapp, settings_json, created_at,
         cep, logradouro, numero, complemento, bairro, cidade, uf,
         theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
         theme_background, theme_shimmer, theme_logo_url,
