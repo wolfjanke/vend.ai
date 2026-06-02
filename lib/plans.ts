@@ -60,6 +60,20 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
 
 export const PLAN_SLUGS = Object.keys(PLANS) as PlanSlug[]
 
+/** Dias de trial gratuito ao assinar (planos pagos). */
+export const TRIAL_DAYS_BY_PLAN: Partial<Record<PlanSlug, number>> = {
+  starter:    7,
+  pro:        14,
+  loja:       14,
+  enterprise: 30,
+}
+
+export const PAID_PLAN_SLUGS: PlanSlug[] = ['starter', 'pro', 'loja', 'enterprise']
+
+export function isPaidPlan(slug: PlanSlug): boolean {
+  return PAID_PLAN_SLUGS.includes(slug)
+}
+
 export const PLAN_PRODUCT_LIMITS: Record<PlanSlug, number | null> = Object.fromEntries(
   PLAN_SLUGS.map(slug => [slug, PLANS[slug].productLimit]),
 ) as Record<PlanSlug, number | null>

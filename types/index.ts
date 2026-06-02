@@ -183,6 +183,12 @@ export interface Store extends StoreAddress {
   asaas_wallet_id?:        string
   asaas_onboarding_status?: AsaasOnboardingStatus
   asaas_approved_at?:      string
+  asaas_subscription_id?:  string | null
+  asaas_billing_customer_id?: string | null
+  subscription_status?:    SubscriptionStatus | null
+  subscription_started_at?: string | null
+  subscription_ends_at?:   string | null
+  trial_ends_at?:          string | null
   vi_messages_used?:       number
   vi_messages_reset_at?:   string
   vi_overage_messages?:    number
@@ -384,6 +390,12 @@ export type AsaasOnboardingStatus =
   | 'AWAITING_APPROVAL'
   | 'APPROVED'
   | 'REJECTED'
+
+export type SubscriptionStatus =
+  | 'TRIAL'
+  | 'ACTIVE'
+  | 'OVERDUE'
+  | 'CANCELLED'
 
 export type AsaasSplitStatus =
   | 'PENDING'
