@@ -5,6 +5,7 @@ import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { sendWelcomeEmail } from '@/lib/email/send-welcome'
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req)
@@ -71,11 +72,15 @@ export async function POST(req: NextRequest) {
       RETURNING id
     `
 
+    const termsVersion = process.env.TERMS_VERSION ?? 'v1.0'
+    const acceptedIp = ip || 'não disponível'
+
     const [store] = await sql`
       INSERT INTO stores (
         user_id, slug, name, whatsapp, settings_json,
         theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-        theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done
+        theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done,
+        terms_version, terms_accepted_at, terms_accepted_ip, assistant_name
       )
       VALUES (
         ${newUser.id}, ${finalSlug}, ${storeName}, ${whatsapp}, ${JSON.stringify(initialSettings)}::jsonb,
@@ -86,12 +91,30 @@ export async function POST(req: NextRequest) {
         ${theme_background ?? 'dark'},
         ${resolvedShimmer},
         ${theme_logo_url ?? null},
-        ${resolvedOnboarding}
+        ${resolvedOnboarding},
+        ${termsVersion},
+        NOW(),
+        ${acceptedIp},
+        'Vi'
       )
       RETURNING id, slug
     `
 
     await sql`UPDATE admin_users SET store_id = ${store.id} WHERE id = ${newUser.id}`
+
+    const acceptedAt = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+
+    void sendWelcomeEmail({
+      ownerName: storeName,
+      ownerEmail: email,
+      storeName,
+      storeSlug: store.slug,
+      plan: 'free',
+      assistantName: 'Vi',
+      acceptedAt,
+      acceptedIp,
+      termsVersion,
+    }).catch(err => logServerError('[Email] Falha no boas-vindas', err))
 
     return NextResponse.json({ slug: store.slug })
   } catch (error) {

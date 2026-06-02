@@ -12,6 +12,7 @@ import {
   upgradeSubscription,
 } from '@/lib/payments/subscriptions'
 import { PLAN_PRODUCT_LIMITS, PLANS, PAID_PLAN_SLUGS, type PlanSlug } from '@/lib/plans'
+import { sendUpgradeEmail } from '@/lib/email/send-upgrade'
 
 const postSchema = z.object({
   plan: z.enum(['starter', 'pro', 'loja', 'enterprise']),
@@ -109,12 +110,37 @@ export async function POST(req: NextRequest) {
   const { plan, action } = parsed.data
 
   try {
+    const before = await getSubscriptionStatus(session.storeId)
+    const oldPlan = before.plan
+
     if (action === 'upgrade') {
       await upgradeSubscription(session.storeId, plan as PlanSlug)
     } else {
       await createSubscription(session.storeId, plan as PlanSlug)
     }
     const status = await getSubscriptionStatus(session.storeId)
+
+    if (oldPlan !== plan) {
+      const storeRows = await sql`
+        SELECT s.name, u.email AS owner_email
+        FROM stores s
+        LEFT JOIN admin_users u ON u.store_id = s.id
+        WHERE s.id = ${session.storeId}
+        LIMIT 1
+      `
+      const row = storeRows[0] as { name: string; owner_email: string | null } | undefined
+      if (row?.owner_email) {
+        void sendUpgradeEmail({
+          ownerName: row.name,
+          ownerEmail: row.owner_email,
+          storeName: row.name,
+          oldPlan,
+          newPlan: plan,
+          renewalDay: new Date().getDate(),
+        }).catch(err => logServerError('[Email] Falha no upgrade', err))
+      }
+    }
+
     return NextResponse.json({ ok: true, ...status })
   } catch (err) {
     if (err instanceof AsaasApiError) {
