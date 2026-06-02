@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { COMPANY } from '@/lib/company'
 
 export const metadata = {
   title: 'Termos de Uso — vend.ai',
@@ -42,7 +43,8 @@ export default function TermosPage() {
 
       <Section title="1. O que é o vend.ai">
         <p>
-          O <strong className="text-foreground">vend.ai</strong> é uma plataforma de catálogo digital com inteligência artificial que permite a lojistas de moda criarem uma loja online, gerenciarem produtos e receberem pedidos via WhatsApp.
+          O <strong className="text-foreground">vend.ai</strong> é uma plataforma de catálogo digital com inteligência artificial que permite a lojistas de moda criarem uma loja online, gerenciarem produtos e receberem pedidos via WhatsApp. O serviço é operado por{' '}
+          <strong className="text-foreground">{COMPANY.name}</strong>, CNPJ {COMPANY.cnpj}, com sede em {COMPANY.city}.
         </p>
         <p>
           A plataforma inclui:
@@ -127,7 +129,7 @@ export default function TermosPage() {
 
       <Section title="7. Propriedade intelectual">
         <p>
-          <strong className="text-foreground">Do vend.ai:</strong> todo o código, design, interface, marca e tecnologia da plataforma são propriedade do vend.ai e protegidos por direitos autorais e marcas registradas.
+          <strong className="text-foreground">Do vend.ai:</strong> todo o código, design, interface, marca e tecnologia da plataforma são propriedade da {COMPANY.name} e protegidos por direitos autorais e marcas registradas.
         </p>
         <p>
           <strong className="text-foreground">Do usuário:</strong> você mantém todos os direitos sobre os conteúdos que publica (fotos, descrições, nome da loja). Ao publicar esses conteúdos, você nos concede uma licença não exclusiva para exibir e processar esses dados exclusivamente para operar a plataforma em seu benefício.
@@ -180,7 +182,7 @@ export default function TermosPage() {
 
       <Section title="12. Lei aplicável e foro">
         <p>
-          Estes Termos são regidos pelas leis da República Federativa do Brasil. Fica eleito o foro da comarca de São Paulo/SP para dirimir eventuais controvérsias, com renúncia a qualquer outro, por mais privilegiado que seja.
+          Estes Termos são regidos pelas leis da República Federativa do Brasil. Fica eleito o foro da comarca de Curitiba/PR para dirimir eventuais controvérsias, com renúncia a qualquer outro, por mais privilegiado que seja.
         </p>
       </Section>
 

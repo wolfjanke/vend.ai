@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { COMPANY } from '@/lib/company'
 
 export const metadata = {
   title: 'Política de Privacidade — vend.ai',
@@ -39,7 +40,8 @@ export default function PrivacidadePage() {
 
       <Section title="1. Quem somos (Controlador dos Dados)">
         <p>
-          O <strong className="text-foreground">vend.ai</strong> é uma plataforma de catálogo digital com inteligência artificial voltada para lojistas de moda. Para fins da LGPD, o controlador dos dados é a empresa responsável pelo vend.ai, com canal de contato dedicado:
+          O <strong className="text-foreground">vend.ai</strong> é uma plataforma de catálogo digital com inteligência artificial voltada para lojistas de moda. Para fins da LGPD, o controlador dos dados é a{' '}
+          <strong className="text-foreground">{COMPANY.name}</strong>, CNPJ {COMPANY.cnpj}, com sede em {COMPANY.city}, com canal de contato dedicado:
         </p>
         <p>
           <strong className="text-foreground">E-mail do Encarregado (DPO):</strong>{' '}
