@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
+import { isCloudinaryConfigured } from '@/lib/cloudinary'
 import crypto from 'crypto'
 
 function cloudinarySignature(params: Record<string, string>, apiSecret: string): string {
@@ -16,16 +17,16 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.storeId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME
-  const apiKey    = process.env.CLOUDINARY_API_KEY
-  const apiSecret = process.env.CLOUDINARY_API_SECRET
-
-  if (!cloudName || !apiKey || !apiSecret) {
+  if (!isCloudinaryConfigured()) {
     return NextResponse.json(
       { error: 'cloudinary_not_configured' },
       { status: 503 },
     )
   }
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME!
+  const apiKey    = process.env.CLOUDINARY_API_KEY!
+  const apiSecret = process.env.CLOUDINARY_API_SECRET!
 
   try {
     const contentType = req.headers.get('content-type') ?? ''
