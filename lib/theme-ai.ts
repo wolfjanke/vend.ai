@@ -2,6 +2,13 @@ import { genAI, GEMINI_MODELS } from '@/lib/gemini'
 import type { ThemeName } from '@/lib/themes'
 import { THEME_NAMES } from '@/lib/themes'
 
+export type LogoBackgroundAnalysis = {
+  color:                      string
+  is_transparent:             boolean
+  suggested_store_background: 'light' | 'dark'
+  harmony_note:               string
+}
+
 export type ThemeAnalysisSuggestion = {
   themeName:   ThemeName
   label:       string
@@ -13,8 +20,16 @@ export type ThemeAnalysisSuggestion = {
 }
 
 export type ThemeAnalysisResult = {
-  suggestions: ThemeAnalysisSuggestion[]
-  summary:     string
+  suggestions:     ThemeAnalysisSuggestion[]
+  summary:           string
+  logo_background?: LogoBackgroundAnalysis
+}
+
+const DEFAULT_LOGO_BACKGROUND: LogoBackgroundAnalysis = {
+  color:                      '#1A1A2E',
+  is_transparent:             false,
+  suggested_store_background: 'dark',
+  harmony_note:               'Use o fundo escuro para destacar logos claras ou coloridas.',
 }
 
 export function buildThemeAnalysisPrompt(input: {
@@ -28,6 +43,12 @@ Analise o logo da loja e o contexto abaixo. Retorne APENAS JSON válido:
 
 {
   "summary": "uma frase sobre a identidade visual detectada",
+  "logo_background": {
+    "color": "#RRGGBB",
+    "is_transparent": true ou false,
+    "suggested_store_background": "light ou dark",
+    "harmony_note": "dica curta sobre harmonizar o fundo da vitrine com a logo (máx 160 caracteres)"
+  },
   "suggestions": [
     {
       "themeName": "um destes: ${themes}",
@@ -43,7 +64,8 @@ Analise o logo da loja e o contexto abaixo. Retorne APENAS JSON válido:
 
 Regras:
 - Exatamente 3 sugestões em "suggestions", themeName diferentes quando possível
-- Cores harmonizadas com o logo
+- Cores harmonizadas com o logo; secondary pode repetir tom da primária
+- logo_background.color: cor dominante de fundo detectada na logo
 - segmento: ${input.segment}
 - público: ${input.audience}
 - personalidade: ${input.personality}
@@ -69,12 +91,35 @@ export async function analyzeLogoForTheme(
   return result.response.text?.() ?? ''
 }
 
+function normalizeLogoBackground(raw: unknown): LogoBackgroundAnalysis {
+  if (!raw || typeof raw !== 'object') return DEFAULT_LOGO_BACKGROUND
+  const o = raw as Record<string, unknown>
+  const bg = o.suggested_store_background === 'light' ? 'light' : 'dark'
+  const color = typeof o.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(o.color)
+    ? o.color
+    : DEFAULT_LOGO_BACKGROUND.color
+  const note = typeof o.harmony_note === 'string' && o.harmony_note.trim()
+    ? o.harmony_note.trim().slice(0, 160)
+    : DEFAULT_LOGO_BACKGROUND.harmony_note
+  return {
+    color,
+    is_transparent: Boolean(o.is_transparent),
+    suggested_store_background: bg,
+    harmony_note: note,
+  }
+}
+
 export function parseThemeAnalysis(raw: string): ThemeAnalysisResult {
+  let parsed: ThemeAnalysisResult
   try {
-    return JSON.parse(raw) as ThemeAnalysisResult
+    parsed = JSON.parse(raw) as ThemeAnalysisResult
   } catch {
     const match = raw.match(/\{[\s\S]*\}/)
     if (!match) throw new Error('IA não retornou JSON válido')
-    return JSON.parse(match[0]) as ThemeAnalysisResult
+    parsed = JSON.parse(match[0]) as ThemeAnalysisResult
+  }
+  return {
+    ...parsed,
+    logo_background: normalizeLogoBackground(parsed.logo_background),
   }
 }
