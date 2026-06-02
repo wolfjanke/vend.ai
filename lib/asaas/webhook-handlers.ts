@@ -91,3 +91,146 @@ export async function onPaymentSplitDivergenceBlockFinished(payload: PaymentEven
   const paymentId = payload.payment?.id
   logServerError('[SPLIT_DIVERGENCE_BLOCK_FINISHED] Divergência de split finalizada', { paymentId })
 }
+
+interface SubscriptionPayload {
+  subscription?: {
+    id?: string
+    externalReference?: string
+    status?: string
+    nextDueDate?: string
+  }
+  payment?: {
+    id?: string
+    subscription?: string
+    externalReference?: string
+  }
+  split?: {
+    id?: string
+    status?: string
+  }
+  [key: string]: unknown
+}
+
+function storeIdFromPayload(payload: SubscriptionPayload): string | null {
+  const subRef = payload.subscription?.externalReference
+  if (subRef && typeof subRef === 'string') return subRef
+  const payRef = payload.payment?.externalReference
+  if (payRef && typeof payRef === 'string' && !payRef.includes(':')) return payRef
+  return null
+}
+
+export async function onSubscriptionCreated(payload: SubscriptionPayload): Promise<void> {
+  const storeId = storeIdFromPayload(payload)
+  const subId = payload.subscription?.id
+  if (!storeId || !subId) return
+
+  await sql`
+    UPDATE stores SET
+      asaas_subscription_id = ${subId},
+      subscription_status = COALESCE(subscription_status, 'ACTIVE'),
+      subscription_started_at = COALESCE(subscription_started_at, NOW())
+    WHERE id = ${storeId}
+  `
+}
+
+export async function onSubscriptionRenewed(payload: SubscriptionPayload): Promise<void> {
+  const storeId = storeIdFromPayload(payload)
+  const nextDue = payload.subscription?.nextDueDate
+  if (!storeId) return
+
+  const endsAt = nextDue ? new Date(nextDue).toISOString() : null
+
+  await sql`
+    UPDATE stores SET
+      subscription_status = 'ACTIVE',
+      subscription_ends_at = COALESCE(${endsAt}, subscription_ends_at)
+    WHERE id = ${storeId}
+  `
+
+  try {
+    const { chargeViOverage } = await import('@/lib/payments/subscriptions')
+    await chargeViOverage(storeId)
+  } catch (err) {
+    logServerError('[onSubscriptionRenewed] chargeViOverage', err)
+  }
+}
+
+export async function onSubscriptionCancelled(payload: SubscriptionPayload): Promise<void> {
+  const storeId = storeIdFromPayload(payload)
+  if (!storeId) return
+
+  await sql`
+    UPDATE stores SET
+      plan = 'free',
+      asaas_subscription_id = NULL,
+      subscription_status = 'CANCELLED',
+      subscription_ends_at = NULL,
+      trial_ends_at = NULL
+    WHERE id = ${storeId}
+  `
+}
+
+export async function onPaymentOverdue(payload: SubscriptionPayload): Promise<void> {
+  const storeId = storeIdFromPayload(payload)
+  const subId = payload.payment?.subscription
+  if (!storeId && !subId) return
+
+  if (storeId) {
+    await sql`
+      UPDATE stores SET subscription_status = 'OVERDUE'
+      WHERE id = ${storeId}
+    `
+    return
+  }
+
+  if (subId) {
+    await sql`
+      UPDATE stores SET subscription_status = 'OVERDUE'
+      WHERE asaas_subscription_id = ${subId}
+    `
+  }
+}
+
+export async function onPaymentEventWithSubscription(payload: PaymentEventPayload & SubscriptionPayload): Promise<void> {
+  await onPaymentEvent(payload)
+
+  const subId = payload.payment?.subscription
+  const storeId = storeIdFromPayload(payload)
+  if (!subId && !storeId) return
+
+  if (storeId) {
+    await sql`
+      UPDATE stores SET subscription_status = 'ACTIVE'
+      WHERE id = ${storeId}
+        AND subscription_status IN ('TRIAL', 'OVERDUE')
+    `
+  } else if (subId) {
+    await sql`
+      UPDATE stores SET subscription_status = 'ACTIVE'
+      WHERE asaas_subscription_id = ${subId}
+        AND subscription_status IN ('TRIAL', 'OVERDUE')
+    `
+  }
+}
+
+export async function onSplitConfirmed(payload: SubscriptionPayload): Promise<void> {
+  const paymentId = payload.payment?.id
+  if (!paymentId) return
+
+  await sql`
+    UPDATE orders SET asaas_split_status = 'DONE'
+    WHERE asaas_payment_id = ${paymentId}
+      AND (asaas_split_status IS NULL OR asaas_split_status <> 'DONE')
+  `
+}
+
+export async function onSplitCancelled(payload: SubscriptionPayload): Promise<void> {
+  const paymentId = payload.payment?.id
+  if (!paymentId) return
+
+  await sql`
+    UPDATE orders SET asaas_split_status = 'CANCELLED'
+    WHERE asaas_payment_id = ${paymentId}
+      AND (asaas_split_status IS NULL OR asaas_split_status NOT IN ('CANCELLED', 'REFUSED'))
+  `
+}

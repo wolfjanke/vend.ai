@@ -4,8 +4,15 @@ import { logServerError } from '@/lib/logger'
 import {
   onAccountStatus,
   onPaymentEvent,
+  onPaymentEventWithSubscription,
+  onPaymentOverdue,
   onPaymentSplitDivergenceBlock,
   onPaymentSplitDivergenceBlockFinished,
+  onSplitCancelled,
+  onSplitConfirmed,
+  onSubscriptionCancelled,
+  onSubscriptionCreated,
+  onSubscriptionRenewed,
 } from '@/lib/asaas/webhook-handlers'
 
 const ok = () => NextResponse.json({ received: true }, { status: 200 })
@@ -93,8 +100,37 @@ export async function POST(req: NextRequest) {
 
       case 'PAYMENT_CONFIRMED':
       case 'PAYMENT_RECEIVED':
+        await onPaymentEventWithSubscription(payload)
+        break
+
       case 'PAYMENT_REFUNDED':
         await onPaymentEvent(payload)
+        break
+
+      case 'PAYMENT_OVERDUE':
+        await onPaymentOverdue(payload)
+        break
+
+      case 'SUBSCRIPTION_CREATED':
+        await onSubscriptionCreated(payload)
+        break
+
+      case 'SUBSCRIPTION_RENEWED':
+        await onSubscriptionRenewed(payload)
+        break
+
+      case 'SUBSCRIPTION_CANCELLED':
+      case 'SUBSCRIPTION_DELETED':
+        await onSubscriptionCancelled(payload)
+        break
+
+      case 'SPLIT_CONFIRMED':
+      case 'PAYMENT_SPLIT_DONE':
+        await onSplitConfirmed(payload)
+        break
+
+      case 'SPLIT_CANCELLED':
+        await onSplitCancelled(payload)
         break
 
       case 'PAYMENT_SPLIT_DIVERGENCE_BLOCK':
