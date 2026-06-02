@@ -1,6 +1,6 @@
 # Migrations vend.ai (Neon)
 
-Execute **na ordem numérica** (001 → 013). Todas usam `IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` quando possível — reexecutar é seguro.
+Execute **na ordem numérica** (001 → 014). Todas usam `IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` quando possível — reexecutar é seguro.
 
 ## Com psql
 
@@ -40,6 +40,7 @@ No dashboard do Neon, abra o SQL Editor e cole o conteúdo de cada arquivo **na 
 | **011** `product_slug_backfill.sql` | Preenche `slug` vazio com `id` em produtos legados |
 | **012** `subscription_billing.sql` | Assinaturas: `asaas_subscription_id`, `subscription_status`, `trial_ends_at`, etc. |
 | **013** `billing_history.sql` | Histórico de cobranças (assinatura + excedente Vi) |
+| **014** `terms_version.sql` | Aceite dos termos (`terms_version`, `terms_accepted_at`, `terms_accepted_ip`) |
 
 ## Verificação pós-migration
 

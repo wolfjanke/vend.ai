@@ -189,6 +189,9 @@ export interface Store extends StoreAddress {
   subscription_started_at?: string | null
   subscription_ends_at?:   string | null
   trial_ends_at?:          string | null
+  terms_version?:          string | null
+  terms_accepted_at?:      string | null
+  terms_accepted_ip?:      string | null
   vi_messages_used?:       number
   vi_messages_reset_at?:   string
   vi_overage_messages?:    number
