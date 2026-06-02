@@ -1,5 +1,6 @@
 import type { InstallmentQuote } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
+import { CHECKOUT_TAKE_RATE } from './split'
 
 type FaixaKey = '1-3' | '4-6' | '7-9' | '10-12'
 
@@ -11,15 +12,6 @@ const FAIXAS: Record<PlanSlug, Record<FaixaKey, number>> = {
   pro:        { '1-3': 0.036, '4-6': 0.065, '7-9': 0.095, '10-12': 0.125 },
   loja:       { '1-3': 0.035, '4-6': 0.055, '7-9': 0.080, '10-12': 0.105 },
   enterprise: { '1-3': 0.033, '4-6': 0.050, '7-9': 0.075, '10-12': 0.100 },
-}
-
-// Taxa à vista (1x): platform take rate
-const SPLIT_A_VISTA: Record<PlanSlug, number> = {
-  free:       0.045,
-  starter:    0.040,
-  pro:        0.025,
-  loja:       0.017,
-  enterprise: 0.015,
 }
 
 export function getFaixa(installments: number): FaixaKey {
@@ -62,8 +54,8 @@ export function calculateInstallmentQuote(
   let platformTakePct: number
 
   if (isAVista) {
-    faixaTaxa      = SPLIT_A_VISTA[plan]
-    platformTakePct = round4(SPLIT_A_VISTA[plan] * 100)
+    faixaTaxa       = CHECKOUT_TAKE_RATE[plan]
+    platformTakePct = round4(CHECKOUT_TAKE_RATE[plan] * 100)
   } else {
     const faixa    = getFaixa(installments)
     faixaTaxa      = FAIXAS[plan][faixa]
