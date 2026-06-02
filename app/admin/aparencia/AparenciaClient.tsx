@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   THEMES,
@@ -33,21 +33,16 @@ type Props = {
   initial: Initial
 }
 
-/** Debounce simples: retorna valor atualizado após `delay` ms de inatividade */
+/** Debounce: retorna valor atualizado após `delay` ms de inatividade */
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const update = useCallback((v: T) => {
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setDebounced(v), delay)
-  }, [delay])
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
 
-  return useMemo(() => {
-    update(value)
-    return debounced
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
+  return debounced
 }
 
 export default function AparenciaClient({ slug, plan, initial }: Props) {
