@@ -105,7 +105,7 @@ export default function FinanceiroClient({ plan }: Props) {
       ) : (
         <>
           {/* Resumo */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             <div className="bg-surface border border-accent/30 rounded-2xl p-4 text-center">
               <div className="text-xs text-muted mb-1">GMV total</div>
               <div className="font-syne font-extrabold text-xl text-accent tabular-nums">{formatCurrency(data.summary.gmv_total)}</div>
@@ -123,46 +123,55 @@ export default function FinanceiroClient({ plan }: Props) {
               </div>
               <div className="text-[10px] text-muted mt-1">GMV − taxa</div>
             </div>
+            <div className="bg-surface border border-border rounded-2xl p-4 text-center">
+              <div className="text-xs text-muted mb-1">Ticket médio</div>
+              <div className="font-syne font-extrabold text-xl tabular-nums">
+                {formatCurrency(data.summary.order_count > 0 ? data.summary.gmv_total / data.summary.order_count : 0)}
+              </div>
+              <div className="text-[10px] text-muted mt-1">GMV / pedidos</div>
+            </div>
           </div>
 
-          {/* Por origem */}
-          {data.bySource.length > 0 && (
-            <div className="bg-surface border border-border rounded-2xl p-4">
-              <div className="font-syne font-bold text-sm mb-3">Por canal de venda</div>
-              <div className="space-y-2">
-                {data.bySource.map(s => (
-                  <div key={s.payment_source} className="flex items-center justify-between text-sm gap-3">
-                    <span className="text-muted shrink-0">{SOURCE_LABELS[s.payment_source] ?? s.payment_source}</span>
-                    <div className="flex-1 border-b border-border border-dashed mx-2" />
-                    <span className="tabular-nums font-semibold shrink-0">{formatCurrency(s.gmv)}</span>
-                    <span className="text-muted text-xs tabular-nums shrink-0">({s.count})</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Por status de split */}
-          {data.bySplitStatus.length > 0 && (
-            <div className="bg-surface border border-border rounded-2xl p-4">
-              <div className="font-syne font-bold text-sm mb-3">Status de repasse</div>
-              <div className="space-y-2">
-                {data.bySplitStatus.map(s => {
-                  const st = SPLIT_LABELS[s.split_status] ?? { label: s.split_status, cls: 'text-muted border-border' }
-                  return (
-                    <div key={s.split_status} className="flex items-center justify-between text-sm gap-3">
-                      <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border ${st.cls}`}>
-                        {st.label}
-                      </span>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+            {/* Por origem */}
+            {data.bySource.length > 0 && (
+              <div className="bg-surface border border-border rounded-2xl p-4">
+                <div className="font-syne font-bold text-sm mb-3">Por canal de venda</div>
+                <div className="space-y-2">
+                  {data.bySource.map(s => (
+                    <div key={s.payment_source} className="flex items-center justify-between text-sm gap-3">
+                      <span className="text-muted shrink-0">{SOURCE_LABELS[s.payment_source] ?? s.payment_source}</span>
                       <div className="flex-1 border-b border-border border-dashed mx-2" />
                       <span className="tabular-nums font-semibold shrink-0">{formatCurrency(s.gmv)}</span>
                       <span className="text-muted text-xs tabular-nums shrink-0">({s.count})</span>
                     </div>
-                  )
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Por status de split */}
+            {data.bySplitStatus.length > 0 && (
+              <div className="bg-surface border border-border rounded-2xl p-4">
+                <div className="font-syne font-bold text-sm mb-3">Status de repasse</div>
+                <div className="space-y-2">
+                  {data.bySplitStatus.map(s => {
+                    const st = SPLIT_LABELS[s.split_status] ?? { label: s.split_status, cls: 'text-muted border-border' }
+                    return (
+                      <div key={s.split_status} className="flex items-center justify-between text-sm gap-3">
+                        <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border ${st.cls}`}>
+                          {st.label}
+                        </span>
+                        <div className="flex-1 border-b border-border border-dashed mx-2" />
+                        <span className="tabular-nums font-semibold shrink-0">{formatCurrency(s.gmv)}</span>
+                        <span className="text-muted text-xs tabular-nums shrink-0">({s.count})</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {data.summary.order_count === 0 && (
             <div className="text-center text-muted text-sm py-10">

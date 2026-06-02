@@ -118,9 +118,9 @@ export default function PdvSale({ storeId, products, storeHasAsaas, storeWhatsap
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
       {/* Busca de produtos */}
-      <div className="bg-surface border border-border rounded-2xl p-4">
+      <div className="bg-surface border border-border rounded-2xl p-4 xl:col-span-7">
         <div className="font-syne font-bold text-sm mb-3">Adicionar produtos</div>
         <input
           className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary transition-all mb-3"
@@ -170,7 +170,8 @@ export default function PdvSale({ storeId, products, storeHasAsaas, storeWhatsap
 
       {/* Carrinho PDV */}
       {cart.length > 0 && (
-        <div className="bg-surface border border-border rounded-2xl p-4">
+        <div className="xl:col-span-5 space-y-4">
+          <div className="bg-surface border border-border rounded-2xl p-4 xl:sticky xl:top-24">
           <div className="font-syne font-bold text-sm mb-3">Itens da venda</div>
           <div className="space-y-2 mb-4">
             {cart.map((item, i) => (
@@ -231,34 +232,31 @@ export default function PdvSale({ storeId, products, storeHasAsaas, storeWhatsap
               <span className="text-accent tabular-nums">{formatCurrency(total)}</span>
             </div>
           </div>
-        </div>
-      )}
+          </div>
 
-      {/* Dados do cliente (opcional) */}
-      {cart.length > 0 && (
-        <div className="bg-surface border border-border rounded-2xl p-4">
-          <div className="font-syne font-bold text-sm mb-3">Cliente (opcional)</div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Nome</label>
-              <input className="w-full min-h-[44px] px-3 py-2 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary transition-all" value={custName} onChange={e => setCustName(e.target.value)} placeholder="Nome do cliente" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">WhatsApp</label>
-              <input className="w-full min-h-[44px] px-3 py-2 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary transition-all" value={custPhone} onChange={e => setCustPhone(e.target.value)} placeholder="(11) 99999-9999" />
+          {/* Dados do cliente (opcional) */}
+          <div className="bg-surface border border-border rounded-2xl p-4">
+            <div className="font-syne font-bold text-sm mb-3">Cliente (opcional)</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Nome</label>
+                <input className="w-full min-h-[44px] px-3 py-2 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary transition-all" value={custName} onChange={e => setCustName(e.target.value)} placeholder="Nome do cliente" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">WhatsApp</label>
+                <input className="w-full min-h-[44px] px-3 py-2 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary transition-all" value={custPhone} onChange={e => setCustPhone(e.target.value)} placeholder="(11) 99999-9999" />
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {cart.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setStep('payment')}
-          className="w-full min-h-[44px] py-3.5 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all"
-        >
-          Finalizar venda — {formatCurrency(total)}
-        </button>
+          <button
+            type="button"
+            onClick={() => setStep('payment')}
+            className="w-full min-h-[44px] py-3.5 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all"
+          >
+            Finalizar venda — {formatCurrency(total)}
+          </button>
+        </div>
       )}
     </div>
   )

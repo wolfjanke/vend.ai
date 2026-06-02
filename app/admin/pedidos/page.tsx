@@ -126,8 +126,50 @@ export default async function PedidosPage({ searchParams }: Props) {
           </button>
         </form>
 
+        <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] gap-3">
+          <div className="flex flex-wrap gap-2">
+            {STATUS_FILTERS.map(f => (
+              <a
+                key={f.value}
+                href={buildHref(f.value === 'TODOS' ? { status: '' } : { status: f.value })}
+                className={`px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-full text-xs font-semibold border transition-all ${
+                  (statusFilter ?? 'TODOS') === f.value
+                    ? 'bg-primary/20 border-primary text-primary'
+                    : 'bg-surface border-border text-muted hover:text-foreground'
+                }`}
+              >
+                {f.label}
+              </a>
+            ))}
+          </div>
+          <div className="min-w-0">
+            <form action={baseUrl} method="GET" className="flex gap-2">
+              {hasStatus && <input type="hidden" name="status" value={statusFilter!} />}
+              {searchTerm && <input type="hidden" name="search" value={searchTerm} />}
+              <select
+                aria-label="Filtrar por origem"
+                name="source"
+                defaultValue={sourceFilter}
+                className="w-full min-h-[40px] px-3 py-2 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary"
+              >
+                {SOURCE_FILTERS.map(f => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="min-h-[40px] px-3 border border-border rounded-xl text-xs text-muted hover:text-foreground"
+              >
+                Ok
+              </button>
+            </form>
+          </div>
+        </div>
+
         {/* Filtro de status */}
-        <div className="overflow-x-auto overflow-y-hidden -mx-1 px-1 pb-1 scrollbar-thin">
+        <div className="lg:hidden overflow-x-auto overflow-y-hidden -mx-1 px-1 pb-1 scrollbar-thin">
           <div className="flex gap-2 flex-nowrap min-w-min">
             {STATUS_FILTERS.map(f => (
               <a
@@ -146,7 +188,7 @@ export default async function PedidosPage({ searchParams }: Props) {
         </div>
 
         {/* Filtro de origem */}
-        <div className="overflow-x-auto overflow-y-hidden -mx-1 px-1 pb-0.5 scrollbar-thin">
+        <div className="lg:hidden overflow-x-auto overflow-y-hidden -mx-1 px-1 pb-0.5 scrollbar-thin">
           <div className="flex gap-2 flex-nowrap min-w-min">
             {SOURCE_FILTERS.map(f => (
               <a
@@ -167,7 +209,7 @@ export default async function PedidosPage({ searchParams }: Props) {
 
       {orders.length > 0 ? (
         <>
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {(orders as Order[]).map(order => (
               <PedidoCard key={order.id} order={order} storeId={storeId} />
             ))}

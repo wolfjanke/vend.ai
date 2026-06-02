@@ -57,7 +57,7 @@ export default function AdminSidebar({ newOrdersCount, plan = 'free' }: Props) {
 
   return (
     <>
-      <aside className="hidden md:flex w-52 flex-col gap-1 p-4 border-r border-border min-h-[calc(100vh-64px)] sticky top-16">
+      <aside className="hidden md:flex w-52 xl:w-60 flex-col gap-1 p-4 border-r border-border min-h-[calc(100vh-64px)] sticky top-16">
         {visibleItems.map(({ href, label, Icon, match }) => {
           const active    = isActive(pathname, href, match)
           const showBadge = href === '/admin/pedidos' && newOrdersCount > 0

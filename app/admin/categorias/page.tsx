@@ -25,7 +25,7 @@ export default async function CategoriasPage() {
   }
 
   return (
-    <div className="animate-fade-up max-w-2xl">
+    <div className="animate-fade-up max-w-7xl min-w-0">
       <div className="mb-6">
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Categorias</h1>
         <p className="text-sm text-muted break-words">

@@ -76,36 +76,37 @@ export default function CategoriesManager({ customCategories: initial, productCo
         </div>
       )}
 
-      <section className="bg-surface border border-border rounded-2xl p-5">
-        <div className="flex items-start gap-2 mb-4">
-          <h2 className="font-syne font-bold text-sm text-foreground">Categorias padrão</h2>
-          <span
-            className="inline-flex text-muted"
-            title="Estas categorias são fixas e não podem ser removidas."
-          >
-            <Info size={16} className="shrink-0 mt-0.5" aria-hidden />
-          </span>
-        </div>
-        <p className="text-xs text-muted mb-4 break-words">
-          Sempre disponíveis no cadastro de produto. A contagem reflete produtos ativos e inativos.
-        </p>
-        <ul className="space-y-2">
-          {PRODUCT_CATEGORIES.map(c => (
-            <li
-              key={c.value}
-              className="flex flex-wrap items-center justify-between gap-2 gap-y-2 min-w-0 py-2 border-b border-border/60 last:border-0"
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section className="bg-surface border border-border rounded-2xl p-5">
+          <div className="flex items-start gap-2 mb-4">
+            <h2 className="font-syne font-bold text-sm text-foreground">Categorias padrão</h2>
+            <span
+              className="inline-flex text-muted"
+              title="Estas categorias são fixas e não podem ser removidas."
             >
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted shrink-0">Padrão</span>
-                <span className="text-sm text-foreground break-words min-w-0">{c.label}</span>
-              </div>
-              <span className="text-xs tabular-nums text-muted shrink-0">{productCounts[c.value] ?? 0} prod.</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+              <Info size={16} className="shrink-0 mt-0.5" aria-hidden />
+            </span>
+          </div>
+          <p className="text-xs text-muted mb-4 break-words">
+            Sempre disponíveis no cadastro de produto. A contagem reflete produtos ativos e inativos.
+          </p>
+          <ul className="space-y-2">
+            {PRODUCT_CATEGORIES.map(c => (
+              <li
+                key={c.value}
+                className="flex flex-wrap items-center justify-between gap-2 gap-y-2 min-w-0 py-2 border-b border-border/60 last:border-0"
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted shrink-0">Padrão</span>
+                  <span className="text-sm text-foreground break-words min-w-0">{c.label}</span>
+                </div>
+                <span className="text-xs tabular-nums text-muted shrink-0">{productCounts[c.value] ?? 0} prod.</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      <section className="bg-surface border border-border rounded-2xl p-5">
+        <section className="bg-surface border border-border rounded-2xl p-5">
         <div className="flex items-start gap-2 mb-4">
           <h2 className="font-syne font-bold text-sm text-foreground">Categorias da sua loja</h2>
           <span
@@ -183,7 +184,8 @@ export default function CategoriesManager({ customCategories: initial, productCo
             ))}
           </ul>
         )}
-      </section>
+        </section>
+      </div>
 
       <ConfirmDialog
         open={removeValue !== null}

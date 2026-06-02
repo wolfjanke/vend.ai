@@ -142,15 +142,16 @@ export default function PlanoClient() {
     : isPaid ? 'Ativo' : 'Grátis'
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-7xl">
       {error && (
         <div className="rounded-xl border border-warm/30 bg-warm/10 px-4 py-3 text-sm text-warm break-words">
           {error}
         </div>
       )}
 
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
       {/* Plano atual */}
-      <div className="bg-surface border border-primary/30 rounded-2xl p-5">
+      <div className="bg-surface border border-primary/30 rounded-2xl p-5 xl:col-span-4 xl:sticky xl:top-24 h-fit">
         <div className="flex items-center gap-2 mb-3">
           <Crown size={18} className="text-primary shrink-0" />
           <span className="font-syne font-bold text-base">Plano atual</span>
@@ -217,6 +218,7 @@ export default function PlanoClient() {
       </div>
 
       {/* Grid de planos */}
+      <div className="xl:col-span-8 space-y-5">
       <div>
         <h2 className="font-syne font-bold text-sm mb-3">Planos disponíveis</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -295,6 +297,8 @@ export default function PlanoClient() {
             )}
           </div>
         )}
+      </div>
+      </div>
       </div>
     </div>
   )

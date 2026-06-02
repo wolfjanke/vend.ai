@@ -262,7 +262,8 @@ export default function ConfigForm({ store, viStats }: Props) {
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-2xl p-4 sm:p-6 flex flex-col gap-2">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div className="bg-surface border border-border rounded-2xl p-4 sm:p-6 flex flex-col gap-2 xl:col-span-8">
         <SectionHeader title="Informações básicas" />
         <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Nome da loja</label>
@@ -638,45 +639,8 @@ export default function ConfigForm({ store, viStats }: Props) {
         </button>
       </div>
 
-      {pwdOpen && (
-        <div className="fixed inset-0 z-[500] bg-bg/80 flex items-center justify-center p-4">
-          <div className="bg-surface border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="font-syne font-bold text-lg mb-4">Alterar senha</h3>
-            <div className="flex flex-col gap-3">
-              <input
-                type="password"
-                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
-                placeholder="Senha atual"
-                value={curPwd}
-                onChange={e => setCurPwd(e.target.value)}
-              />
-              <input
-                type="password"
-                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
-                placeholder="Nova senha (mín. 6 caracteres)"
-                value={newPwd}
-                onChange={e => setNewPwd(e.target.value)}
-              />
-              {pwdErr && <p className="text-sm text-warm">{pwdErr}</p>}
-              <div className="flex gap-2 mt-2">
-                <button type="button" onClick={() => setPwdOpen(false)} className="flex-1 min-h-[44px] border border-border rounded-xl text-sm text-muted">
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  disabled={pwdLoading}
-                  onClick={() => void handleChangePassword()}
-                  className="flex-1 min-h-[44px] bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50"
-                >
-                  {pwdLoading ? 'Salvando…' : 'Salvar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-6 bg-surface border border-border rounded-2xl p-6 space-y-4">
+      <div className="xl:col-span-4 space-y-6">
+      <div className="bg-surface border border-border rounded-2xl p-6 space-y-4 xl:sticky xl:top-24">
         <SectionHeader title="Vi — Assistente IA" />
         {viStats && (
           <div className="text-sm space-y-1 text-muted break-words">
@@ -786,7 +750,7 @@ export default function ConfigForm({ store, viStats }: Props) {
         )}
       </div>
 
-      <div className="mt-6 bg-surface border border-warm/20 rounded-2xl p-6">
+      <div className="bg-surface border border-warm/20 rounded-2xl p-6">
         <h3 className="font-syne font-bold text-sm text-warm mb-2">Zona de risco</h3>
         <p className="text-xs text-muted mb-4 break-words">
           Essas ações são sensíveis. Para exclusão de dados e conta, envie um e-mail conforme a LGPD.
@@ -809,6 +773,46 @@ export default function ConfigForm({ store, viStats }: Props) {
           </button>
         </div>
       </div>
+      </div>
+      </div>
+
+      {pwdOpen && (
+        <div className="fixed inset-0 z-[500] bg-bg/80 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 className="font-syne font-bold text-lg mb-4">Alterar senha</h3>
+            <div className="flex flex-col gap-3">
+              <input
+                type="password"
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
+                placeholder="Senha atual"
+                value={curPwd}
+                onChange={e => setCurPwd(e.target.value)}
+              />
+              <input
+                type="password"
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
+                placeholder="Nova senha (mín. 6 caracteres)"
+                value={newPwd}
+                onChange={e => setNewPwd(e.target.value)}
+              />
+              {pwdErr && <p className="text-sm text-warm">{pwdErr}</p>}
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={() => setPwdOpen(false)} className="flex-1 min-h-[44px] border border-border rounded-xl text-sm text-muted">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={pwdLoading}
+                  onClick={() => void handleChangePassword()}
+                  className="flex-1 min-h-[44px] bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                >
+                  {pwdLoading ? 'Salvando…' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={deleteAccountOpen}

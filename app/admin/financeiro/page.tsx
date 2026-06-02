@@ -11,7 +11,7 @@ export default async function FinanceiroPage() {
   const plan = storeRows[0]?.plan ?? 'free'
 
   return (
-    <div className="animate-fade-up">
+    <div className="animate-fade-up max-w-7xl min-w-0">
       <div className="mb-6">
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Financeiro</h1>
         <p className="text-sm text-muted">Extrato de vendas processadas pelo checkout e PDV</p>

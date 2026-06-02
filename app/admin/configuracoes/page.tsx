@@ -40,7 +40,7 @@ export default async function ConfiguracoesPage() {
   }
 
   return (
-    <div className="animate-fade-up max-w-lg">
+    <div className="animate-fade-up max-w-7xl min-w-0">
       <div className="mb-6">
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Configurações</h1>
         <p className="text-sm text-muted">Gerencie os dados gerais da sua loja</p>

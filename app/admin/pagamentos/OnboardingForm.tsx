@@ -59,13 +59,13 @@ export default function OnboardingForm({ storeId }: Props) {
   const labelCls = 'text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5'
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-2 gap-3">
       <div>
         <label className={labelCls}>Nome completo / Razão social</label>
         <input required className={inputCls} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Seu nome ou razão social" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
         <div>
           <label className={labelCls}>E-mail</label>
           <input required type="email" className={inputCls} value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemplo.com" />
@@ -76,7 +76,7 @@ export default function OnboardingForm({ storeId }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
         <div>
           <label className={labelCls}>Data de nascimento</label>
           <input required type="date" className={inputCls} value={form.birthDate} onChange={e => set('birthDate', e.target.value)} />
@@ -92,7 +92,7 @@ export default function OnboardingForm({ storeId }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
         <div>
           <label className={labelCls}>Telefone fixo</label>
           <input className={inputCls} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(11) 3000-0000" />
@@ -103,7 +103,7 @@ export default function OnboardingForm({ storeId }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
         <div>
           <label className={labelCls}>CEP</label>
           <input required className={inputCls} value={form.postalCode} onChange={e => set('postalCode', e.target.value)} placeholder="00000-000" />
@@ -114,7 +114,7 @@ export default function OnboardingForm({ storeId }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 xl:col-span-2">
         <div className="col-span-2">
           <label className={labelCls}>Endereço (rua/av.)</label>
           <input required className={inputCls} value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua Exemplo" />
@@ -134,7 +134,7 @@ export default function OnboardingForm({ storeId }: Props) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full min-h-[44px] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-70 disabled:cursor-wait"
+        className="w-full min-h-[44px] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-70 disabled:cursor-wait xl:col-span-2"
       >
         {loading ? 'Ativando…' : 'Ativar recebimentos'}
       </button>

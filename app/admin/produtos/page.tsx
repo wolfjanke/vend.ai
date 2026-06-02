@@ -164,8 +164,8 @@ export default async function ProdutosPage({ searchParams }: Props) {
         </Link>
       </div>
 
-      <form action={basePath} method="GET" className="flex flex-col gap-3 mb-6">
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+      <form action={basePath} method="GET" className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem_12rem_auto] gap-2 lg:items-end mb-6">
+        <div className="min-w-0">
           <div className="flex-1 min-w-0">
             <label htmlFor="prod-search" className="text-[11px] text-muted block mb-1">
               Buscar
@@ -179,49 +179,49 @@ export default async function ProdutosPage({ searchParams }: Props) {
               className="w-full min-h-[44px] px-4 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary placeholder:text-muted"
             />
           </div>
-          <div className="sm:w-40 min-w-0">
-            <label htmlFor="prod-active" className="text-[11px] text-muted block mb-1">
-              Situação
-            </label>
-            <select
-              id="prod-active"
-              name="active"
-              defaultValue={activeFilter}
-              className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
-            >
-              <option value="all">Todos</option>
-              <option value="active">Ativos na vitrine</option>
-              <option value="inactive">Ocultos</option>
-            </select>
-          </div>
-          <div className="sm:w-44 min-w-0">
-            <label htmlFor="prod-sort" className="text-[11px] text-muted block mb-1">
-              Ordenar
-            </label>
-            <select
-              id="prod-sort"
-              name="sort"
-              defaultValue={sort}
-              className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
-            >
-              <option value="newest">Mais recentes</option>
-              <option value="oldest">Mais antigos</option>
-              <option value="name">Nome A–Z</option>
-              <option value="price">Menor preço</option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            className="min-h-[44px] px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 shrink-0"
-          >
-            Aplicar
-          </button>
         </div>
+        <div className="min-w-0">
+          <label htmlFor="prod-active" className="text-[11px] text-muted block mb-1">
+            Situação
+          </label>
+          <select
+            id="prod-active"
+            name="active"
+            defaultValue={activeFilter}
+            className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+          >
+            <option value="all">Todos</option>
+            <option value="active">Ativos na vitrine</option>
+            <option value="inactive">Ocultos</option>
+          </select>
+        </div>
+        <div className="min-w-0">
+          <label htmlFor="prod-sort" className="text-[11px] text-muted block mb-1">
+            Ordenar
+          </label>
+          <select
+            id="prod-sort"
+            name="sort"
+            defaultValue={sort}
+            className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+          >
+            <option value="newest">Mais recentes</option>
+            <option value="oldest">Mais antigos</option>
+            <option value="name">Nome A–Z</option>
+            <option value="price">Menor preço</option>
+          </select>
+        </div>
+        <button
+          type="submit"
+          className="min-h-[44px] px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 shrink-0"
+        >
+          Aplicar
+        </button>
       </form>
 
       {products.length > 0 ? (
         <>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {(products as Product[]).map(p => {
               const nVar = p.variants_json?.length ?? 0
               const oos = productOutOfStock(p)
