@@ -64,8 +64,9 @@ export default function FinanceiroClient({ plan }: Props) {
     setLoading(true)
     try {
       const res  = await fetch(`/api/admin/financeiro?from=${from}&to=${to}`)
+      if (!res.ok) { setData(null); return }
       const json = await res.json()
-      setData(json)
+      setData(json?.summary ? json : null)
     } catch {
       setData(null)
     } finally {
