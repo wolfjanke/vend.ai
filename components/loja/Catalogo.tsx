@@ -213,10 +213,8 @@ export default function Catalogo({
                   setCatFilter(f.value)
                   onInteract?.()
                 }}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-full border text-sm font-medium transition-all ${
-                  catFilter === f.value
-                    ? 'bg-primary/20 border-primary text-primary'
-                    : 'bg-surface border-border text-muted hover:text-foreground'
+                className={`filter-chip flex-shrink-0 px-4 py-1.5 min-h-[36px] text-sm font-medium transition-all ${
+                  catFilter === f.value ? 'active' : ''
                 }`}
               >
                 {f.label}

@@ -116,7 +116,7 @@ export default function ProductDetailClient({ product }: Props) {
           <h1 className="font-syne font-bold text-xl sm:text-2xl mb-2 break-words">{product.name}</h1>
           <p className="text-xs text-muted uppercase tracking-wide mb-3">{catLabel}</p>
           <div className="flex flex-wrap items-baseline gap-2 mb-4">
-            <span className="text-accent font-bold text-2xl tabular-nums">
+            <span className="produto-preco font-bold text-2xl tabular-nums">
               R${price.toFixed(2).replace('.', ',')}
             </span>
             {product.promo_price != null && (

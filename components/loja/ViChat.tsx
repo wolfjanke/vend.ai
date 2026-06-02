@@ -207,7 +207,10 @@ export default function ViChat({
       <div className={`fixed z-[150] w-[340px] max-w-[min(340px,calc(100vw-24px))] bg-surface border border-border rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5),0_0_0_1px_var(--primary-dim)] transition-all duration-300 origin-bottom-right right-3 sm:right-7 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] ${isOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-90 pointer-events-none'}`}>
 
         {/* Header */}
-        <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-border" style={{ background: 'linear-gradient(135deg, #7B6EFF22, #00E5A011)' }}>
+        <div
+          className="flex items-center gap-2.5 px-4 py-3.5 border-b border-border"
+          style={{ background: 'linear-gradient(135deg, var(--theme-primary-surface), var(--accent-dim))' }}
+        >
           <div className="w-9 h-9 bg-grad rounded-full flex items-center justify-center text-lg">✦</div>
           <div>
             <div className="font-syne font-bold text-sm truncate">{assistantName} — Assistente</div>

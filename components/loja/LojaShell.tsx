@@ -7,6 +7,7 @@ import type { PlanSlug } from '@/lib/plans'
 import { isPaidViPlan } from '@/lib/plans'
 import { getStoreProfile, getSegmentLabel } from '@/types'
 import Carrinho from '@/components/loja/Carrinho'
+import LojaHeader from '@/components/loja/LojaHeader'
 import ViChat from '@/components/loja/ViChat'
 import { LojaProvider, type LojaContextValue } from '@/components/loja/LojaContext'
 import { buildWhatsAppUrl, formatOrderMessage, generateOrderNumber } from '@/lib/whatsapp'
@@ -328,46 +329,25 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
   return (
     <LojaProvider value={lojaValue}>
       <div className="relative z-10">
-        <header className="sticky top-0 z-50 glass border-b border-border h-16 px-4 md:px-6 animate-slide-down">
-          <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between">
-            <a href={`/${store.slug}`} className="font-syne font-extrabold text-xl text-grad min-w-0 truncate">
-              vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)', opacity: 1 }}>.</span>ai
-            </a>
-            <span className="font-syne text-xs font-semibold text-muted tracking-[2px] uppercase hidden sm:block truncate">
-              {store.name}
-            </span>
-            <div className="flex gap-2.5 items-center shrink-0">
-              <a
-                href={`https://wa.me/${store.whatsapp}`}
-                target="_blank"
-                rel="noreferrer"
-                className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-accent/10 border border-accent/30 rounded-full text-accent text-xs font-medium hover:bg-accent/20 transition-all min-h-[44px]"
-              >
-                Vendedor
-              </a>
-              <button
-                type="button"
-                onClick={() => setCartOpen(true)}
-                className="relative min-h-[44px] min-w-[44px] bg-surface2 border border-border rounded-xl flex items-center justify-center hover:border-primary transition-all"
-                aria-label="Abrir carrinho"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <path d="M16 10a4 4 0 01-8 0" />
-                </svg>
-                {totalQty > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] min-h-[18px] bg-primary rounded-full text-[10px] font-bold text-white flex items-center justify-center px-1">
-                    {totalQty}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-        </header>
+        <LojaHeader
+          slug={store.slug}
+          storeName={store.name}
+          whatsapp={store.whatsapp}
+          logoUrl={store.theme_logo_url?.trim() || store.logo_url?.trim() || null}
+          tagline={store.tagline}
+          themeName={store.theme_name as import('@/lib/themes').ThemeName}
+          cartQty={totalQty}
+          onOpenCart={() => setCartOpen(true)}
+        />
 
         {activeBanners.length > 0 && (
-          <div className="px-4 py-3 bg-primary/10 border-b border-primary/20">
+          <div
+            className="px-4 py-3 border-b"
+            style={{
+              background: 'var(--theme-primary-surface)',
+              borderColor:  'var(--theme-primary-border)',
+            }}
+          >
             <div className="mx-auto w-full max-w-5xl">
               <p className="text-sm text-foreground text-center break-words">
                 {activeBanners[bannerIndex]?.text}

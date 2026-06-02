@@ -28,12 +28,12 @@ function PriceBlock({
   className?:      string
   inverted?:       boolean
 }) {
-  const priceCls = inverted ? 'text-white' : 'text-accent'
-  const mutedCls = inverted ? 'text-white/70' : 'text-muted'
+  const priceCls = inverted ? 'text-white' : 'produto-preco font-bold text-sm tabular-nums shrink-0'
+  const mutedCls = inverted ? 'text-white/70' : 'produto-preco-old text-[11px] tabular-nums'
   return (
     <div className={`flex flex-col gap-0.5 min-w-0 ${className}`}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
-        <span className={`font-bold text-sm tabular-nums shrink-0 ${priceCls}`}>
+        <span className={priceCls}>
           R${effectivePrice.toFixed(2).replace('.', ',')}
         </span>
         {promoPrice != null && (
@@ -64,7 +64,7 @@ export default function VitrineProductCard({
   const shadow = cardTheme.shadow
     ? 'shadow-lg hover:shadow-xl'
     : 'hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)]'
-  const baseCard = `produto-card group bg-surface border border-border overflow-hidden hover:-translate-y-1 hover:border-primary transition-all duration-300 h-full flex min-h-0 ${shadow}`
+  const baseCard = `produto-card group overflow-hidden h-full flex min-h-0 ${shadow}`
 
   const imageBtn = (
     <button
@@ -134,15 +134,8 @@ export default function VitrineProductCard({
               <ProductPlaceholder category={product.category} colorHex={variant?.colorHex} className="w-full h-full" />
             </div>
           )}
-          <div
-            className="absolute inset-0 flex flex-col justify-end p-3 min-w-0"
-            style={{
-              background:
-                cardTheme.overlayGradient ??
-                'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 55%)',
-            }}
-          >
-            <span className="font-syne font-semibold text-sm text-white line-clamp-2 break-words mb-1">
+          <div className="card-info-overlay absolute inset-0 flex flex-col justify-end min-w-0">
+            <span className="produto-nome font-semibold text-sm line-clamp-2 break-words mb-1">
               {product.name}
             </span>
             <PriceBlock
@@ -173,9 +166,9 @@ export default function VitrineProductCard({
         <button
           type="button"
           onClick={onOpenDetail}
-          className="w-full min-w-0 p-2.5 text-left border-t border-border/60 hover:bg-surface2/80 transition-colors"
+          className="card-info-below w-full min-w-0 text-left border-t border-border/60 hover:bg-surface2/80 transition-colors"
         >
-          <span className="font-syne font-semibold text-sm line-clamp-2 break-words block mb-1">{product.name}</span>
+          <span className="produto-nome font-semibold text-sm line-clamp-2 break-words block mb-1">{product.name}</span>
           <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
         </button>
       </div>
@@ -198,9 +191,9 @@ export default function VitrineProductCard({
           <button
             type="button"
             onClick={onOpenDetail}
-            className="w-full min-w-0 p-2.5 text-left border-t border-border/60"
+            className="card-info-sidebar w-full min-w-0 p-2.5 text-left border-t border-border/60"
           >
-            <span className="font-syne font-bold text-sm uppercase tracking-wide line-clamp-1 break-words">{product.name}</span>
+            <span className="produto-nome font-bold text-sm uppercase tracking-wide line-clamp-1 break-words">{product.name}</span>
             <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
           </button>
         </div>
@@ -220,11 +213,11 @@ export default function VitrineProductCard({
           <button
             type="button"
             onClick={onOpenDetail}
-            className="absolute inset-0 flex flex-col justify-end p-3 bg-bg/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 text-left border-0 cursor-pointer"
+            className="card-info-hover text-left border-0 cursor-pointer min-w-0"
             style={{ borderRadius: radius }}
           >
-            <div className="bg-surface/95 backdrop-blur-sm p-3 rounded-lg border border-border min-w-0">
-              <span className="font-syne font-semibold text-sm line-clamp-2 break-words block mb-1">{product.name}</span>
+            <div className="min-w-0">
+              <span className="produto-nome font-semibold text-sm line-clamp-2 break-words block mb-1">{product.name}</span>
               <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
             </div>
           </button>
@@ -244,9 +237,9 @@ export default function VitrineProductCard({
       <button
         type="button"
         onClick={onOpenDetail}
-        className="w-full min-w-0 flex-1 flex flex-col min-h-0 text-left p-2.5 sm:p-3 border-t border-border/60 hover:bg-surface2/80 transition-colors"
+        className="card-info-below w-full min-w-0 flex-1 flex flex-col min-h-0 text-left p-2.5 sm:p-3 border-t border-border/60 hover:bg-surface2/80 transition-colors"
       >
-        <span className="font-syne font-semibold text-sm text-foreground line-clamp-2 break-words mb-1.5 block min-h-[2.625rem] leading-snug">
+        <span className="produto-nome font-semibold text-sm line-clamp-2 break-words mb-1.5 block min-h-[2.625rem] leading-snug">
           {product.name}
         </span>
         <span className="block text-[11px] text-muted line-clamp-1 break-words mb-1 min-h-[1.125rem] leading-tight">
