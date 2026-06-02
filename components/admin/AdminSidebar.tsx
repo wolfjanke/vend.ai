@@ -13,6 +13,7 @@ import {
   CreditCard,
   BarChart2,
   ShoppingCart,
+  Crown,
   type LucideIcon,
 } from 'lucide-react'
 import type { PlanSlug } from '@/types'
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { href: '/admin/pagamentos',   label: 'Pagamentos', Icon: CreditCard,      match: 'prefix' },
   { href: '/admin/financeiro',   label: 'Financeiro', Icon: BarChart2,       match: 'prefix' },
   { href: '/admin/pdv',          label: 'PDV',        Icon: ShoppingCart,    match: 'prefix', planOnly: 'loja' },
+  { href: '/admin/plano',        label: 'Plano',      Icon: Crown,           match: 'exact' },
   { href: '/admin/configuracoes', label: 'Config',   Icon: Settings,        match: 'exact' },
 ]
 
