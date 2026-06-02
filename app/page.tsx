@@ -1,26 +1,21 @@
 import Link from 'next/link'
 import {
   Store,
-  Camera,
   MessageCircle,
-  Bot,
-  BarChart3,
-  Package,
   Star,
-  Clock,
-  ShoppingBag,
   ArrowRight,
   CheckCircle2,
   XCircle,
   Zap,
-  TrendingUp,
   Heart,
+  ShoppingBag,
 } from 'lucide-react'
 import LandingHeader from '@/components/landing/LandingHeader'
 import LandingHeroDevices from '@/components/landing/LandingHeroDevices'
 import ScrollReveal from '@/components/landing/ScrollReveal'
 import LandingPlans from '@/components/landing/LandingPlans'
 import LandingFooter from '@/components/landing/LandingFooter'
+import { LandingEditorialCard, LandingPainLines } from '@/components/landing/LandingEditorialCard'
 
 /** Padding horizontal seguro no mobile (evita texto colado na borda / cortado) */
 const sectionX = 'px-4 sm:px-6 md:px-12 lg:px-16'
@@ -121,7 +116,7 @@ export default function LandingPage() {
           ].map(line => (
             <div
               key={line}
-              className="text-sm sm:text-base text-foreground font-medium py-3 px-4 rounded-xl border border-border bg-surface text-center break-words"
+              className="text-sm sm:text-base text-foreground font-medium py-3 px-4 rounded-[2px] border border-[#252525] bg-[#161616] text-center break-words"
             >
               {line}
             </div>
@@ -144,46 +139,32 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-3 gap-4 sm:gap-5 min-w-0">
           {[
             {
-              icon: Clock,
-              color: 'warm',
+              n: '01',
               before: '"Qual o tamanho disponível?" — você responde 30x por dia no direct.',
               after: 'A Vi responde por você, 24h, com os tamanhos e cores do seu estoque.',
               label: 'Atendimento',
             },
             {
-              icon: ShoppingBag,
-              color: 'warm',
+              n: '02',
               before: 'Pedidos perdidos no direct, mensagens duplicadas, cliente sumiu.',
               after: 'Pedido formatado chega no seu WhatsApp. Sem ruído, sem perda.',
               label: 'Pedidos',
             },
             {
-              icon: Camera,
-              color: 'warm',
+              n: '03',
               before: 'Cadastrar produto com foto, nome, tamanho, cor... leva horas.',
               after: 'Tira uma foto. A IA gera nome, descrição e categoria na hora.',
               label: 'Cadastro',
             },
           ].map((item, i) => (
             <ScrollReveal key={item.label} delay={i * 120}>
-              <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 h-full flex flex-col gap-4 hover:border-primary/40 transition-all min-w-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 shrink-0 rounded-lg bg-warm/10 flex items-center justify-center">
-                    <item.icon size={18} className="text-warm-DEFAULT" style={{ color: 'var(--warm)' }} />
-                  </div>
-                  <span className="font-syne font-bold text-base sm:text-sm min-w-0 break-words leading-tight">{item.label}</span>
-                </div>
-                <div className="flex flex-col gap-3 flex-1 min-w-0">
-                  <div className="flex gap-2.5 items-start min-w-0">
-                    <XCircle size={15} className="mt-0.5 shrink-0 text-warm-DEFAULT" style={{ color: 'var(--warm)' }} />
-                    <p className="text-sm text-muted leading-relaxed min-w-0 break-words">{item.before}</p>
-                  </div>
-                  <div className="flex gap-2.5 items-start min-w-0">
-                    <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-accent" />
-                    <p className="text-sm text-foreground leading-relaxed min-w-0 break-words">{item.after}</p>
-                  </div>
-                </div>
-              </div>
+              <LandingEditorialCard
+                number={item.n}
+                title={item.label}
+                className="h-full hover:border-primary/30 transition-colors"
+              >
+                <LandingPainLines negative={item.before} positive={item.after} />
+              </LandingEditorialCard>
             </ScrollReveal>
           ))}
         </div>
@@ -292,34 +273,29 @@ export default function LandingPage() {
           {[
             {
               n: '01',
-              icon: Store,
               title: 'Crie sua loja',
               desc: 'Foto, nome, WhatsApp — e seu link está no ar. Sem precisar de programador ou designer.',
             },
             {
               n: '02',
-              icon: Camera,
               title: 'Adicione produtos com IA',
               desc: 'Tire uma foto da peça. A IA cria nome, descrição e categoria automaticamente. Em segundos.',
             },
             {
               n: '03',
-              icon: MessageCircle,
               title: 'Receba pedidos no WhatsApp',
               desc: 'Cliente navega, monta o carrinho com a Vi, e o pedido formatado chega no seu WhatsApp.',
             },
           ].map((step, i) => (
             <ScrollReveal key={step.n} delay={i * 130}>
-              <div className="relative bg-surface border border-border rounded-2xl p-5 sm:p-7 hover:border-primary hover:-translate-y-1 hover:shadow-[0_10px_40px_var(--primary-glow)] transition-all h-full min-w-0">
-                <span className="absolute top-4 right-4 sm:right-5 font-syne font-extrabold text-4xl sm:text-5xl text-primary/10 leading-none select-none max-w-[45%] text-right break-all pointer-events-none">
-                  {step.n}
-                </span>
-                <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center mb-4 shrink-0">
-                  <step.icon size={20} className="text-primary" />
-                </div>
-                <h3 className="font-syne font-bold text-base mb-2 min-w-0 break-words pr-10">{step.title}</h3>
-                <p className="text-sm text-muted leading-relaxed min-w-0 break-words">{step.desc}</p>
-              </div>
+              <LandingEditorialCard
+                number={step.n}
+                title={step.title}
+                showDivider={false}
+                className="h-full hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-[0_10px_40px_var(--primary-glow)] transition-all sm:px-7 sm:py-7"
+              >
+                <p className="text-sm font-light text-[#666666] leading-relaxed break-words">{step.desc}</p>
+              </LandingEditorialCard>
             </ScrollReveal>
           ))}
         </div>
@@ -337,49 +313,47 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             {
-              icon: Bot,
+              n: '01',
               title: 'Vi — Assistente com IA',
               desc: 'A Vi atende seus clientes 24h: sugere produtos, responde dúvidas e encaminha pedidos pro WhatsApp.',
               highlight: true,
             },
             {
-              icon: MessageCircle,
+              n: '02',
               title: 'Pedidos direto no WhatsApp',
               desc: 'Quando o cliente finaliza, o pedido vai formatado pro seu WhatsApp. Você não precisa de nenhum app novo.',
             },
             {
-              icon: BarChart3,
+              n: '03',
               title: 'Painel de controle',
               desc: 'Gerencie pedidos, estoque e métricas em um lugar só. Simples e rápido.',
             },
             {
-              icon: Camera,
+              n: '04',
               title: 'IA no cadastro',
               desc: 'Tire foto do produto e a IA gera nome e descrição na hora. Cadastre 10x mais rápido.',
             },
             {
-              icon: Package,
+              n: '05',
               title: 'Controle de estoque',
               desc: 'Por tamanho e cor, com alertas automáticos de estoque baixo.',
             },
             {
-              icon: TrendingUp,
+              n: '06',
               title: 'Recuperação de pedido',
               desc: 'Nos planos Pro+, veja quem não finalizou e envie mensagem pronta pelo painel.',
             },
           ].map((f, i) => (
             <ScrollReveal key={f.title} delay={i * 80}>
-              <div
-                className={`group bg-surface border rounded-[18px] p-6 hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_var(--primary-glow)] transition-all h-full flex flex-col gap-3 ${
-                  f.highlight ? 'border-primary/40 bg-primary/5' : 'border-border'
+              <LandingEditorialCard
+                number={f.n}
+                title={f.title}
+                className={`h-full hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_var(--primary-glow)] transition-all ${
+                  f.highlight ? 'ring-1 ring-primary/30' : ''
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.highlight ? 'bg-primary/20' : 'bg-surface2'}`}>
-                  <f.icon size={18} className={f.highlight ? 'text-primary' : 'text-muted'} />
-                </div>
-                <h3 className="font-syne font-bold text-sm min-w-0 break-words">{f.title}</h3>
-                <p className="text-xs text-muted leading-relaxed min-w-0 break-words">{f.desc}</p>
-              </div>
+                <p className="text-xs text-[#666666] font-light leading-relaxed break-words">{f.desc}</p>
+              </LandingEditorialCard>
             </ScrollReveal>
           ))}
         </div>
@@ -413,7 +387,7 @@ export default function LandingPage() {
           </ScrollReveal>
 
           <ScrollReveal direction="right">
-            <div className="bg-primary/8 border border-primary/25 rounded-2xl p-7 mb-5">
+            <div className="bg-primary/8 border border-primary/25 rounded-[2px] p-7 mb-5">
               <p className="font-syne font-bold text-sm mb-3 text-primary">Por que não só link no bio?</p>
               <p className="text-sm text-muted leading-relaxed">
                 Porque no vend.ai você tem catálogo inteligente, IA que sugere produtos ao cliente e pedido formatado direto no seu WhatsApp — sem planilha, sem confusão, sem perder venda.
@@ -424,7 +398,7 @@ export default function LandingPage() {
                 { label: 'Link na bio', items: ['Só mostra uma foto', 'Cliente precisa te chamar', 'Você responde manualmente', 'Sem controle de estoque'] },
                 { label: 'vend.ai', items: ['Catálogo completo', 'Vi atende 24h', 'Pedido no WhatsApp', 'Estoque atualizado'] },
               ].map(col => (
-                <div key={col.label} className={`rounded-xl p-4 border ${col.label === 'vend.ai' ? 'border-primary/40 bg-primary/8' : 'border-border bg-surface'}`}>
+                <div key={col.label} className={`rounded-[2px] p-4 border ${col.label === 'vend.ai' ? 'border-primary/40 bg-primary/8' : 'border-[#252525] bg-[#161616]'}`}>
                   <p className={`font-syne font-bold text-xs mb-3 ${col.label === 'vend.ai' ? 'text-primary' : 'text-muted'}`}>{col.label}</p>
                   <ul className="flex flex-col gap-2">
                     {col.items.map(item => (
@@ -481,7 +455,7 @@ export default function LandingPage() {
             },
           ].map((t, i) => (
             <ScrollReveal key={t.name} delay={i * 100}>
-              <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 h-full flex flex-col gap-4 hover:border-primary/30 transition-all min-w-0">
+              <div className="bg-[#161616] border border-[#252525] rounded-[2px] p-5 sm:p-6 h-full flex flex-col gap-4 hover:border-primary/30 transition-all min-w-0">
                 <div className="flex">
                   {[...Array(5)].map((_, j) => (
                     <Star key={j} size={13} className="fill-accent text-accent" />
@@ -567,7 +541,7 @@ export default function LandingPage() {
             },
           ].map((item, i) => (
             <ScrollReveal key={i} delay={i * 50}>
-              <details className="bg-surface border border-border rounded-xl overflow-hidden group">
+              <details className="bg-[#161616] border border-[#252525] rounded-[2px] overflow-hidden group">
                 <summary className="px-4 sm:px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between gap-3 hover:text-primary transition-colors min-w-0">
                   <span className="min-w-0 flex-1 pe-2 break-words">{item.q}</span>
                   <span className="text-muted group-open:rotate-180 transition-transform shrink-0 text-xs">▼</span>
