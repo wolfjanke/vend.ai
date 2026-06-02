@@ -22,6 +22,9 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['@react-pdf/renderer'],
+  },
   async rewrites() {
     return [
       /** Pedidos legados a `.ico` servem o SVG em `public/favicon.svg`. */
