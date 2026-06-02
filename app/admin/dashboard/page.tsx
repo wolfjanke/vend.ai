@@ -20,6 +20,7 @@ import RecoveryInfoModal from '@/components/admin/RecoveryInfoModal'
 import OnboardingChecklist from '@/components/admin/OnboardingChecklist'
 import ViUsageCard from '@/components/admin/ViUsageCard'
 import ViLimitBanner from '@/components/admin/ViLimitBanner'
+import AdminPageError from '@/components/admin/AdminPageError'
 import { getViUsageStats } from '@/lib/vi-limits'
 import type { Order } from '@/types'
 import type { PlanSlug } from '@/types'
@@ -70,40 +71,73 @@ export default async function DashboardPage() {
   const week = weekRange()
   const month = monthRange()
 
-  const storeRows = await sql`SELECT name, plan, logo_url, slug FROM stores WHERE id = ${storeId} LIMIT 1`
-  const store = storeRows[0] as { name: string; plan?: PlanSlug; logo_url: string | null; slug: string } | undefined
+  let store: { name: string; plan?: PlanSlug; logo_url: string | null; slug: string } | undefined
+  let viStats: Awaited<ReturnType<typeof getViUsageStats>>
+  let novoRows: { c: number }[]
+  let confirmadoRows: { c: number }[]
+  let entregaRows: { c: number }[]
+  let todayRows: { total: number }[]
+  let weekRows: { total: number }[]
+  let monthRows: { total: number }[]
+  let recentRows: Order[]
+  let recoveryRows: Order[]
+  let productCountRows: { c: number }[]
+
+  try {
+    const storeRows = await sql`SELECT name, plan, logo_url, slug FROM stores WHERE id = ${storeId} LIMIT 1`
+    store = storeRows[0] as typeof store
+    const plan = store?.plan ?? 'free'
+    const showRecovery = plan === 'pro' || plan === 'loja' || plan === 'enterprise'
+    viStats = await getViUsageStats(storeId)
+
+    ;[
+      novoRows,
+      confirmadoRows,
+      entregaRows,
+      todayRows,
+      weekRows,
+      monthRows,
+      recentRows,
+      recoveryRows,
+      productCountRows,
+    ] = await Promise.all([
+      sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'NOVO'`,
+      sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'CONFIRMADO' AND created_at >= ${start} AND created_at <= ${end}`,
+      sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'EM_ENTREGA'`,
+      sql`SELECT total FROM orders WHERE store_id = ${storeId} AND created_at >= ${start} AND created_at <= ${end} AND status != 'CANCELADO'`,
+      sql`SELECT total FROM orders WHERE store_id = ${storeId} AND created_at >= ${week.start} AND created_at <= ${week.end} AND status != 'CANCELADO'`,
+      sql`SELECT total FROM orders WHERE store_id = ${storeId} AND created_at >= ${month.start} AND created_at <= ${month.end} AND status != 'CANCELADO'`,
+      sql`SELECT * FROM orders WHERE store_id = ${storeId} ORDER BY created_at DESC LIMIT 5`,
+      showRecovery
+        ? sql`SELECT * FROM orders WHERE store_id = ${storeId} AND status = 'NOVO' AND created_at < NOW() - INTERVAL '24 hours' AND recovery_sent_at IS NULL ORDER BY created_at DESC`
+        : Promise.resolve([]),
+      sql`SELECT COUNT(*)::int as c FROM products WHERE store_id = ${storeId}`,
+    ]) as [
+      { c: number }[],
+      { c: number }[],
+      { c: number }[],
+      { total: number }[],
+      { total: number }[],
+      { total: number }[],
+      Order[],
+      Order[],
+      { c: number }[],
+    ]
+  } catch (e) {
+    console.error('[admin/dashboard]', e)
+    return (
+      <AdminPageError title="Dashboard">
+        Não foi possível carregar o painel. Verifique as migrations{' '}
+        <code className="font-mono text-xs">005</code>–<code className="font-mono text-xs">010</code> no banco
+        (Neon SQL Editor) e tente novamente.
+      </AdminPageError>
+    )
+  }
+
   const plan = store?.plan ?? 'free'
   const showRecovery = plan === 'pro' || plan === 'loja' || plan === 'enterprise'
-  const viStats = await getViUsageStats(storeId)
 
-  const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''
-  const storePublicUrl = baseUrl && store?.slug ? `${baseUrl}/${store.slug}` : ''
-
-  const [
-    novoRows,
-    confirmadoRows,
-    entregaRows,
-    todayRows,
-    weekRows,
-    monthRows,
-    recentRows,
-    recoveryRows,
-    productCountRows,
-  ] = await Promise.all([
-    sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'NOVO'`,
-    sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'CONFIRMADO' AND created_at >= ${start} AND created_at <= ${end}`,
-    sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'EM_ENTREGA'`,
-    sql`SELECT total FROM orders WHERE store_id = ${storeId} AND created_at >= ${start} AND created_at <= ${end} AND status != 'CANCELADO'`,
-    sql`SELECT total FROM orders WHERE store_id = ${storeId} AND created_at >= ${week.start} AND created_at <= ${week.end} AND status != 'CANCELADO'`,
-    sql`SELECT total FROM orders WHERE store_id = ${storeId} AND created_at >= ${month.start} AND created_at <= ${month.end} AND status != 'CANCELADO'`,
-    sql`SELECT * FROM orders WHERE store_id = ${storeId} ORDER BY created_at DESC LIMIT 5`,
-    showRecovery
-      ? sql`SELECT * FROM orders WHERE store_id = ${storeId} AND status = 'NOVO' AND created_at < NOW() - INTERVAL '24 hours' AND recovery_sent_at IS NULL ORDER BY created_at DESC`
-      : Promise.resolve([]),
-    sql`SELECT COUNT(*)::int as c FROM products WHERE store_id = ${storeId}`,
-  ])
-
-  const ordersToRecover = (recoveryRows as Order[]) || []
+  const ordersToRecover = recoveryRows || []
   const countNovo = Number(novoRows[0]?.c ?? 0)
   const countConf = Number(confirmadoRows[0]?.c ?? 0)
   const countEntrega = Number(entregaRows[0]?.c ?? 0)
@@ -113,6 +147,8 @@ export default async function DashboardPage() {
   const productCount = Number(productCountRows[0]?.c ?? 0)
   const hasLogo = Boolean(store?.logo_url?.trim())
   const hasProducts = productCount > 0
+  const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''
+  const storePublicUrl = baseUrl && store?.slug ? `${baseUrl}/${store.slug}` : ''
   const showOnboarding = recentRows.length === 0 && storePublicUrl
 
   return (

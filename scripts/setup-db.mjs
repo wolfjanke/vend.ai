@@ -152,6 +152,51 @@ async function setup() {
     processed_at TIMESTAMPTZ DEFAULT NOW()
   )`
 
+  // Migration 006: vi_usage
+  await sql`CREATE TABLE IF NOT EXISTS vi_usage (
+    store_id    UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    period_key  TEXT NOT NULL,
+    msg_count   INT  NOT NULL DEFAULT 0,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (store_id, period_key)
+  )`
+  await sql`CREATE INDEX IF NOT EXISTS vi_usage_period_idx ON vi_usage(period_key)`
+
+  // Migration 007: store vi usage columns
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS vi_messages_used INTEGER DEFAULT 0`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS vi_messages_reset_at TIMESTAMPTZ DEFAULT NOW()`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS photo_analysis_used INTEGER DEFAULT 0`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS photo_analysis_reset_at TIMESTAMPTZ DEFAULT NOW()`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS vi_daily_limit INTEGER DEFAULT NULL`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS vi_overage_messages INTEGER DEFAULT 0`
+  try {
+    await sql`ALTER TABLE stores DROP CONSTRAINT IF EXISTS stores_plan_check`
+    await sql`ALTER TABLE stores ADD CONSTRAINT stores_plan_check CHECK (plan IN ('free', 'starter', 'pro', 'loja', 'enterprise'))`
+  } catch (e) {
+    if (e?.code !== '42710') throw e
+  }
+
+  // Migration 008: themes
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_name TEXT DEFAULT 'default'`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_primary_color TEXT DEFAULT NULL`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_secondary_color TEXT DEFAULT NULL`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_accent_color TEXT DEFAULT NULL`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_background TEXT DEFAULT 'dark'`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_shimmer BOOLEAN DEFAULT FALSE`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_logo_url TEXT DEFAULT NULL`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS theme_onboarding_done BOOLEAN DEFAULT FALSE`
+  await sql`CREATE INDEX IF NOT EXISTS idx_stores_theme ON stores(slug, theme_name)`
+
+  // Migration 009 + 011: product slug
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS slug TEXT`
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_products_slug_store ON products(store_id, slug)`
+  await sql`UPDATE products SET slug = id::text WHERE slug IS NULL OR trim(slug) = ''`
+
+  // Migration 010: assistant
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS assistant_name TEXT DEFAULT 'Vi'`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS assistant_welcome_message TEXT DEFAULT NULL`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS assistant_tone TEXT DEFAULT 'friendly'`
+
   console.log('✓ Tabelas criadas!')
 
   // ─── Seed: Loja Demo ───────────────────────────────────────────────────────

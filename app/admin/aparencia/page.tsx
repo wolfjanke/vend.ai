@@ -3,22 +3,37 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { Store } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
+import AdminPageError from '@/components/admin/AdminPageError'
 import AparenciaClient from './AparenciaClient'
 
 export default async function AparenciaPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
-  const rows = await sql`
-    SELECT
-      slug, plan, logo_url,
-      theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-      theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done
-    FROM stores
-    WHERE id = ${session.storeId}
-    LIMIT 1
-  `
-  const store = rows[0] as Store | undefined
+  let store: Store | undefined
+  try {
+    const rows = await sql`
+      SELECT
+        slug, plan, logo_url,
+        theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
+        theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done
+      FROM stores
+      WHERE id = ${session.storeId}
+      LIMIT 1
+    `
+    store = rows[0] as Store | undefined
+  } catch (e) {
+    console.error('[admin/aparencia] query stores:', e)
+    return (
+      <AdminPageError title="Aparência">
+        Não foi possível carregar os dados de tema. Execute as migrations{' '}
+        <code className="font-mono text-xs">008_themes.sql</code> e{' '}
+        <code className="font-mono text-xs">010_assistant.sql</code> no banco de produção
+        (Neon SQL Editor) e tente novamente.
+      </AdminPageError>
+    )
+  }
+
   if (!store) redirect('/cadastro')
 
   return (

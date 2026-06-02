@@ -59,53 +59,62 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   if (isReservedStoreSlug(params.slug)) notFound()
 
-  const storeRows = await sql`
-    SELECT
-      id, slug, name, logo_url, whatsapp, settings_json, created_at, plan,
-      cep, logradouro, numero, complemento, bairro, cidade, uf,
-      theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-      theme_background, theme_shimmer, theme_logo_url,
-      assistant_name, assistant_welcome_message, assistant_tone
-    FROM stores
-    WHERE slug = ${params.slug}
-    LIMIT 1
-  `
-  const storeRow = storeRows[0] as Record<string, unknown> | undefined
-  if (!storeRow) notFound()
+  let storeRow: Record<string, unknown> | undefined
+  let product: Product | undefined
+  let allProducts: Product[]
 
-  const storeId = String(storeRow.id)
-  const productRows = await sql`
-    SELECT * FROM products
-    WHERE store_id = ${storeId} AND slug = ${params.productSlug} AND active = true
-    LIMIT 1
-  `
-  const product = productRows[0] as Product | undefined
-  if (!product) notFound()
+  try {
+    const storeRows = await sql`
+      SELECT
+        id, slug, name, logo_url, whatsapp, settings_json, created_at, plan,
+        cep, logradouro, numero, complemento, bairro, cidade, uf,
+        theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
+        theme_background, theme_shimmer, theme_logo_url,
+        assistant_name, assistant_welcome_message, assistant_tone
+      FROM stores
+      WHERE slug = ${params.slug}
+      LIMIT 1
+    `
+    storeRow = storeRows[0] as Record<string, unknown> | undefined
+    if (!storeRow) notFound()
 
-  const allProducts = (await sql`
-    SELECT * FROM products WHERE store_id = ${storeId} AND active = true ORDER BY created_at DESC
-  `) as Product[]
+    const storeId = String(storeRow.id)
+    const productRows = await sql`
+      SELECT * FROM products
+      WHERE store_id = ${storeId} AND slug = ${params.productSlug} AND active = true
+      LIMIT 1
+    `
+    product = productRows[0] as Product | undefined
+    if (!product) notFound()
 
-  const publicStore = toPublicStore(storeRow)
-  const store = {
-    ...publicStoreAsStore(publicStore),
-    plan:                    (storeRow.plan as PlanSlug) ?? 'free',
-    assistant_name:          (storeRow.assistant_name as string) ?? 'Vi',
-    assistant_welcome_message: (storeRow.assistant_welcome_message as string | null) ?? null,
-    assistant_tone:          (storeRow.assistant_tone as Store['assistant_tone']) ?? 'friendly',
-    logo_url:                resolveStoreTheme(storeRow).displayLogo ?? publicStore.logo_url,
+    allProducts = (await sql`
+      SELECT * FROM products WHERE store_id = ${storeId} AND active = true ORDER BY created_at DESC
+    `) as Product[]
+  } catch (e) {
+    console.error('[store/product]', params.slug, params.productSlug, e)
+    notFound()
   }
 
-  const themeResolved = resolveStoreTheme(storeRow)
+  const publicStore = toPublicStore(storeRow!)
+  const store = {
+    ...publicStoreAsStore(publicStore),
+    plan:                    (storeRow!.plan as PlanSlug) ?? 'free',
+    assistant_name:          (storeRow!.assistant_name as string) ?? 'Vi',
+    assistant_welcome_message: (storeRow!.assistant_welcome_message as string | null) ?? null,
+    assistant_tone:          (storeRow!.assistant_tone as Store['assistant_tone']) ?? 'friendly',
+    logo_url:                resolveStoreTheme(storeRow!).displayLogo ?? publicStore.logo_url,
+  }
+
+  const themeResolved = resolveStoreTheme(storeRow!)
 
   return (
     <LojaShell
       store={store}
-      products={allProducts}
+      products={allProducts!}
       cardTheme={themeResolved.cardTheme}
       plan={store.plan ?? 'free'}
     >
-      <ProductDetailClient product={product} />
+      <ProductDetailClient product={product!} />
     </LojaShell>
   )
 }

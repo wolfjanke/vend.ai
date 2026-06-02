@@ -2,6 +2,7 @@ import { redirect }   from 'next/navigation'
 import { getSessionSafe }  from '@/lib/auth'
 import { sql }         from '@/lib/db'
 import PedidoCard      from '@/components/admin/PedidoCard'
+import AdminPageError  from '@/components/admin/AdminPageError'
 import Pagination      from '@/components/ui/Pagination'
 import type { Order, OrderStatus } from '@/types'
 
@@ -24,14 +25,14 @@ const SOURCE_FILTERS = [
 const PAGE_SIZE = 20
 
 interface Props {
-  searchParams: Promise<{ status?: string; search?: string; page?: string; source?: string }>
+  searchParams: { status?: string; search?: string; page?: string; source?: string }
 }
 
 export default async function PedidosPage({ searchParams }: Props) {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
-  const params       = await searchParams
+  const params       = searchParams
   const storeId      = session.storeId
   const statusFilter = params.status as OrderStatus | 'TODOS' | undefined
   const searchTerm   = params.search?.trim() ?? ''
@@ -44,24 +45,37 @@ export default async function PedidosPage({ searchParams }: Props) {
   const hasSource = !!sourceFilter
   const hasSearch = !!q
 
-  const countRows = await sql`
-    SELECT COUNT(*)::int as c FROM orders
-    WHERE store_id = ${storeId}
-    AND (${!hasStatus} OR status = ${hasStatus ? statusFilter! : 'NOVO'}::order_status)
-    AND (${!hasSource} OR payment_source = ${hasSource ? sourceFilter : null})
-    AND (${!hasSearch} OR customer_name ILIKE ${q ?? ''} OR order_number ILIKE ${q ?? ''})
-  `
-  const total = Number(countRows[0]?.c ?? 0)
+  let total = 0
+  let orders: Order[] = []
 
-  const orders = await sql`
-    SELECT * FROM orders
-    WHERE store_id = ${storeId}
-    AND (${!hasStatus} OR status = ${hasStatus ? statusFilter! : 'NOVO'}::order_status)
-    AND (${!hasSource} OR payment_source = ${hasSource ? sourceFilter : null})
-    AND (${!hasSearch} OR customer_name ILIKE ${q ?? ''} OR order_number ILIKE ${q ?? ''})
-    ORDER BY created_at DESC
-    LIMIT ${PAGE_SIZE} OFFSET ${offset}
-  `
+  try {
+    const countRows = await sql`
+      SELECT COUNT(*)::int as c FROM orders
+      WHERE store_id = ${storeId}
+      AND (${!hasStatus} OR status = ${hasStatus ? statusFilter! : 'NOVO'}::order_status)
+      AND (${!hasSource} OR payment_source = ${hasSource ? sourceFilter : null})
+      AND (${!hasSearch} OR customer_name ILIKE ${q ?? ''} OR order_number ILIKE ${q ?? ''})
+    `
+    total = Number(countRows[0]?.c ?? 0)
+
+    orders = (await sql`
+      SELECT * FROM orders
+      WHERE store_id = ${storeId}
+      AND (${!hasStatus} OR status = ${hasStatus ? statusFilter! : 'NOVO'}::order_status)
+      AND (${!hasSource} OR payment_source = ${hasSource ? sourceFilter : null})
+      AND (${!hasSearch} OR customer_name ILIKE ${q ?? ''} OR order_number ILIKE ${q ?? ''})
+      ORDER BY created_at DESC
+      LIMIT ${PAGE_SIZE} OFFSET ${offset}
+    `) as Order[]
+  } catch (e) {
+    console.error('[admin/pedidos] query:', e)
+    return (
+      <AdminPageError title="Pedidos">
+        Não foi possível carregar os pedidos. Execute a migration{' '}
+        <code className="font-mono text-xs">005_add_asaas_checkout.sql</code> no banco se ainda não foi aplicada.
+      </AdminPageError>
+    )
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 

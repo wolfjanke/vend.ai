@@ -42,11 +42,13 @@ export default async function StorePage({ params }: Props) {
       LIMIT 1
     `
     storeRow = rows[0] as Record<string, unknown> | undefined
-  } catch {
-    throw new Error('STORE_LOAD_FAILED')
+  } catch (e) {
+    console.error('[store/page]', params.slug, e)
+    notFound()
   }
 
   if (!storeRow) notFound()
+
   const storeId = String(storeRow.id)
   const publicStore = toPublicStore(storeRow)
   const themeResolved = resolveStoreTheme(storeRow)
@@ -66,8 +68,9 @@ export default async function StorePage({ params }: Props) {
       WHERE store_id = ${storeId} AND active = true
       ORDER BY created_at DESC
     `) as Product[]
-  } catch {
-    throw new Error('STORE_LOAD_FAILED')
+  } catch (e) {
+    console.error('[store/page] products', params.slug, e)
+    notFound()
   }
 
   return (

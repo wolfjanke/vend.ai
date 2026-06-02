@@ -36,14 +36,14 @@ function productOutOfStock(p: Product): boolean {
 }
 
 interface Props {
-  searchParams: Promise<{ page?: string; search?: string; active?: string; sort?: string }>
+  searchParams: { page?: string; search?: string; active?: string; sort?: string }
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
-  const params = await searchParams
+  const params = searchParams
   const storeId = session.storeId
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
   const offset = (page - 1) * PAGE_SIZE

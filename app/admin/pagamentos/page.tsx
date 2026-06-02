@@ -2,6 +2,7 @@ import { redirect }   from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql }            from '@/lib/db'
 import { getOnboardingUrl } from '@/lib/asaas/subaccounts'
+import AdminPageError     from '@/components/admin/AdminPageError'
 import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
 import { PLAN_PRODUCT_LIMITS } from '@/types'
 import OnboardingForm    from './OnboardingForm'
@@ -19,19 +20,30 @@ export default async function PagamentosPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
-  const rows = await sql`
-    SELECT
-      plan,
-      asaas_account_id,
-      asaas_wallet_id,
-      asaas_onboarding_status,
-      asaas_approved_at
-    FROM stores
-    WHERE id = ${session.storeId}
-    LIMIT 1
-  `
+  let store: Record<string, unknown>
+  try {
+    const rows = await sql`
+      SELECT
+        plan,
+        asaas_account_id,
+        asaas_wallet_id,
+        asaas_onboarding_status,
+        asaas_approved_at
+      FROM stores
+      WHERE id = ${session.storeId}
+      LIMIT 1
+    `
+    store = (rows[0] ?? {}) as Record<string, unknown>
+  } catch (e) {
+    console.error('[admin/pagamentos]', e)
+    return (
+      <AdminPageError title="Pagamentos">
+        Não foi possível carregar os dados de pagamento. Execute a migration{' '}
+        <code className="font-mono text-xs">005_add_asaas_checkout.sql</code> no banco e tente novamente.
+      </AdminPageError>
+    )
+  }
 
-  const store = rows[0] ?? {}
   const plan              = (store.plan ?? 'free') as PlanSlug
   const onboardingStatus  = (store.asaas_onboarding_status ?? null) as AsaasOnboardingStatus | null
   const hasAccount        = !!store.asaas_account_id
@@ -40,7 +52,6 @@ export default async function PagamentosPage() {
   const merchantPct = 100 - takePct
   const limitLabel  = PLAN_PRODUCT_LIMITS[plan] === null ? 'Ilimitado' : String(PLAN_PRODUCT_LIMITS[plan])
 
-  // Busca URL de onboarding se ainda pendente
   let onboardingUrl: string | null = null
   if (hasAccount && onboardingStatus !== 'APPROVED' && onboardingStatus !== 'REJECTED') {
     onboardingUrl = await getOnboardingUrl(session.storeId)
@@ -53,7 +64,6 @@ export default async function PagamentosPage() {
         <p className="text-sm text-muted">Configure o recebimento pelo checkout integrado</p>
       </div>
 
-      {/* Estado 3: APROVADO */}
       {onboardingStatus === 'APPROVED' && (
         <div className="bg-surface border border-accent/30 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -87,7 +97,6 @@ export default async function PagamentosPage() {
         </div>
       )}
 
-      {/* Estado 4: REJEITADO */}
       {onboardingStatus === 'REJECTED' && (
         <div className="bg-surface border border-warm/30 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
@@ -101,12 +110,10 @@ export default async function PagamentosPage() {
         </div>
       )}
 
-      {/* Estado 2: Tem conta mas aguardando aprovação */}
       {hasAccount && (onboardingStatus === 'PENDING' || onboardingStatus === 'AWAITING_APPROVAL') && (
         <OnboardingPending onboardingUrl={onboardingUrl} status={onboardingStatus} />
       )}
 
-      {/* Estado 1: Sem conta ainda */}
       {!hasAccount && (
         <div className="bg-surface border border-border rounded-2xl p-6">
           <h2 className="font-syne font-bold text-base mb-2">Ativar recebimentos</h2>

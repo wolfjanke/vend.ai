@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql }            from '@/lib/db'
+import AdminPageError     from '@/components/admin/AdminPageError'
 import type { Product }   from '@/types'
 import PdvClient          from './PdvClient'
 
@@ -8,21 +9,34 @@ export default async function PdvPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
-  const storeRows = await sql`
-    SELECT plan, asaas_wallet_id, asaas_onboarding_status, whatsapp
-    FROM stores WHERE id = ${session.storeId} LIMIT 1
-  `
-  const store = storeRows[0]
+  let store: { plan: string; asaas_wallet_id: string | null; asaas_onboarding_status: string | null; whatsapp: string }
+  let products: Product[]
 
-  if (!store || store.plan !== 'loja') {
-    redirect('/admin/dashboard')
+  try {
+    const storeRows = await sql`
+      SELECT plan, asaas_wallet_id, asaas_onboarding_status, whatsapp
+      FROM stores WHERE id = ${session.storeId} LIMIT 1
+    `
+    const row = storeRows[0] as typeof store | undefined
+    if (!row || row.plan !== 'loja') {
+      redirect('/admin/dashboard')
+    }
+    store = row
+
+    products = (await sql`
+      SELECT * FROM products
+      WHERE store_id = ${session.storeId} AND active = true
+      ORDER BY name ASC
+    `) as Product[]
+  } catch (e) {
+    console.error('[admin/pdv]', e)
+    return (
+      <AdminPageError title="Mini PDV">
+        Não foi possível carregar o PDV. Execute a migration{' '}
+        <code className="font-mono text-xs">005_add_asaas_checkout.sql</code> no banco e tente novamente.
+      </AdminPageError>
+    )
   }
-
-  const products = await sql`
-    SELECT * FROM products
-    WHERE store_id = ${session.storeId} AND active = true
-    ORDER BY name ASC
-  `
 
   const storeHasAsaas = store.asaas_onboarding_status === 'APPROVED' && !!store.asaas_wallet_id
 
@@ -34,9 +48,9 @@ export default async function PdvPage() {
       </div>
       <PdvClient
         storeId={session.storeId}
-        products={products as Product[]}
+        products={products}
         storeHasAsaas={storeHasAsaas}
-        storeWhatsapp={store.whatsapp as string}
+        storeWhatsapp={store.whatsapp}
       />
     </div>
   )
