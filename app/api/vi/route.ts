@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { viChatResponse } from '@/lib/gemini'
 import { buildViSystemPrompt, type AssistantTone } from '@/lib/vi-prompt'
-import type { ViMessage, StoreContext, Product, StoreSettings } from '@/types'
+import type { ViMessage, StoreContext, StoreSettings } from '@/types'
 import { logServerError } from '@/lib/logger'
 import { sql } from '@/lib/db'
+import { getActiveProductsForVi } from '@/lib/store-public-data'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import {
   checkViLimit,
@@ -48,6 +49,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Loja inválida' }, { status: 400 })
     }
 
+    if (!process.env.GEMINI_API_KEY?.trim()) {
+      return NextResponse.json({ error: 'Assistente indisponível no momento.' }, { status: 503 })
+    }
+
     const storeRows = await sql`
       SELECT
         id, plan, whatsapp, name, slug, settings_json,
@@ -66,13 +71,7 @@ export async function POST(req: NextRequest) {
     const whatsapp = String(storeContext.whatsapp ?? store.whatsapp ?? '')
     const settings = (store.settings_json as StoreSettings) ?? {}
 
-    const productRows = await sql`
-      SELECT id, name, slug, description, category, price, promo_price, variants_json
-      FROM products
-      WHERE store_id = ${storeId} AND active = true
-      ORDER BY created_at DESC
-    `
-    const dbProducts = productRows as Product[]
+    const dbProducts = await getActiveProductsForVi(storeId)
 
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://vendai.club'
@@ -117,9 +116,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Indisponível no momento.' }, { status: 429 })
     }
 
-    await incrementViMessage(storeId, viCheck.isOverage)
-    await incrementViDailyCount(storeId)
-
     const model = viModelForPlan(plan)
     const stream = viStreamsForPlan(plan)
 
@@ -130,11 +126,26 @@ export async function POST(req: NextRequest) {
       stream,
     })
 
+    await incrementViMessage(storeId, viCheck.isOverage)
+    await incrementViDailyCount(storeId)
+
     if (result instanceof Response) return result
 
-    return NextResponse.json({ text: result })
+    const text = typeof result === 'string' ? result.trim() : ''
+    if (!text) {
+      return NextResponse.json({ error: 'A assistente não conseguiu responder. Tente de novo.' }, { status: 502 })
+    }
+
+    return NextResponse.json({ text })
   } catch (error) {
     logServerError('[/api/vi]', error)
+    const msg = error instanceof Error ? error.message : ''
+    if (msg.includes('429') || msg.toLowerCase().includes('quota')) {
+      return NextResponse.json(
+        { error: 'Muitas consultas à IA agora. Aguarde um minuto e tente de novo.' },
+        { status: 429 },
+      )
+    }
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

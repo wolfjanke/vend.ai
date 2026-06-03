@@ -42,9 +42,6 @@ function segmentInstructions(profile: StoreProfile): string {
   return lines.join('\n')
 }
 
-/** @deprecated Prefer server-side buildViSystemPrompt from lib/vi-prompt.ts */
-export { buildViSystemPrompt } from '@/lib/vi-prompt'
-
 const AUDIENCE_HINT_LABELS: Record<string, string> = {
   feminine:  'feminino',
   masculine: 'masculino',
@@ -153,6 +150,25 @@ function mapViContents(messages: ViMessage[]) {
   }))
 }
 
+/** Histórico válido para o Gemini: começa no 1.º user e alterna papéis. */
+export function sanitizeViMessagesForGemini(messages: ViMessage[]): ViMessage[] {
+  let start = 0
+  while (start < messages.length && messages[start].role !== 'user') start++
+  const slice = messages.slice(start)
+  if (!slice.length) return []
+
+  const out: ViMessage[] = []
+  for (const m of slice) {
+    const prev = out[out.length - 1]
+    if (prev?.role === m.role) {
+      out[out.length - 1] = { role: m.role, content: `${prev.content}\n\n${m.content}` }
+    } else {
+      out.push({ ...m })
+    }
+  }
+  return out
+}
+
 function extractChunkText(chunk: unknown): string {
   if (typeof (chunk as { text?: () => string }).text === 'function') {
     return (chunk as { text: () => string }).text()
@@ -170,7 +186,10 @@ export async function viChatResponse(options: ViChatOptions): Promise<Response |
     model: modelName,
     systemInstruction: options.systemPrompt,
   })
-  const contents = mapViContents(options.messages)
+  const contents = mapViContents(sanitizeViMessagesForGemini(options.messages))
+  if (!contents.length) {
+    throw new Error('Nenhuma mensagem do cliente para responder')
+  }
 
   if (options.stream) {
     const result = await model.generateContentStream({ contents })
@@ -198,22 +217,5 @@ export async function viChatResponse(options: ViChatOptions): Promise<Response |
   const result = await model.generateContent({ contents })
   return result.response.text?.() ?? ''
 }
-
-/** Busca semântica no estoque — modelo leve. */
-export async function searchStock(query: string, catalogSummary: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.stockSearch })
-  const prompt = `Com base no catálogo abaixo, responda em português do Brasil de forma curta (máx. 3 frases) à busca do cliente.
-
-Catálogo:
-${catalogSummary}
-
-Busca: ${query}`
-
-  const result = await model.generateContent(prompt)
-  return result.response.text?.() ?? ''
-}
-
-/** @deprecated Use GEMINI_MODELS.viChat */
-export const MODEL = GEMINI_MODELS.viChat
 
 export { genAI }

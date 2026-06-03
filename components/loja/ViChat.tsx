@@ -8,33 +8,33 @@ function buildViSuggestions(ctx: StoreContext): Array<{ label: string; text: str
   const ag = ctx.ageGroup ?? 'adult'
   if (ag === 'kids') {
     return [
-      { label: '👶 Infantil', text: 'Roupas infantis disponíveis' },
-      { label: '😊 Conforto', text: 'Peças confortáveis para criança' },
-      { label: '🔥 Promoções', text: 'Promoções do dia' },
-      { label: '📏 Tamanhos', text: 'Tem tamanho infantil 6?' },
+      { label: 'Infantil', text: 'Roupas infantis disponíveis' },
+      { label: 'Conforto', text: 'Peças confortáveis para criança' },
+      { label: 'Promoções', text: 'Promoções do dia' },
+      { label: 'Tamanhos', text: 'Tem tamanho infantil 6?' },
     ]
   }
   if (gf === 'masculine') {
     return [
-      { label: '👕 Básicos', text: 'Camisetas e bermudas' },
-      { label: '😊 Casual', text: 'Look casual masculino' },
-      { label: '🔥 Promoções', text: 'Promoções do dia' },
-      { label: '📏 Tamanhos', text: 'Tem tamanho M?' },
+      { label: 'Básicos', text: 'Camisetas e bermudas' },
+      { label: 'Casual', text: 'Look casual masculino' },
+      { label: 'Promoções', text: 'Promoções do dia' },
+      { label: 'Tamanhos', text: 'Tem tamanho M?' },
     ]
   }
   if (gf === 'unisex' || gf === 'mixed') {
     return [
-      { label: '✨ Novidades', text: 'Novidades da loja' },
-      { label: '😊 Casual', text: 'Looks casuais' },
-      { label: '🔥 Promoções', text: 'Promoções do dia' },
-      { label: '📏 Tamanhos', text: 'Tem tamanho P?' },
+      { label: 'Novidades', text: 'Novidades da loja' },
+      { label: 'Casual', text: 'Looks casuais' },
+      { label: 'Promoções', text: 'Promoções do dia' },
+      { label: 'Tamanhos', text: 'Tem tamanho P?' },
     ]
   }
   return [
-    { label: '👗 Festa', text: 'Vestido para festa' },
-    { label: '😊 Casual', text: 'Looks casuais' },
-    { label: '🔥 Promoções', text: 'Promoções do dia' },
-    { label: '📏 Tamanhos', text: 'Tem tamanho P?' },
+    { label: 'Festa', text: 'Vestido para festa' },
+    { label: 'Casual', text: 'Looks casuais' },
+    { label: 'Promoções', text: 'Promoções do dia' },
+    { label: 'Tamanhos', text: 'Tem tamanho P?' },
   ]
 }
 
@@ -60,6 +60,7 @@ export default function ViChat({
     storeContext.segmentLabel,
   ])
   const [messages,      setMessages]      = useState<ViMessage[]>([])
+  const [apiMessages,   setApiMessages]   = useState<ViMessage[]>([])
   const [input,         setInput]         = useState('')
   const [loading,       setLoading]       = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
@@ -76,7 +77,7 @@ export default function ViChat({
         role:    'assistant',
         content:
           storeContext.welcomeMessage?.trim() ||
-          `Olá! 👋 Sou a **${assistantName}**, assistente da ${storeContext.name}. Me conta o que você está procurando hoje? Posso buscar por estilo, ocasião, cor ou tamanho!`,
+          `Olá! Sou a **${assistantName}**, assistente da ${storeContext.name}. Me conta o que você está procurando hoje? Posso buscar por estilo, ocasião, cor ou tamanho!`,
       }
       setTimeout(() => setMessages([welcome]), 400)
     }
@@ -101,15 +102,16 @@ export default function ViChat({
     setShowSuggestions(false)
 
     const userMsg: ViMessage = { role: 'user', content }
-    const nextMessages = [...messages, userMsg]
-    setMessages(nextMessages)
+    const apiNext = [...apiMessages, userMsg]
+    const displayNext = [...messages, userMsg]
+    setMessages(displayNext)
     setLoading(true)
 
     try {
       const response = await fetch('/api/vi', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ messages: nextMessages, storeContext }),
+        body:    JSON.stringify({ messages: apiNext, storeContext }),
       })
 
       const contentType = response.headers.get('content-type') ?? ''
@@ -129,23 +131,24 @@ export default function ViChat({
           const wa = data.whatsappUrl
             ? `\n\n[Continuar no WhatsApp](${data.whatsappUrl})`
             : ''
-          setMessages([...nextMessages, {
-            role:    'assistant',
-            content: `${data.message}${wa}`,
-          }])
+          const assistantMsg: ViMessage = { role: 'assistant', content: `${data.message}${wa}` }
+          setApiMessages([...apiNext, assistantMsg])
+          setMessages([...displayNext, assistantMsg])
           return
         }
         if (data.text) {
-          setMessages([...nextMessages, { role: 'assistant', content: data.text }])
+          const assistantMsg: ViMessage = { role: 'assistant', content: data.text }
+          setApiMessages([...apiNext, assistantMsg])
+          setMessages([...displayNext, assistantMsg])
           return
         }
-        throw new Error('Resposta inválida')
+        throw new Error(data.error ?? 'Resposta inválida')
       }
 
       if (!response.ok || !response.body) throw new Error('Erro na API')
 
       const assistantMsg: ViMessage = { role: 'assistant', content: '' }
-      setMessages([...nextMessages, assistantMsg])
+      setMessages([...displayNext, assistantMsg])
 
       const reader  = response.body.getReader()
       const decoder = new TextDecoder()
@@ -155,12 +158,19 @@ export default function ViChat({
         const { done, value } = await reader.read()
         if (done) break
         accumulated += decoder.decode(value, { stream: true })
-        setMessages([...nextMessages, { role: 'assistant', content: accumulated }])
+        setMessages([...displayNext, { role: 'assistant', content: accumulated }])
       }
-    } catch {
-      setMessages([...nextMessages, {
+
+      if (!accumulated.trim()) throw new Error('Resposta vazia')
+      setApiMessages([...apiNext, { role: 'assistant', content: accumulated }])
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : ''
+      const friendly = detail && !['Erro na API', 'Resposta inválida', 'Resposta vazia'].includes(detail)
+        ? detail
+        : 'Desculpe, tive um problema. Tente novamente ou fale com nossa vendedora no WhatsApp! 😊'
+      setMessages([...displayNext, {
         role:    'assistant',
-        content: 'Desculpe, tive um problema. Tente novamente ou fale com nossa vendedora no WhatsApp! 😊',
+        content: friendly,
       }])
     } finally {
       setLoading(false)

@@ -3,7 +3,7 @@ import type { PlanSlug } from '@/lib/plans'
 
 export type AssistantTone = 'friendly' | 'formal' | 'playful' | 'professional'
 
-export type ViPromptStore = {
+type ViPromptStore = {
   name:            string
   assistantName:   string
   whatsapp:        string
@@ -37,7 +37,7 @@ function productAvailable(p: Product): boolean {
   return (p.variants_json ?? []).some(variantAvailable)
 }
 
-export function buildViStockJson(
+function buildViStockJson(
   storeSlug: string,
   baseUrl: string,
   products: Product[],
@@ -52,7 +52,12 @@ export function buildViStockJson(
       price:       Number(p.price),
       promoPrice:  p.promo_price != null ? Number(p.promo_price) : null,
       description: (p.description ?? '').slice(0, 200),
-      variants:    p.variants_json ?? [],
+      variants: (p.variants_json ?? []).map(v => ({
+        color:     v.color,
+        colorHex:  v.colorHex,
+        stock:     v.stock ?? {},
+        available: variantAvailable(v),
+      })),
       url:         `${base}/${storeSlug}/produto/${slug}`,
       available:   productAvailable(p),
     }
