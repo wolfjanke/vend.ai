@@ -2,6 +2,7 @@
 
 import type { Product, ProductVariant } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
+import { getVariantPhotoUrl } from '@/lib/product-media'
 import ProductPlaceholder from './ProductPlaceholder'
 
 type Props = {
@@ -59,6 +60,7 @@ export default function VitrineProductCard({
   cardTheme,
   onOpenDetail,
 }: Props) {
+  const photoUrl = getVariantPhotoUrl(variant)
   const radius = cardTheme.borderRadius
   const ratio = cardTheme.aspectRatio
   const shadow = cardTheme.shadow
@@ -74,9 +76,9 @@ export default function VitrineProductCard({
       className="relative w-full shrink-0 overflow-hidden bg-surface2 text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
       style={{ aspectRatio: ratio, borderRadius: radius }}
     >
-      {variant?.photos[0] ? (
+      {photoUrl ? (
         <img
-          src={variant.photos[0]}
+          src={photoUrl}
           alt={product.name}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -123,9 +125,9 @@ export default function VitrineProductCard({
           className="relative block w-full text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           style={{ aspectRatio: ratio, borderRadius: radius }}
         >
-          {variant?.photos[0] ? (
+          {photoUrl ? (
             <img
-              src={variant.photos[0]}
+              src={photoUrl}
               alt={product.name}
               className="absolute inset-0 w-full h-full object-cover"
             />
