@@ -82,35 +82,6 @@ export default function AdminSidebar({ newOrdersCount, plan = 'free' }: Props) {
           )
         })}
       </aside>
-
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-border flex max-w-[100vw]"
-        style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
-      >
-        {visibleItems.map(({ href, label, Icon, match }) => {
-          const active    = isActive(pathname, href, match)
-          const showBadge = href === '/admin/pedidos' && newOrdersCount > 0
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-0.5 text-[10px] sm:text-xs transition-colors min-w-0 border-t-2 ${
-                active ? 'text-primary border-primary' : 'text-muted border-transparent hover:text-foreground'
-              }`}
-            >
-              <span className="relative">
-                <Icon size={20} className="shrink-0" aria-hidden />
-                {showBadge && (
-                  <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-0.5 rounded-full bg-primary text-[8px] font-bold text-white flex items-center justify-center">
-                    {newOrdersCount > 9 ? '9+' : newOrdersCount}
-                  </span>
-                )}
-              </span>
-              <span className="truncate w-full text-center leading-tight">{label}</span>
-            </Link>
-          )
-        })}
-      </nav>
     </>
   )
 }

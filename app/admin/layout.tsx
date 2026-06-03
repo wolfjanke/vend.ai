@@ -2,6 +2,7 @@ import { Globe } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import MobileNav from '@/components/admin/MobileNav'
 import SandboxBanner from '@/components/admin/SandboxBanner'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 
@@ -82,12 +83,19 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <AdminSidebar newOrdersCount={newOrdersCount} plan={(store?.plan ?? 'free') as import('@/types').PlanSlug} />
 
         {/* Main */}
-        <main className="flex-1 min-w-0 p-4 md:p-6 xl:p-8 pb-24 md:pb-6">
+        <main className="flex-1 min-w-0 p-4 md:p-6 xl:p-8 pb-[max(5rem,calc(64px+env(safe-area-inset-bottom,0px)))] md:pb-6">
           <div className="w-full max-w-[1600px] mx-auto min-w-0">
             <SandboxBanner />
             {children}
           </div>
         </main>
+      </div>
+
+      <div className="md:hidden">
+        <MobileNav
+          newOrdersCount={newOrdersCount}
+          plan={(store?.plan ?? 'free') as import('@/types').PlanSlug}
+        />
       </div>
     </div>
     </AuthSessionProvider>

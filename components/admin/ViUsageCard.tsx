@@ -16,7 +16,7 @@ export default function ViUsageCard({ used, limit, percent }: Props) {
   const pct = Math.min(100, percent)
 
   return (
-    <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 min-w-0">
+    <div id="vi" className="bg-surface border border-border rounded-2xl p-4 sm:p-5 min-w-0 scroll-mt-24">
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">Vi este mês</p>
