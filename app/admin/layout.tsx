@@ -4,6 +4,7 @@ import { sql } from '@/lib/db'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import MobileNav from '@/components/admin/MobileNav'
 import SandboxBanner from '@/components/admin/SandboxBanner'
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 
 /** Obrigatório com getServerSession/cookies — sem isto o build pode pré-renderizar e `cookies()` lança em produção. */
@@ -78,6 +79,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </form>
         </div>
       </header>
+      <ImpersonationBanner />
 
       <div className="flex">
         <AdminSidebar newOrdersCount={newOrdersCount} plan={(store?.plan ?? 'free') as import('@/types').PlanSlug} />
