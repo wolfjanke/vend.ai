@@ -5,16 +5,9 @@ import { getOnboardingUrl } from '@/lib/asaas/subaccounts'
 import AdminPageError     from '@/components/admin/AdminPageError'
 import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
 import { PLAN_PRODUCT_LIMITS } from '@/types'
+import { getTakeRates, getTakeRateSync } from '@/lib/take-rates'
 import OnboardingForm    from './OnboardingForm'
 import OnboardingPending from './OnboardingPending'
-
-const PLAN_TAKE_PCT: Record<PlanSlug, number> = {
-  free:       4.5,
-  starter:    4.0,
-  pro:        2.75,
-  loja:       1.7,
-  enterprise: 1.5,
-}
 
 export default async function PagamentosPage() {
   const session = await getSessionSafe()
@@ -48,7 +41,8 @@ export default async function PagamentosPage() {
   const onboardingStatus  = (store.asaas_onboarding_status ?? null) as AsaasOnboardingStatus | null
   const hasAccount        = !!store.asaas_account_id
 
-  const takePct    = PLAN_TAKE_PCT[plan]
+  const takeRates  = await getTakeRates()
+  const takePct    = getTakeRateSync(plan, takeRates)
   const merchantPct = 100 - takePct
   const limitLabel  = PLAN_PRODUCT_LIMITS[plan] === null ? 'Ilimitado' : String(PLAN_PRODUCT_LIMITS[plan])
 
