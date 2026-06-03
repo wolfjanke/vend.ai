@@ -4,6 +4,8 @@ import { sql } from '@/lib/db'
 import { getSessionSafe } from '@/lib/auth'
 import { digitsOnly } from '@/lib/masks'
 import { logServerError } from '@/lib/logger'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const schema = z.object({
   customerWhatsapp: z.string().min(10).max(20),

@@ -9,6 +9,8 @@ import { logServerError } from '@/lib/logger'
 import { resolveOrderLines, amountsMatch, OrderValidationError, decrementStockForOrder } from '@/lib/order-pricing'
 import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const PEDIDOS_IP_LIMIT = 10
 const PEDIDOS_IP_WINDOW = 60_000

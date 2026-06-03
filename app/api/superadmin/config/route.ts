@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperadmin } from '@/lib/superadmin'
 import { getGlobalConfig, setGlobalConfig, clearGlobalConfigCache } from '@/lib/global-config'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function GET() {
   const { error } = await requireSuperadmin()

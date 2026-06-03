@@ -6,6 +6,8 @@ import { registerSchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import { sendWelcomeEmail } from '@/lib/email/send-welcome'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req)

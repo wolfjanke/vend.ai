@@ -15,6 +15,8 @@ import {
   onSubscriptionRenewed,
 } from '@/lib/asaas/webhook-handlers'
 
+export { dynamic } from '@/lib/route-dynamic'
+
 const ok = () => NextResponse.json({ received: true }, { status: 200 })
 
 const REPLAY_MAX_AGE_MS = 5 * 60 * 1000

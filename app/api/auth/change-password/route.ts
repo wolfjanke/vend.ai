@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { z } from 'zod'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const schema = z.object({
   currentPassword: z.string().min(1),

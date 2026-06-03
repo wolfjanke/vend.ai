@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function POST() {
   return NextResponse.redirect(

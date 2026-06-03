@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { requireSuperadmin } from '@/lib/superadmin'
 import { PLAN_SLUGS, type PlanSlug } from '@/lib/plans'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 type Ctx = { params: { id: string } }
 

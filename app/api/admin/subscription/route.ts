@@ -14,6 +14,8 @@ import {
 import { PLAN_PRODUCT_LIMITS, PLANS, PAID_PLAN_SLUGS, type PlanSlug } from '@/lib/plans'
 import { sendUpgradeEmail } from '@/lib/email/send-upgrade'
 
+export { dynamic } from '@/lib/route-dynamic'
+
 const postSchema = z.object({
   plan: z.enum(['starter', 'pro', 'loja', 'enterprise']),
   action: z.enum(['create', 'upgrade']).optional(),

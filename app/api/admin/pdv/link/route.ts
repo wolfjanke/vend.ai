@@ -6,6 +6,8 @@ import { calculateInstallmentQuote } from '@/lib/payments/installment-fees'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/asaas/client'
 import type { Store, PlanSlug } from '@/types'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function POST(req: NextRequest) {
   const session = await getSessionSafe()

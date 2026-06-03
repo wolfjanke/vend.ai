@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { requireSession } from '@/lib/require-session'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function GET() {
   const { session, unauthorized } = await requireSession()

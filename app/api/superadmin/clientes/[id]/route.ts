@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { requireSuperadmin } from '@/lib/superadmin'
 import { getViLimit } from '@/lib/superadmin-metrics'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 type Ctx = { params: { id: string } }
 

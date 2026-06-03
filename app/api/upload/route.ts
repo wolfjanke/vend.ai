@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
 import { isCloudinaryConfigured } from '@/lib/cloudinary'
 import crypto from 'crypto'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 function cloudinarySignature(params: Record<string, string>, apiSecret: string): string {
   const sorted = Object.keys(params)

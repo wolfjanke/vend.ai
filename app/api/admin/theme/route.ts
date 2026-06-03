@@ -13,6 +13,8 @@ import {
 } from '@/lib/themes'
 import { deriveThemeColors } from '@/lib/theme-derive'
 import { getThemeContrastWarnings, isValidHex, validateThemeColors } from '@/lib/theme-contrast'
+
+export { dynamic } from '@/lib/route-dynamic'
 const themeNameSchema = z.enum([
   'default', 'boutique', 'street', 'editorial', 'pop', 'fitness', 'lumiere',
 ])

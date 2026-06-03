@@ -10,6 +10,8 @@ import { resolveOrderLines, amountsMatch, OrderValidationError } from '@/lib/ord
 import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import { signCheckoutStatusToken } from '@/lib/checkout-status-token'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const RATE_LIMIT = 5
 const RATE_WINDOW = 60_000

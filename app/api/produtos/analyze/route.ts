@@ -8,6 +8,8 @@ import { getStoreProfile, normalizeProductCategory } from '@/types'
 import { logServerError } from '@/lib/logger'
 import type { PlanSlug } from '@/lib/plans'
 import { checkPhotoAnalysisLimit, incrementPhotoAnalysis } from '@/lib/photo-analysis-limits'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 interface AnalysisResult {
   nome:       string

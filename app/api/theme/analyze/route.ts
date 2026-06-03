@@ -6,6 +6,8 @@ import { logServerError } from '@/lib/logger'
 import type { PlanSlug } from '@/lib/plans'
 import { sql } from '@/lib/db'
 import { getAvailableThemes } from '@/lib/themes'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function POST(req: NextRequest) {
   try {

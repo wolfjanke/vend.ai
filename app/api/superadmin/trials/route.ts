@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { requireSuperadmin } from '@/lib/superadmin'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function GET() {
   const { error } = await requireSuperadmin()

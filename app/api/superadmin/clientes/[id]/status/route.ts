@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { requireSuperadmin } from '@/lib/superadmin'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const VALID = ['TRIAL', 'ACTIVE', 'OVERDUE', 'CANCELLED'] as const
 

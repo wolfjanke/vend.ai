@@ -5,6 +5,8 @@ import { sendPasswordResetEmail } from '@/lib/email'
 import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const schema = z.object({ email: z.string().email() })
 

@@ -7,6 +7,8 @@ import { PLAN_PRODUCT_LIMITS } from '@/types'
 import { productBodySchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
 import { resolveProductSlugForStore } from '@/lib/product-slug'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)

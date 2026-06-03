@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 // Redireciona para o signout do NextAuth
 export async function POST() {

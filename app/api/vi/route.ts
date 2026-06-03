@@ -18,6 +18,8 @@ import {
 } from '@/lib/vi-limits'
 import type { PlanSlug } from '@/lib/plans'
 
+export { dynamic } from '@/lib/route-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req)

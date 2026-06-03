@@ -5,6 +5,8 @@ import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import type { PlanSlug } from '@/lib/plans'
 import { canUseAssistantFeature } from '@/lib/plans'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 function emptyToNull(s: string | undefined | null): string | null {
   if (s == null || String(s).trim() === '') return null

@@ -4,6 +4,8 @@ import { getSessionSafe } from '@/lib/auth'
 import { createSubaccount } from '@/lib/asaas/subaccounts'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/asaas/client'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const subaccountSchema = z.object({
   name:          z.string().min(2),

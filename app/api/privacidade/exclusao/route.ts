@@ -4,6 +4,8 @@ import { sql } from '@/lib/db'
 import { digitsOnly } from '@/lib/masks'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import { logServerError } from '@/lib/logger'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const schema = z.object({
   storeSlug:          z.string().min(2).max(40),

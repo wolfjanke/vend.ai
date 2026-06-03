@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { productBodySchema } from '@/lib/validations'
 import { resolveProductSlugForStore } from '@/lib/product-slug'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function GET(
   _req: NextRequest,

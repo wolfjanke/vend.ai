@@ -4,6 +4,8 @@ import { logServerError } from '@/lib/logger'
 import { chargeViOverage } from '@/lib/payments/subscriptions'
 import { getWolfHubApiKey } from '@/lib/payments/config'
 import { isPaidPlan, type PlanSlug } from '@/lib/plans'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 function cronAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET?.trim()

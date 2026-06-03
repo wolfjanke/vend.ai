@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs'
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 const schema = z.object({
   token:    z.string().min(10),

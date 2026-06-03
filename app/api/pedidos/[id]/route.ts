@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { OrderStatus } from '@/types'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 async function getParams(params: { id: string } | Promise<{ id: string }>) {
   return typeof (params as Promise<{ id: string }>).then === 'function'

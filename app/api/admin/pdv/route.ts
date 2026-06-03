@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getSessionSafe } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function GET(req: NextRequest) {
   const session = await getSessionSafe()

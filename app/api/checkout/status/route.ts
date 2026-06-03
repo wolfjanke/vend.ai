@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { verifyCheckoutStatusToken } from '@/lib/checkout-status-token'
+export { dynamic } from '@/lib/route-dynamic'
+
 
 export async function GET(req: NextRequest) {
   const paymentId = req.nextUrl.searchParams.get('id')

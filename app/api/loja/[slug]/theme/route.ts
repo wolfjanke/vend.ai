@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { isReservedStoreSlug } from '@/lib/reserved-slugs'
 import { resolveStoreTheme } from '@/lib/theme-css'
+export { dynamic } from '@/lib/route-dynamic'
+
 interface Props {
   params: { slug: string }
 }
