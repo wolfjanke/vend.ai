@@ -6,6 +6,7 @@ import type { Product, CartItem, CustomCategory } from '@/types'
 import { getCategoryDisplayLabel } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import { getTheme, themeToCardConfig } from '@/lib/themes'
+import { getVariantPhotoUrl } from '@/lib/product-media'
 import ProductPlaceholder from './ProductPlaceholder'
 import VitrineProductCard from './VitrineProductCard'
 
@@ -67,9 +68,11 @@ export default function ProdutoCard({
   const [added,              setAdded]              = useState(false)
   const [detailOpen,         setDetailOpen]         = useState(false)
   const [portalReady,        setPortalReady]        = useState(false)
+  const [portalTarget,       setPortalTarget]       = useState<HTMLElement | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    setPortalTarget(document.getElementById('store-theme-root'))
     setPortalReady(true)
   }, [])
 
@@ -110,6 +113,7 @@ export default function ProdutoCard({
   }, [detailOpen])
 
   const variant  = product.variants_json[selectedVariantIdx]
+  const variantPhotoUrl = getVariantPhotoUrl(variant)
   const allSizes = variant
     ? Object.entries(variant.stock).filter(([, q]) => Number(q) > 0).map(([s]) => s)
     : []
@@ -141,7 +145,7 @@ export default function ProdutoCard({
       color:      variant.color,
       qty:        1,
       price:      Number(product.promo_price ?? product.price),
-      photo:      variant.photos[0],
+      photo:      variantPhotoUrl ?? undefined,
       description: product.description?.trim() || undefined,
     })
 
@@ -178,21 +182,43 @@ export default function ProdutoCard({
         <button
           type="button"
           aria-label="Fechar detalhes"
-          className="absolute inset-0 bg-bg/80 backdrop-blur-sm"
+          className="absolute inset-0 backdrop-blur-sm"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--theme-bg) 82%, transparent)' }}
           onClick={() => setDetailOpen(false)}
         />
-        <div className="relative z-[176] w-full max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[min(92vh,calc(100dvh-32px))] rounded-t-3xl sm:rounded-3xl bg-surface border border-border shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden mb-[env(safe-area-inset-bottom,0px)] sm:mb-0">
-          <div className="flex flex-shrink-0 items-center justify-between gap-3 px-4 pt-4 pb-2 border-b border-border min-w-0">
+        <div
+          className="relative z-[176] w-full max-w-[calc(100vw-16px)] sm:max-w-lg max-h-[min(92vh,calc(100dvh-32px))] shadow-[0_20px_60px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden mb-[env(safe-area-inset-bottom,0px)] sm:mb-0"
+          style={{
+            background:   'var(--theme-card-bg)',
+            color:        'var(--theme-text)',
+            border:       '1px solid var(--theme-card-border)',
+            borderRadius: 'var(--theme-card-radius)',
+          }}
+        >
+          <div
+            className="flex flex-shrink-0 items-center justify-between gap-3 px-4 pt-4 pb-2 min-w-0"
+            style={{ borderBottom: '1px solid var(--theme-card-border)' }}
+          >
             <h2
               id={`produto-detalhe-${product.id}`}
-              className="font-syne font-bold text-lg sm:text-xl text-foreground min-w-0 break-words pr-2"
+              className="font-semibold text-lg sm:text-xl min-w-0 break-words pr-2"
+              style={{
+                fontFamily: 'var(--theme-font-display)',
+                fontWeight: 'var(--theme-font-weight-display)',
+                color:      'var(--theme-text)',
+              }}
             >
               {product.name}
             </h2>
             <button
               type="button"
               onClick={() => setDetailOpen(false)}
-              className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-border text-muted hover:text-foreground hover:border-primary transition-colors"
+              className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl transition-colors"
+              style={{
+                border:     '1px solid var(--theme-card-border)',
+                color:      'var(--theme-text-muted)',
+                background: 'transparent',
+              }}
               aria-label="Fechar"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -201,19 +227,30 @@ export default function ProdutoCard({
             </button>
           </div>
           <div className="overflow-y-auto px-4 pb-6 pt-3 flex-1 min-h-0">
-            {variant?.photos?.length ? (
+            {variantPhotoUrl ? (
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3 -mx-1 px-1 snap-x snap-mandatory">
-                {variant.photos.map((src, i) => (
+                {(variant?.photos ?? []).filter(Boolean).map((src, i) => (
                   <img
                     key={i}
                     src={src}
                     alt=""
-                    className="h-48 w-36 flex-shrink-0 rounded-xl object-cover snap-center border border-border"
+                    className="h-48 w-36 flex-shrink-0 object-cover snap-center"
+                    style={{
+                      borderRadius: 'calc(var(--theme-card-radius) * 0.75)',
+                      border:       '1px solid var(--theme-card-border)',
+                    }}
                   />
                 ))}
               </div>
             ) : (
-              <div className="w-full h-44 rounded-2xl overflow-hidden border border-border mb-3 bg-surface2">
+              <div
+                className="w-full h-44 overflow-hidden mb-3"
+                style={{
+                  borderRadius: 'var(--theme-card-radius)',
+                  border:       '1px solid var(--theme-card-border)',
+                  background:   'var(--theme-surface)',
+                }}
+              >
                 <ProductPlaceholder
                   category={product.category}
                   colorHex={variant?.colorHex}
@@ -221,41 +258,50 @@ export default function ProdutoCard({
                 />
               </div>
             )}
-            <p className="text-xs text-muted uppercase tracking-wide mb-1">{cat}</p>
+            <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--theme-text-muted)' }}>{cat}</p>
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-accent font-bold text-lg">
+              <span className="font-bold text-lg" style={{ color: 'var(--theme-price)' }}>
                 R${Number(product.promo_price ?? product.price).toFixed(2).replace('.', ',')}
               </span>
               {product.promo_price != null && (
-                <span className="text-muted text-sm line-through">
+                <span className="text-sm line-through" style={{ color: 'var(--theme-price-old)' }}>
                   R${Number(product.price).toFixed(2).replace('.', ',')}
                 </span>
               )}
             </div>
             {installmentText && (
-              <p className="text-xs text-muted mb-4">
+              <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>
                 {installmentText} sem juros
               </p>
             )}
             <p className="text-sm font-medium mb-4">
               {isSoldOut ? (
-                <span className="text-muted">Esgotado</span>
+                <span style={{ color: 'var(--theme-text-muted)' }}>Esgotado</span>
               ) : allSizes.length === 0 ? (
                 <span className="text-warm">Indisponível nesta cor</span>
               ) : isLowStock ? (
                 <span className="text-warm">Últimas unidades</span>
               ) : (
-                <span className="text-accent">Disponível</span>
+                <span style={{ color: 'var(--theme-accent)' }}>Disponível</span>
               )}
             </p>
-            <h3 className="font-syne font-semibold text-sm text-foreground mb-2">Descrição</h3>
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap break-words mb-3">
+            <h3
+              className="font-semibold text-sm mb-2"
+              style={{
+                fontFamily: 'var(--theme-font-display)',
+                color:      'var(--theme-text)',
+              }}
+            >
+              Descrição
+            </h3>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words mb-3" style={{ color: 'var(--theme-text-muted)' }}>
               {descTrimmed || 'Sem descrição adicional.'}
             </p>
             {storeSlug && product.slug && (
               <a
                 href={`/${storeSlug}/produto/${product.slug}`}
-                className="inline-block text-sm text-primary font-medium mb-5 min-h-[44px] leading-[44px]"
+                className="inline-block text-sm font-medium mb-5 min-h-[44px] leading-[44px]"
+                style={{ color: 'var(--theme-primary)' }}
               >
                 Ver página do produto →
               </a>
@@ -264,7 +310,7 @@ export default function ProdutoCard({
             {!isSoldOut && (
               <>
                 <div className="mb-4">
-                  <p className="text-[10px] text-muted uppercase tracking-wide mb-2">Cor</p>
+                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Cor</p>
                   {product.variants_json.length > 1 ? (
                     <div className="flex flex-wrap gap-2">
                       {product.variants_json.map((v, i) => (
@@ -273,24 +319,32 @@ export default function ProdutoCard({
                           type="button"
                           onClick={() => { setSelectedVariantIdx(i); setSelectedSize(null); onInteract?.() }}
                           title={sumStock(v) > 0 ? v.color : `${v.color} — indisponível`}
-                          className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-all ${i === selectedVariantIdx ? 'ring-2 ring-primary ring-offset-2 ring-offset-surface' : ''}`}
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-all"
+                          style={
+                            i === selectedVariantIdx
+                              ? { boxShadow: '0 0 0 2px var(--theme-primary)' }
+                              : undefined
+                          }
                         >
                           <span
-                            className={`block w-7 h-7 rounded-full border-2 ${i === selectedVariantIdx ? 'border-primary' : 'border-border'}`}
-                            style={{ background: v.colorHex }}
+                            className="block w-7 h-7 rounded-full border-2"
+                            style={{
+                              background:  v.colorHex,
+                              borderColor: i === selectedVariantIdx ? 'var(--theme-primary)' : 'var(--theme-card-border)',
+                            }}
                           />
                         </button>
                       ))}
                     </div>
                   ) : variant ? (
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full border-2 border-primary shrink-0" style={{ background: variant.colorHex }} />
-                      <span className="text-sm text-foreground font-medium">{variant.color}</span>
+                      <span className="w-6 h-6 rounded-full border-2 shrink-0" style={{ background: variant.colorHex, borderColor: 'var(--theme-primary)' }} />
+                      <span className="text-sm font-medium" style={{ color: 'var(--theme-text)' }}>{variant.color}</span>
                     </div>
                   ) : null}
                 </div>
                 <div className="mb-2">
-                  <p className="text-[10px] text-muted uppercase tracking-wide mb-2">Tamanho</p>
+                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Tamanho</p>
                   <div className="flex flex-wrap gap-2">
                     {allSizes.length > 0 ? (
                       allSizes.map(s => (
@@ -298,17 +352,26 @@ export default function ProdutoCard({
                           key={s}
                           type="button"
                           onClick={() => { setSelectedSize(s); onInteract?.() }}
-                          className={`min-h-[44px] min-w-[44px] px-3 rounded-xl border text-sm font-semibold transition-all ${
+                          className="min-h-[44px] min-w-[44px] px-3 rounded-xl border text-sm font-semibold transition-all"
+                          style={
                             selectedSize === s
-                              ? 'bg-primary/20 border-primary text-primary'
-                              : 'bg-surface2 border-border text-muted hover:border-primary hover:text-primary'
-                          }`}
+                              ? {
+                                  background:   'var(--theme-primary-surface)',
+                                  borderColor:  'var(--theme-primary-border)',
+                                  color:        'var(--theme-primary)',
+                                }
+                              : {
+                                  background:  'var(--theme-surface)',
+                                  borderColor: 'var(--theme-card-border)',
+                                  color:       'var(--theme-text-muted)',
+                                }
+                          }
                         >
                           {s}
                         </button>
                       ))
                     ) : (
-                      <span className="text-xs text-muted">Sem tamanhos disponíveis nesta cor</span>
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Sem tamanhos disponíveis nesta cor</span>
                     )}
                   </div>
                 </div>
@@ -316,9 +379,15 @@ export default function ProdutoCard({
             )}
           </div>
           {!isSoldOut && (
-            <div className="flex-shrink-0 border-t border-border px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-surface">
+            <div
+              className="flex-shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
+              style={{
+                borderTop:    '1px solid var(--theme-card-border)',
+                background:   'var(--theme-card-bg)',
+              }}
+            >
               {!canAdd && !added && (
-                <p className="text-center text-xs text-muted mb-2">
+                <p className="text-center text-xs mb-2" style={{ color: 'var(--theme-text-muted)' }}>
                   {!variant
                     ? 'Escolha uma cor para continuar'
                     : 'Escolha um tamanho para continuar'}
@@ -328,11 +397,20 @@ export default function ProdutoCard({
                 type="button"
                 onClick={() => handleAdd(true)}
                 disabled={!canAdd}
-                className={`w-full min-h-[48px] py-3 rounded-xl text-sm font-semibold border transition-all ${
+                className={`w-full min-h-[48px] py-3 rounded-xl text-sm font-semibold border transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                style={
                   added
-                    ? 'bg-accent/20 border-accent text-accent'
-                    : 'bg-primary text-white border-primary hover:shadow-[0_4px_20px_var(--primary-glow)]'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    ? {
+                        background:  'color-mix(in srgb, var(--theme-accent) 20%, transparent)',
+                        borderColor: 'var(--theme-accent)',
+                        color:       'var(--theme-accent)',
+                      }
+                    : {
+                        background:  'var(--theme-btn-bg)',
+                        borderColor: 'var(--theme-btn-bg)',
+                        color:       'var(--theme-btn-text)',
+                      }
+                }
               >
                 {added ? '✓ Adicionado ao carrinho' : 'Adicionar ao carrinho'}
               </button>
@@ -340,7 +418,7 @@ export default function ProdutoCard({
           )}
         </div>
       </div>,
-      document.body,
+      portalTarget ?? document.body,
     )
 
   if (layout === 'vitrine') {
@@ -371,9 +449,9 @@ export default function ProdutoCard({
         title="Ver detalhes do produto"
         className="relative aspect-[3/4] w-full shrink-0 overflow-hidden bg-surface2 text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
       >
-        {variant?.photos[0] ? (
+        {variantPhotoUrl ? (
           <img
-            src={variant.photos[0]}
+            src={variantPhotoUrl}
             alt={product.name}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
