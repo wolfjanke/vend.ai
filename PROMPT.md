@@ -6,7 +6,7 @@ O prompt da assistente Vi é gerado em **`lib/gemini.ts`** (`buildViSystemPrompt
 
 | Uso | Modelo | Função em `lib/gemini.ts` |
 |-----|--------|---------------------------|
-| Análise de foto no cadastro | `gemini-2.5-pro` | `analyzeProductPhoto()` |
+| Análise de foto no cadastro | `gemini-2.5-flash` | `analyzeProductPhoto()` |
 | Chat com o cliente | `gemini-2.5-flash` | `viChatResponse()` |
 | Busca semântica no estoque | `gemini-2.5-flash-lite` | `searchStock()` |
 

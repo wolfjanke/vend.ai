@@ -335,6 +335,16 @@ export interface StoreContext {
   }>
 }
 
+/** Dicas opcionais no cadastro guiado (fotos + texto → IA). */
+export type ProductAudienceHint = '' | GenderFocus | 'kids'
+
+export interface ProductAnalysisHints {
+  pieceType?:  string
+  audience?:   ProductAudienceHint
+  colorsNote?: string
+  freeText?:   string
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export const PRODUCT_CATEGORIES = [
   { value: 'vestido',  label: '👗 Vestidos' },

@@ -3,7 +3,9 @@ import {
   type StoreProfile,
   type CustomCategory,
   type ViMessage,
+  type ProductAnalysisHints,
   PRODUCT_CATEGORY_SLUGS,
+  getCategoryDisplayLabel,
   getSegmentLabel,
 } from '@/types'
 
@@ -11,7 +13,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
 /** Modelos por função — override global legado: GEMINI_MODEL (aplica só ao viChat). */
 export const GEMINI_MODELS = {
-  photoAnalysis: 'gemini-2.5-pro',
+  /** Flash: cota estável no free tier; Pro costuma ter limite 0 sem billing. */
+  photoAnalysis: 'gemini-2.5-flash',
   themeAnalysis: 'gemini-2.5-flash',
   viChat:        (process.env.GEMINI_MODEL ?? 'gemini-2.5-flash').trim(),
   stockSearch:   'gemini-2.5-flash-lite',
@@ -42,9 +45,44 @@ function segmentInstructions(profile: StoreProfile): string {
 /** @deprecated Prefer server-side buildViSystemPrompt from lib/vi-prompt.ts */
 export { buildViSystemPrompt } from '@/lib/vi-prompt'
 
+const AUDIENCE_HINT_LABELS: Record<string, string> = {
+  feminine:  'feminino',
+  masculine: 'masculino',
+  unisex:    'unissex',
+  mixed:     'misto (feminino e masculino)',
+  kids:      'infantil',
+}
+
+function formatProductHintsBlock(
+  hints?: ProductAnalysisHints | null,
+  customCategories?: CustomCategory[] | null,
+): string {
+  if (!hints) return ''
+  const lines: string[] = []
+  const piece = hints.pieceType?.trim()
+  if (piece) {
+    const label = getCategoryDisplayLabel(piece, customCategories)
+    lines.push(`- Tipo de peça informado pelo lojista: ${piece} (${label})`)
+  }
+  const aud = hints.audience?.trim()
+  if (aud && AUDIENCE_HINT_LABELS[aud]) {
+    lines.push(`- Público informado pelo lojista: ${AUDIENCE_HINT_LABELS[aud]}`)
+  }
+  const colors = hints.colorsNote?.trim()
+  if (colors) lines.push(`- Cores informadas pelo lojista: ${colors}`)
+  const note = hints.freeText?.trim()
+  if (note) lines.push(`- Observação do lojista: ${note}`)
+  if (!lines.length) return ''
+  return `
+
+Dados informados pelo lojista (priorize sobre a imagem se houver conflito claro):
+${lines.join('\n')}`
+}
+
 export function buildProductAnalysisPrompt(
   profile: StoreProfile,
   customCategories?: CustomCategory[] | null,
+  hints?: ProductAnalysisHints | null,
 ): string {
   const std = new Set(PRODUCT_CATEGORY_SLUGS)
   const extra = (customCategories ?? [])
@@ -73,11 +111,12 @@ Instruções por segmento:
 ${segmentInstructions(profile)}
 
 Se houver múltiplas fotos com cores diferentes, liste cada cor como uma variante separada.
-O campo "categoria" deve ser obrigatoriamente um dos slugs listados acima (use "outro" se nenhum encaixar bem). Os slugs extras após os padrões são categorias da própria loja — prefira o mais adequado à imagem.
+O campo "categoria" deve ser obrigatoriamente um dos slugs listados acima (use "outro" se nenhum encaixar bem). Os slugs extras após os padrões são categorias da própria loja — prefira o mais adequado à imagem.${formatProductHintsBlock(hints, customCategories)}
+
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`
 }
 
-/** Análise de foto no cadastro de produto — modelo Pro. */
+/** Análise de foto no cadastro de produto. */
 export async function analyzeProductPhoto(
   images: string[],
   productPrompt: string,

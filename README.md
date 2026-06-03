@@ -59,7 +59,7 @@ RESEND_API_KEY=
 EMAIL_FROM=
 ```
 
-Opcional: `GEMINI_MODEL` sobrescreve apenas o chat da Vi (padrão `gemini-2.5-flash`). Análise de foto usa `gemini-2.5-pro`; busca de estoque usa `gemini-2.5-flash-lite`.
+Opcional: `GEMINI_MODEL` sobrescreve apenas o chat da Vi (padrão `gemini-2.5-flash`). Análise de foto usa `gemini-2.5-flash`; busca de estoque usa `gemini-2.5-flash-lite`.
 
 ### Migrations (Neon)
 
@@ -84,7 +84,7 @@ Acesse `http://localhost:3000`.
 
 | Função              | Modelo                 | Arquivo / rota              |
 |--------------------|------------------------|-----------------------------|
-| Análise de foto    | `gemini-2.5-pro`       | `lib/gemini.ts` → `/api/produtos/analyze` |
+| Análise de foto    | `gemini-2.5-flash`     | `lib/gemini.ts` → `/api/produtos/analyze` |
 | Chat Vi            | `gemini-2.5-flash`     | `lib/gemini.ts` → `/api/vi` |
 | Busca no estoque   | `gemini-2.5-flash-lite`| `lib/gemini.ts` → `searchStock()` |
 

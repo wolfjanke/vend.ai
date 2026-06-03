@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { analyzeProductPhoto, buildProductAnalysisPrompt } from '@/lib/gemini'
-import type { StoreSettings } from '@/types'
+import { analyzeProductPhoto, buildProductAnalysisPrompt, GEMINI_MODELS } from '@/lib/gemini'
+import type { StoreSettings, ProductAnalysisHints } from '@/types'
 import { getStoreProfile, normalizeProductCategory } from '@/types'
 import { logServerError } from '@/lib/logger'
 import type { PlanSlug } from '@/lib/plans'
@@ -46,13 +46,18 @@ export async function POST(req: NextRequest) {
     const profile = getStoreProfile(settingsJson)
     const customCats = settingsJson?.customCategories ?? []
     const customSlugs = customCats.map(c => c.value).filter(Boolean)
-    const productPrompt = buildProductAnalysisPrompt(profile, customCats)
-
-    const { images }: { images: string[] } = await req.json()
+    const body = await req.json() as { images?: string[]; hints?: ProductAnalysisHints }
+    const { images, hints } = body
 
     if (!images?.length) {
       return NextResponse.json({ error: 'images required' }, { status: 400 })
     }
+
+    if (images.length > 10) {
+      return NextResponse.json({ error: 'Máximo de 10 imagens por análise' }, { status: 400 })
+    }
+
+    const productPrompt = buildProductAnalysisPrompt(profile, customCats, hints)
 
     const raw = await analyzeProductPhoto(images, productPrompt)
 
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'O modelo de análise (gemini-2.5-pro) não está disponível. Verifique GEMINI_API_KEY e permissões do projeto Google AI.',
+            `O modelo de análise (${GEMINI_MODELS.photoAnalysis}) não está disponível. Verifique GEMINI_API_KEY e permissões do projeto Google AI.`,
         },
         { status: 500 },
       )

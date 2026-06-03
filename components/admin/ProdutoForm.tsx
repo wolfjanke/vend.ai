@@ -2,8 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter }        from 'next/navigation'
-import type { Product, ProductVariant, CustomCategory, VariantType } from '@/types'
-import { PRODUCT_CATEGORIES, SIZES } from '@/types'
+import type {
+  Product,
+  ProductVariant,
+  CustomCategory,
+  VariantType,
+  ProductAnalysisHints,
+  ProductAudienceHint,
+} from '@/types'
+import { PRODUCT_CATEGORIES, SIZES, getCategoryDisplayLabel } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import { numberToCurrencyInput, parseCurrency } from '@/lib/masks'
 
@@ -31,6 +38,49 @@ const VARIANT_TYPE_OPTIONS: Array<{ value: VariantType; label: string }> = [
   { value: 'material', label: 'Material' },
   { value: 'tamanho',  label: 'Tamanho (variação gratuita)' },
 ]
+
+type CadastroStep = 1 | 2 | 3 | 4
+
+const AUDIENCE_HINT_OPTIONS: Array<{ value: ProductAudienceHint; label: string }> = [
+  { value: '',          label: 'Não informar' },
+  { value: 'feminine',  label: 'Feminino' },
+  { value: 'masculine', label: 'Masculino' },
+  { value: 'kids',      label: 'Infantil' },
+  { value: 'unisex',    label: 'Unissex' },
+  { value: 'mixed',     label: 'Misto' },
+]
+
+function WizardStepIndicator({ step }: { step: CadastroStep }) {
+  const items: Array<{ n: CadastroStep; label: string }> = [
+    { n: 1, label: 'Fotos' },
+    { n: 2, label: 'IA' },
+    { n: 3, label: 'Revisar' },
+    { n: 4, label: 'Publicar' },
+  ]
+  return (
+    <nav className="mb-5 flex gap-1 min-w-0" aria-label="Etapas do cadastro">
+      {items.map(({ n, label }) => {
+        const done = step > n
+        const active = step === n
+        return (
+          <div
+            key={n}
+            className={`flex-1 min-w-0 flex flex-col items-center gap-1 px-1 py-2 rounded-xl border text-center transition-colors ${
+              active
+                ? 'border-primary bg-primary/10 text-primary'
+                : done
+                  ? 'border-accent/40 bg-accent/5 text-accent'
+                  : 'border-border bg-surface2 text-muted'
+            }`}
+          >
+            <span className="font-syne font-bold text-xs tabular-nums">{n}</span>
+            <span className="text-[10px] sm:text-[11px] font-medium truncate w-full">{label}</span>
+          </div>
+        )
+      })}
+    </nav>
+  )
+}
 
 /** Reparte ficheiros pelas variações: 1 foto por cor na ordem; extras na última cor. */
 function distributeFilesAcrossVariants(files: File[], variantCount: number): File[][] {
@@ -85,10 +135,16 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
   const [files,     setFiles]     = useState<File[]>([])
   const [previews,  setPreviews]  = useState<string[]>([])
+  const [step, setStep] = useState<CadastroStep>(1)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiStatus,  setAiStatus]  = useState('')
   const [analyzed,  setAnalyzed]  = useState(!!initialProduct)
   const [saving,    setSaving]    = useState(false)
+  const [savedAnalysisImages, setSavedAnalysisImages] = useState<string[]>([])
+  const [hintPiece, setHintPiece]     = useState('')
+  const [hintAudience, setHintAudience] = useState<ProductAudienceHint>('')
+  const [hintColors, setHintColors]   = useState('')
+  const [hintNote, setHintNote]       = useState('')
   const [active,    setActive]    = useState(true)
   const [postAiPhotoNote, setPostAiPhotoNote] = useState('')
 
@@ -129,13 +185,39 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setPostAiPhotoNote('')
     newFiles.forEach(f => {
       const reader = new FileReader()
-      reader.onload = ev => setPreviews(prev => [...prev, ev.target?.result as string])
+      reader.onload = ev => {
+        const dataUrl = ev.target?.result
+        if (typeof dataUrl === 'string') {
+          setPreviews(prev => [...prev, dataUrl])
+        }
+      }
       reader.readAsDataURL(f)
     })
+    e.target.value = ''
   }
 
-  async function analyzeWithAI() {
-    if (!previews.length) return
+  const previewsStillLoading = files.length > previews.length
+
+  /** Restaura miniaturas ao voltar da etapa 3 (após análise, previews globais são limpos). */
+  function returnToIntakeStep() {
+    if (savedAnalysisImages.length > 0) {
+      setPreviews([...savedAnalysisImages])
+      const variantFiles = variants.flatMap(v => v.photos)
+      if (variantFiles.length > 0) setFiles(variantFiles)
+    }
+    setStep(1)
+  }
+
+  function buildAnalysisHints(): ProductAnalysisHints | undefined {
+    const hints: ProductAnalysisHints = {}
+    if (hintPiece.trim()) hints.pieceType = hintPiece.trim()
+    if (hintAudience) hints.audience = hintAudience
+    if (hintColors.trim()) hints.colorsNote = hintColors.trim()
+    if (hintNote.trim()) hints.freeText = hintNote.trim()
+    return Object.keys(hints).length ? hints : undefined
+  }
+
+  async function runAnalysis(imageList: string[], filesSnapshot: File[]) {
     setAnalyzing(true)
     setAiStatus('Carregando imagens…')
     setPostAiPhotoNote('')
@@ -145,15 +227,16 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       [1500, 'Detectando variações de cor…'],
       [2500, 'Gerando nome e descrição…'],
     ]
-    steps.forEach(([t, msg]) => setTimeout(() => setAiStatus(msg), t))
-
-    const filesSnapshot = [...files]
+    const timers = steps.map(([t, msg]) => setTimeout(() => setAiStatus(msg), t))
 
     try {
       const res = await fetch('/api/produtos/analyze', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ images: previews.slice(0, 10) }),
+        body:    JSON.stringify({
+          images: imageList.slice(0, 10),
+          hints:  buildAnalysisHints(),
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -210,13 +293,51 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       setFiles([])
       setPreviews([])
       setAiStatus(`✓ ${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''} identificada${generatedVariants.length > 1 ? 's' : ''}`)
+      if (!isEdit) setStep(3)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro na análise — preencha manualmente'
       setAiStatus(msg)
       setAnalyzed(true)
+      if (!variants.length) {
+        setVariants([{
+          id:          crypto.randomUUID(),
+          color:       'Único',
+          colorHex:    '#888888',
+          photos:      [...filesSnapshot],
+          stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+          variantType: 'cor' as VariantType,
+        }])
+      }
+      if (!isEdit) setStep(3)
     } finally {
+      timers.forEach(clearTimeout)
       setAnalyzing(false)
     }
+  }
+
+  async function startAnalysisFromIntake() {
+    if (previewsStillLoading) {
+      alert('Aguarde o carregamento das fotos na tela.')
+      return
+    }
+    if (!previews.length) return
+    const imgs = previews.slice(0, 10)
+    const filesForRun = [...files].slice(0, imgs.length)
+    setSavedAnalysisImages(imgs)
+    if (!isEdit) setStep(2)
+    await runAnalysis(imgs, filesForRun)
+  }
+
+  async function reanalyzeFromReview() {
+    const imgs = savedAnalysisImages.length > 0 ? savedAnalysisImages : previews.slice(0, 10)
+    if (!imgs.length) {
+      alert('Adicione fotos na etapa 1 para analisar novamente.')
+      setStep(1)
+      return
+    }
+    const filesFromVariants = variants.flatMap(v => v.photos)
+    setStep(2)
+    await runAnalysis(imgs, filesFromVariants.length > 0 ? filesFromVariants : [...files])
   }
 
   function addVariant() {
@@ -352,85 +473,309 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     }
   }
 
-  return (
-    <div>
-      {/* Upload Zone - oculto em edição */}
-      {!isEdit && (
-      <div
-        className={`border-2 border-dashed rounded-2xl transition-all cursor-pointer mb-4 ${
-          files.length ? 'border-border' : 'border-border hover:border-primary hover:bg-primary/5'
-        }`}
-        onClick={() => !files.length && fileRef.current?.click()}
-      >
-        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
-        {files.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-            <div className="text-5xl mb-3">🖼️</div>
-            <div className="font-syne font-semibold text-sm mb-1">Selecionar fotos da galeria</div>
-            <div className="text-xs text-muted mb-4">Selecione várias fotos — a IA sugere variações de cor</div>
-            <div className="px-4 py-2 bg-primary/10 border border-primary rounded-xl text-primary text-xs font-semibold">
-              📂 Abrir galeria
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2.5 p-4 cursor-default">
-            {previews.map((src, i) => (
-              <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-border">
-                <img src={src} alt="" className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+  const categorySelect = (
+    <select
+      className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all appearance-none"
+      value={prodCat}
+      onChange={e => { setProdCat(e.target.value); setAiBadges(p => ({ ...p, cat: false })) }}
+    >
+      <option value="">Selecionar…</option>
+      <optgroup label="Categorias padrão">
+        {PRODUCT_CATEGORIES.map(c => (
+          <option key={c.value} value={c.value}>{c.label}</option>
+        ))}
+      </optgroup>
+      {customCategories.length > 0 && (
+        <optgroup label="Categorias da loja">
+          {customCategories.map(c => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </optgroup>
       )}
+    </select>
+  )
 
-      {/* Analyze bar ou nota pós-distribuição */}
-      {!isEdit && files.length > 0 && (
-        <div className="flex items-center justify-between flex-wrap gap-3 p-4 bg-surface border border-border rounded-2xl mb-4">
-          <div>
-            <div className="font-semibold text-sm">
-              {files.length} foto{files.length > 1 ? 's' : ''} selecionada{files.length > 1 ? 's' : ''}
-            </div>
-            {aiStatus && (
-              <div className={`text-xs mt-0.5 ${analyzed ? 'text-accent' : 'text-primary'}`}>{aiStatus}</div>
+  const showCommercial = isEdit || step === 4
+  const showReview = !isEdit && step === 3 && analyzed
+
+  return (
+    <div className="min-w-0">
+      {!isEdit && <WizardStepIndicator step={step} />}
+
+      {/* Etapa 1 — fotos + contexto */}
+      {!isEdit && step === 1 && (
+        <>
+          <div
+            className={`border-2 border-dashed rounded-2xl transition-all cursor-pointer mb-4 ${
+              files.length ? 'border-border' : 'border-border hover:border-primary hover:bg-primary/5'
+            }`}
+            onClick={() => !files.length && fileRef.current?.click()}
+          >
+            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
+            {files.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+                <div className="text-5xl mb-3">🖼️</div>
+                <div className="font-syne font-semibold text-sm mb-1">Fotos do produto</div>
+                <div className="text-xs text-muted mb-4 break-words max-w-sm">
+                  Uma foto por cor ajuda a IA. Depois você revisa tudo antes de publicar.
+                </div>
+                <div className="px-4 py-2 min-h-[44px] flex items-center bg-primary/10 border border-primary rounded-xl text-primary text-xs font-semibold">
+                  📂 Abrir galeria
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2.5 p-4 cursor-default" onClick={e => e.stopPropagation()}>
+                {previews.map((src, i) => (
+                  <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-border shrink-0">
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-20 h-20 min-h-[44px] rounded-xl border-2 border-dashed border-border text-muted text-xl hover:border-primary hover:text-primary transition-colors shrink-0"
+                  aria-label="Adicionar fotos"
+                >
+                  +
+                </button>
+              </div>
             )}
           </div>
-          <div className="flex gap-2">
+
+          <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 mb-4">
+            <div className="font-syne font-bold text-sm mb-1">Contexto para a IA</div>
+            <p className="text-[11px] text-muted mb-4 break-words">Opcional — quanto mais você informar, menos erro na sugestão.</p>
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Tipo de peça</label>
+                  <select
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                    value={hintPiece}
+                    onChange={e => setHintPiece(e.target.value)}
+                  >
+                    <option value="">Não informar</option>
+                    {PRODUCT_CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                    {customCategories.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Público</label>
+                  <select
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                    value={hintAudience}
+                    onChange={e => setHintAudience(e.target.value as ProductAudienceHint)}
+                  >
+                    {AUDIENCE_HINT_OPTIONS.map(o => (
+                      <option key={o.value || 'none'} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Cores que você vê</label>
+                <input
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+                  placeholder="Ex.: preto, off-white, azul marinho"
+                  value={hintColors}
+                  onChange={e => setHintColors(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Observação</label>
+                <textarea
+                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[72px] resize-y break-words"
+                  placeholder="Ex.: 3 fotos = 3 cores; bermuda masculina tamanho M"
+                  value={hintNote}
+                  onChange={e => setHintNote(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={startAnalysisFromIntake}
+            disabled={!files.length || analyzing || previewsStillLoading}
+            className="w-full min-h-[44px] py-3 bg-grad text-bg font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {previewsStillLoading
+              ? 'Carregando fotos…'
+              : files.length
+                ? '✦ Continuar com análise da IA'
+                : 'Adicione ao menos uma foto'}
+          </button>
+        </>
+      )}
+
+      {/* Etapa 2 — analisando */}
+      {!isEdit && step === 2 && (
+        <div className="bg-surface border border-border rounded-2xl p-8 mb-4 text-center">
+          <div className="text-4xl mb-4 animate-pulse" aria-hidden>✦</div>
+          <div className="font-syne font-bold text-base mb-2">Analisando com IA…</div>
+          <p className="text-sm text-primary break-words">{aiStatus || 'Aguarde um momento'}</p>
+          {!analyzing && (
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
-              className="px-3.5 py-2 border border-border rounded-xl text-muted text-xs hover:text-foreground transition-all"
+              onClick={() => setStep(savedAnalysisImages.length ? 3 : 1)}
+              className="mt-6 min-h-[44px] px-4 text-xs text-muted hover:text-foreground border border-border rounded-xl"
             >
-              + Adicionar
+              Voltar
             </button>
+          )}
+        </div>
+      )}
+
+      {/* Etapa 3 — revisar sugestões */}
+      {showReview && (
+        <>
+          {postAiPhotoNote && (
+            <div className="mb-4 p-4 bg-surface2 border border-border rounded-2xl text-sm text-muted break-words">
+              {postAiPhotoNote}
+            </div>
+          )}
+          <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mb-4 font-syne font-bold text-sm">
+              Revise a sugestão da IA
+              <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                Etapa 3 de 4
+              </span>
+            </div>
+            {aiStatus && (
+              <p className={`text-xs mb-4 break-words ${aiStatus.startsWith('✓') ? 'text-accent' : 'text-warm'}`}>{aiStatus}</p>
+            )}
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Nome</label>
+                <input
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+                  value={prodName}
+                  onChange={e => { setProdName(e.target.value); setAiBadges(p => ({ ...p, name: false })) }}
+                />
+                {aiBadges.name && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Descrição</label>
+                <textarea
+                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y"
+                  value={prodDesc}
+                  onChange={e => { setProdDesc(e.target.value); setAiBadges(p => ({ ...p, desc: false })) }}
+                />
+                {aiBadges.desc && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Categoria</label>
+                {categorySelect}
+                {aiBadges.cat && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
+            <div className="font-syne font-bold text-sm mb-1">Variações detectadas</div>
+            <p className="text-[11px] text-muted mb-4 break-words">Ajuste nomes de cor antes de definir preço e estoque.</p>
+            {variants.map(v => (
+              <div key={v.id} className="flex items-center gap-2.5 mb-3 flex-wrap min-w-0">
+                <div className="w-5 h-5 rounded-full border-2 border-white/20 shrink-0" style={{ background: v.colorHex }} />
+                <input
+                  className="flex-1 min-w-0 min-h-[44px] px-3 py-2 bg-surface2 border border-border rounded-lg text-foreground text-sm outline-none focus:border-primary"
+                  value={v.color}
+                  onChange={e => updateVariant(v.id, { color: e.target.value })}
+                />
+                <input
+                  type="color"
+                  value={v.colorHex}
+                  onChange={e => updateVariant(v.id, { colorHex: e.target.value })}
+                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full cursor-pointer border-0 bg-transparent p-0 shrink-0"
+                  aria-label={`Cor de ${v.color}`}
+                />
+                <span className="text-[11px] text-muted shrink-0">
+                  {v.photos.length} foto{v.photos.length !== 1 ? 's' : ''}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeVariant(v.id)}
+                  className="min-h-[44px] px-3 py-2 bg-warm/10 border border-warm/30 rounded-lg text-warm text-xs shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
             <button
               type="button"
-              onClick={analyzeWithAI}
-              disabled={analyzing}
-              className="flex items-center gap-1.5 px-4 py-2 bg-grad text-bg font-syne font-bold text-xs rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-70 disabled:cursor-wait"
+              onClick={addVariant}
+              className="w-full min-h-[44px] py-2.5 border-2 border-dashed border-border rounded-xl text-muted text-xs hover:border-primary hover:text-primary transition-all"
             >
-              {analyzing ? '⏳ Analisando…' : '✦ Analisar com IA'}
+              + Adicionar variação
             </button>
           </div>
-        </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={returnToIntakeStep}
+              className="flex-1 min-h-[44px] py-3 border border-border rounded-xl text-muted text-sm hover:text-foreground transition-all"
+            >
+              ← Voltar às fotos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!window.confirm('A IA vai gerar novas sugestões e pode substituir nome, descrição e variações. Continuar?')) return
+                void reanalyzeFromReview()
+              }}
+              disabled={analyzing}
+              className="flex-1 min-h-[44px] py-3 border border-primary/40 rounded-xl text-primary text-sm hover:bg-primary/10 transition-all disabled:opacity-60"
+            >
+              Analisar de novo
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!prodName.trim()) { alert('Informe o nome do produto'); return }
+                if (!prodCat) { alert('Selecione a categoria'); return }
+                if (!variants.length) { alert('Adicione ao menos uma variação'); return }
+                setStep(4)
+              }}
+              className="flex-[2] min-h-[44px] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all"
+            >
+              Confirmar e continuar →
+            </button>
+          </div>
+        </>
       )}
 
-      {!isEdit && analyzed && files.length === 0 && postAiPhotoNote && (
-        <div className="mb-4 p-4 bg-surface2 border border-border rounded-2xl text-sm text-muted break-words">
-          {postAiPhotoNote}
-        </div>
-      )}
-
-      {/* Result */}
-      {(analyzed || isEdit) && (
+      {showCommercial && (
         <>
-          {/* Product info */}
+          {!isEdit && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted break-words">Etapa 4 — preço, estoque e publicação</p>
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="text-xs text-primary hover:underline min-h-[44px] px-2"
+              >
+                Ajustar revisão
+              </button>
+            </div>
+          )}
+
+          {postAiPhotoNote && !showReview && (
+            <div className="mb-4 p-4 bg-surface2 border border-border rounded-2xl text-sm text-muted break-words">
+              {postAiPhotoNote}
+            </div>
+          )}
+
           <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-            <div className="flex items-center gap-2 mb-4 font-syne font-bold text-sm">
+            <div className="flex items-center gap-2 mb-4 font-syne font-bold text-sm flex-wrap">
               Informações do Produto
               {!isEdit && (
-                <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                  ✦ Preenchido pela IA
+                <span className="text-accent bg-accent/10 border border-accent/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                  Revisado
                 </span>
               )}
             </div>
@@ -439,11 +784,10 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               <div>
                 <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Nome</label>
                 <input
-                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
                   value={prodName}
                   onChange={e => { setProdName(e.target.value); setAiBadges(p => ({ ...p, name: false })) }}
                 />
-                {aiBadges.name && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
 
               <div>
@@ -453,35 +797,20 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   value={prodDesc}
                   onChange={e => { setProdDesc(e.target.value); setAiBadges(p => ({ ...p, desc: false })) }}
                 />
-                {aiBadges.desc && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Categoria</label>
-                  <select
-                    className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all appearance-none"
-                    value={prodCat}
-                    onChange={e => { setProdCat(e.target.value); setAiBadges(p => ({ ...p, cat: false })) }}
-                  >
-                    <option value="">Selecionar…</option>
-                    <optgroup label="Categorias padrão">
-                      {PRODUCT_CATEGORIES.map(c => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
-                      ))}
-                    </optgroup>
-                    {customCategories.length > 0 && (
-                      <optgroup label="Categorias da loja">
-                        {customCategories.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
-                  {aiBadges.cat && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
+                  {categorySelect}
+                  {prodCat && (
+                    <p className="text-[11px] text-muted mt-1 break-words">
+                      {getCategoryDisplayLabel(prodCat, customCategories)}
+                    </p>
+                  )}
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Preço (R$)</label>
                   <MaskedInput
                     mask="currency"
@@ -493,7 +822,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0 sm:col-span-2">
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">
                     Preço promocional (opcional)
                   </label>
@@ -506,14 +835,13 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                     inputMode="decimal"
                   />
                   <p className="text-[11px] text-muted mt-1.5 leading-snug break-words">
-                    Com valor aqui, o produto entra na seção <span className="text-foreground/90">Promoções</span> na loja e
-                    exibe o selo de promoção no card.
+                    Com valor aqui, o produto entra na seção Promoções na loja.
                   </p>
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-center min-h-[44px] sm:col-span-2">
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider mr-auto">Visível na loja</label>
-                  <button type="button" onClick={() => setActive(a => !a)} className="flex items-center gap-2">
+                  <button type="button" onClick={() => setActive(a => !a)} className="flex items-center gap-2 min-h-[44px]">
                     <div className={`w-10 h-[22px] rounded-full relative transition-colors ${active ? 'bg-accent' : 'bg-border'}`}>
                       <div className={`absolute top-[3px] w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-[22px]' : 'left-[3px]'}`} />
                     </div>
@@ -642,19 +970,19 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           </div>
 
           {/* Save buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="button"
-              onClick={() => router.back()}
-              className="flex-1 py-3 border border-border rounded-xl text-muted text-sm hover:border-muted hover:text-foreground transition-all"
+              onClick={() => (isEdit ? router.back() : setStep(3))}
+              className="flex-1 min-h-[44px] py-3 border border-border rounded-xl text-muted text-sm hover:border-muted hover:text-foreground transition-all"
             >
-              Cancelar
+              {isEdit ? 'Cancelar' : '← Voltar à revisão'}
             </button>
             <button
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="flex-[2] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait"
+              className="flex-[2] min-h-[44px] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait"
             >
               {saving ? (isEdit ? 'Salvando…' : 'Publicando…') : (isEdit ? '✓ Salvar alterações' : '✓ Publicar produto')}
             </button>
