@@ -3,6 +3,8 @@ import 'next-auth'
 declare module 'next-auth' {
   interface Session {
     storeId: string
+    impersonating?: boolean
+    realStoreId?: string
     user: {
       id:    string
       email: string
@@ -15,5 +17,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     storeId: string
+    impersonating?: boolean
+    realStoreId?: string
   }
 }
