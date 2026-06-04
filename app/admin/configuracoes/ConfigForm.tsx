@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { signOut } from 'next-auth/react'
 import { Info, Loader2, Trash2 } from 'lucide-react'
 import type { Store, AgeGroup, GenderFocus, DeliveryZone } from '@/types'
@@ -64,6 +64,15 @@ export default function ConfigForm({ store, viStats }: Props) {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
+
+  useEffect(() => {
+    if (!pwdOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPwdOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pwdOpen])
 
   const initialCc = settings.checkoutChannels ?? {}
   const [siteEnabled, setSiteEnabled] = useState(initialCc.siteEnabled === true)
@@ -778,8 +787,16 @@ export default function ConfigForm({ store, viStats }: Props) {
       </div>
 
       {pwdOpen && (
-        <div className="fixed inset-0 z-[500] bg-bg/80 flex items-center justify-center p-4">
-          <div className="bg-surface border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div
+          className="fixed inset-0 z-[500] bg-bg/80 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPwdOpen(false)}
+        >
+          <div
+            className="bg-surface border border-border rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-32px)] overflow-y-auto shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
             <h3 className="font-syne font-bold text-lg mb-4">Alterar senha</h3>
             <div className="flex flex-col gap-3">
               <input

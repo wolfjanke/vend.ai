@@ -132,7 +132,11 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
     return (
       <div className="text-center py-16">
         <h2 className="font-syne font-bold text-xl mb-2">Pagamento confirmado!</h2>
-        <p className="text-muted text-sm">Você receberá a confirmação em breve.</p>
+        <p className="text-muted text-sm break-words">
+          {email.trim()
+            ? `Enviamos os detalhes do pedido para ${email.trim()}.`
+            : 'O pagamento foi registrado. A loja pode entrar em contato pelo WhatsApp informado no pedido.'}
+        </p>
         <a href={`/${storeSlug}`} className="mt-6 inline-block text-primary text-sm font-semibold underline underline-offset-2">
           Voltar à loja
         </a>

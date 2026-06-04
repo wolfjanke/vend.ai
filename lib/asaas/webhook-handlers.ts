@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
+import { sendOrderConfirmationEmail } from '@/lib/email/send-order-confirmation'
 
 interface AccountStatusPayload {
   account?: {
@@ -59,14 +60,48 @@ export async function onPaymentEvent(payload: PaymentEventPayload): Promise<void
   }
 
   if (eventType === 'PAYMENT_CONFIRMED' || eventType === 'PAYMENT_RECEIVED') {
-    await sql`
+    const updated = await sql`
       UPDATE orders
       SET
         payment_status     = 'CONFIRMED',
         asaas_split_status = 'DONE'
       WHERE asaas_payment_id = ${paymentId}
         AND (payment_status IS NULL OR payment_status <> 'CONFIRMED')
+      RETURNING id, order_number, customer_name, customer_email, total, store_id, payment_source
     `
+
+    if (updated.length === 0) return
+
+    const row = updated[0] as {
+      id: string
+      order_number: string
+      customer_name: string
+      customer_email: string | null
+      total: number
+      store_id: string
+      payment_source: string | null
+    }
+
+    if (row.payment_source !== 'CHECKOUT') return
+
+    const email = row.customer_email?.trim()
+    if (!email) return
+
+    const storeRows = await sql`
+      SELECT name, slug FROM stores WHERE id = ${row.store_id} LIMIT 1
+    `
+    const store = storeRows[0] as { name: string; slug: string } | undefined
+    if (!store) return
+
+    void sendOrderConfirmationEmail({
+      to:           email,
+      customerName: row.customer_name,
+      storeName:    store.name,
+      storeSlug:    store.slug,
+      orderNumber:  row.order_number,
+      total:        Number(row.total),
+    }).catch(err => logServerError('[onPaymentEvent] order confirmation email', err))
+
     return
   }
 

@@ -2,12 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getSessionSafe } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
+import { canUsePdv } from '@/lib/pdv-access'
+import type { PlanSlug } from '@/types'
 export { dynamic } from '@/lib/route-dynamic'
+
+async function requirePdvPlan(storeId: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const rows = await sql`SELECT plan FROM stores WHERE id = ${storeId} LIMIT 1`
+  const plan = (rows[0]?.plan ?? 'free') as PlanSlug
+  if (!canUsePdv(plan)) {
+    return { ok: false, status: 403, error: 'PDV disponível apenas no plano Loja' }
+  }
+  return { ok: true }
+}
 
 
 export async function GET(req: NextRequest) {
   const session = await getSessionSafe()
   if (!session?.storeId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const gate = await requirePdvPlan(session.storeId)
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
 
   const date = req.nextUrl.searchParams.get('date') ?? new Date().toISOString().slice(0, 10)
 
@@ -32,6 +46,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionSafe()
   if (!session?.storeId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const gate = await requirePdvPlan(session.storeId)
+  if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
 
   let body: Record<string, unknown>
   try {

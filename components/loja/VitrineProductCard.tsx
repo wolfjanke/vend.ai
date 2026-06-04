@@ -32,7 +32,7 @@ function PriceBlock({
 }) {
   const priceCls = inverted ? 'text-white' : 'produto-preco font-bold tabular-nums shrink-0'
   const mutedCls = inverted ? 'text-white/70' : 'produto-preco-old tabular-nums'
-  const parcelaCls = inverted ? 'text-white/70' : 'produto-preco-old produto-parcela'
+  const parcelaCls = inverted ? 'text-white/70 produto-parcela' : 'produto-parcela text-muted'
   return (
     <div className={`flex flex-col gap-0.5 min-w-0 ${className}`}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
@@ -142,11 +142,6 @@ export default function VitrineProductCard({
           Últimas unidades
         </span>
       )}
-      {product.promo_price && !isSoldOut && cardTheme.infoPosition === 'below' && (
-        <span className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-primary/20 border border-primary/30 rounded-lg text-primary text-[11px] font-bold uppercase tracking-wide">
-          Promoção
-        </span>
-      )}
     </button>
   )
 
@@ -193,9 +188,11 @@ export default function VitrineProductCard({
         data-shimmer={cardTheme.shimmer ? 'true' : 'false'}
       >
         <div className="relative w-full shrink-0 min-w-0">
-          <span className="absolute top-2 left-2 right-2 z-10 px-2 py-1 rounded-full bg-primary text-white produto-badge font-bold text-center truncate">
-            {product.promo_price ? 'Promo' : product.name}
-          </span>
+          {product.promo_price != null && (
+            <span className="absolute top-2 left-2 z-10 px-2 py-1 rounded-full bg-primary text-white produto-badge font-bold text-center">
+              Promo
+            </span>
+          )}
           {imageBtn}
         </div>
         <button

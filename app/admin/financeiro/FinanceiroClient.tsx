@@ -27,6 +27,8 @@ interface FinanceiroData {
   summary:       Summary
   bySource:      BySource[]
   bySplitStatus: BySplitStatus[]
+  merchantRetainPct?: number
+  platformTakePct?: number
 }
 
 interface Props {
@@ -77,7 +79,9 @@ export default function FinanceiroClient({ plan }: Props) {
 
   useEffect(() => { load() }, [load])
 
-  const merchantPct = plan === 'loja' ? 98.3 : plan === 'pro' ? 97.5 : plan === 'starter' ? 96.0 : 95.5
+  const merchantPct =
+    data?.merchantRetainPct ??
+    (plan === 'loja' ? 98.3 : plan === 'pro' ? 97.5 : plan === 'starter' ? 96.0 : 95.5)
 
   return (
     <div className="space-y-5">

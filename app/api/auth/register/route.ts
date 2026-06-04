@@ -6,6 +6,7 @@ import { registerSchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import { sendWelcomeEmail } from '@/lib/email/send-welcome'
+import { getGlobalConfig } from '@/lib/global-config'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -23,6 +24,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
     }
 
+    const signupsEnabled = await getGlobalConfig<boolean>('new_signups_enabled')
+    if (signupsEnabled === false) {
+      return NextResponse.json(
+        { error: 'Novos cadastros estão temporariamente desativados. Tente novamente mais tarde.' },
+        { status: 403 },
+      )
+    }
+
     const parsed = registerSchema.safeParse(body)
     if (!parsed.success) {
       const first =
@@ -33,6 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     const {
+      ownerName,
       email,
       password,
       storeName,
@@ -51,11 +61,12 @@ export async function POST(req: NextRequest) {
     const initialSettings = {
       genderFocus: genderFocus ?? 'feminine',
       ageGroup:    ageGroup ?? 'adult',
+      ownerName:   ownerName.trim(),
     }
 
     const resolvedThemeName = theme_name ?? 'default'
     const resolvedShimmer = Boolean(theme_shimmer)
-    const resolvedOnboarding = theme_onboarding_done ?? true
+    const resolvedOnboarding = theme_onboarding_done ?? false
 
     const existing = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`
     if (existing.length > 0) {
@@ -107,7 +118,7 @@ export async function POST(req: NextRequest) {
     const acceptedAt = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
     void sendWelcomeEmail({
-      ownerName: storeName,
+      ownerName: ownerName.trim(),
       ownerEmail: email,
       storeName,
       storeSlug: store.slug,

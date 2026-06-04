@@ -167,11 +167,11 @@ export default function Catalogo({
   )
 
   const filteredTitle = useMemo(() => {
+    if (search.trim()) return 'Resultados'
     if (catFilter === 'sale') return 'Promoções'
     if (catFilter) {
       return getCategoryDisplayLabel(catFilter, customCategories)
     }
-    if (search.trim()) return 'Resultados'
     return 'Produtos'
   }, [catFilter, search, customCategories])
 
@@ -197,7 +197,7 @@ export default function Catalogo({
                 setSearch(e.target.value)
                 onInteract?.()
               }}
-              className="w-full pl-11 pr-4 py-3.5 bg-surface border border-border rounded-2xl text-foreground vitrine-search-input outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+              className="w-full pl-11 pr-4 py-3.5 min-h-[44px] bg-surface border border-border rounded-2xl text-foreground vitrine-search-input outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
               placeholder={getSearchPlaceholder(profile)}
             />
           </div>
@@ -213,7 +213,7 @@ export default function Catalogo({
                   setCatFilter(f.value)
                   onInteract?.()
                 }}
-                className={`filter-chip flex-shrink-0 px-4 py-1.5 min-h-[36px] font-medium transition-all ${
+                className={`filter-chip flex-shrink-0 px-4 py-1.5 min-h-[44px] font-medium transition-all ${
                   catFilter === f.value ? 'active' : ''
                 }`}
               >

@@ -71,6 +71,15 @@ export default function Carrinho({
   const [loading, setLoading] = useState(false)
   const [errors,  setErrors]  = useState<Record<string, string>>({})
 
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
   const settingsMerged: StoreSettings = useMemo(
     () => ({
       ...(storeSettings ?? {}),
@@ -292,9 +301,6 @@ export default function Carrinho({
                     <div className="text-xs text-muted mb-1.5 break-words">
                       {item.color && `${item.color} • `}Tamanho: {item.size}
                     </div>
-                    {item.description?.trim() ? (
-                      <p className="text-xs text-muted/90 leading-snug mb-2 line-clamp-4 break-words">{item.description.trim()}</p>
-                    ) : null}
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-accent font-bold text-sm">
                         R${(item.price * item.qty).toFixed(2).replace('.', ',')}
@@ -437,7 +443,7 @@ export default function Carrinho({
             <div className="flex flex-col gap-2.5 pb-2">
               {checkoutChannel === 'site' && (
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-muted mb-1">
-                  Canal: pagamento no site. Você confirma os dados abaixo e enviamos o pedido; combine PIX ou cartão com a loja (checkout online completo em breve).
+                  Canal: pagamento no site. Na próxima tela você conclui com PIX ou cartão de forma segura.
                 </div>
               )}
               <div>

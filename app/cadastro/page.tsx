@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { z } from 'zod'
@@ -11,6 +11,19 @@ import type { AgeGroup, GenderFocus } from '@/types'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 
 type Step = 1 | 2 | 3
+
+const DRAFT_KEY = 'vend_cadastro_draft'
+
+type CadastroDraft = {
+  step:        Step
+  name:        string
+  email:       string
+  storeName:   string
+  wpp:         string
+  genderFocus: GenderFocus
+  ageGroup:    AgeGroup
+  termsAccepted: boolean
+}
 
 function passwordStrength(pass: string): { score: number; label: string } {
   let score = 0
@@ -45,9 +58,53 @@ function CadastroPage() {
   const [slug,      setSlug]      = useState('sua-loja')
   const [genderFocus, setGenderFocus] = useState<GenderFocus>('feminine')
   const [ageGroup, setAgeGroup]       = useState<AgeGroup>('adult')
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
   const strength = passwordStrength(pass)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const d = JSON.parse(raw) as Partial<CadastroDraft>
+      if (d.step === 1 || d.step === 2) setStep(d.step)
+      if (typeof d.name === 'string') setName(d.name)
+      if (typeof d.email === 'string') setEmail(d.email)
+      if (typeof d.storeName === 'string') {
+        setStoreName(d.storeName)
+        setSlug(slugify(d.storeName) || 'sua-loja')
+      }
+      if (typeof d.wpp === 'string') setWpp(d.wpp)
+      if (d.genderFocus) setGenderFocus(d.genderFocus)
+      if (d.ageGroup) setAgeGroup(d.ageGroup)
+      if (d.termsAccepted) setTermsAccepted(true)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (step === 3) {
+      try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+      return
+    }
+    try {
+      const draft: CadastroDraft = {
+        step,
+        name,
+        email,
+        storeName,
+        wpp,
+        genderFocus,
+        ageGroup,
+        termsAccepted,
+      }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+    } catch {
+      /* ignore */
+    }
+  }, [step, name, email, storeName, wpp, genderFocus, ageGroup, termsAccepted])
 
   function handleStep1() {
     const r = step1Schema.safeParse({ name, email, pass })
@@ -67,7 +124,22 @@ function CadastroPage() {
   }
 
   async function handleStep2() {
-    const r = registerSchema.safeParse({ email, password: pass, storeName: storeName.trim(), whatsapp: wpp })
+    if (!termsAccepted) {
+      setFieldErr({ termsAccepted: 'Aceite os termos de uso para continuar' })
+      setError('Aceite os termos de uso para continuar.')
+      return
+    }
+
+    const r = registerSchema.safeParse({
+      ownerName: name.trim(),
+      email,
+      password: pass,
+      storeName: storeName.trim(),
+      whatsapp: wpp,
+      termsAccepted: true as const,
+      genderFocus,
+      ageGroup,
+    })
     if (!r.success) {
       const fe: Record<string, string> = {}
       for (const iss of r.error.issues) {
@@ -87,14 +159,16 @@ function CadastroPage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
+          ownerName: name.trim(),
           email,
           password:  pass,
           storeName: storeName.trim(),
           whatsapp:  wpp,
           genderFocus,
           ageGroup,
+          termsAccepted: true,
           theme_name:            'default',
-          theme_onboarding_done: true,
+          theme_onboarding_done: false,
         }),
       })
 
@@ -224,9 +298,14 @@ function CadastroPage() {
                 />
                 {fieldErr.storeName && <p className="text-xs text-warm mt-1">{fieldErr.storeName}</p>}
               </div>
-              <div className="flex items-start gap-2 px-3.5 py-2.5 bg-accent/10 border border-accent/30 rounded-[10px] min-w-0">
-                <span className="text-xs text-muted shrink-0 pt-0.5">Seu link:</span>
-                <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all min-w-0">vend.ai/{slug}</span>
+              <div className="flex flex-col gap-1 px-3.5 py-2.5 bg-accent/10 border border-accent/30 rounded-[10px] min-w-0">
+                <div className="flex items-start gap-2 min-w-0">
+                  <span className="text-xs text-muted shrink-0 pt-0.5">Seu link:</span>
+                  <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all min-w-0">vend.ai/{slug}</span>
+                </div>
+                <p className="text-[11px] text-muted break-words">
+                  Se o endereço já existir, adicionamos um sufixo automático ao criar a loja.
+                </p>
               </div>
               <div>
                 <MaskedInput
@@ -264,6 +343,29 @@ function CadastroPage() {
                   <option value="all">Todas as idades</option>
                 </select>
               </div>
+              <label className={`flex items-start gap-3 min-h-[44px] cursor-pointer ${fieldErr.termsAccepted ? 'text-warm' : 'text-muted'}`}>
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={e => {
+                    setTermsAccepted(e.target.checked)
+                    setFieldErr(p => { const n = { ...p }; delete n.termsAccepted; return n })
+                  }}
+                  className="mt-1 shrink-0 w-5 h-5 rounded border-border accent-primary"
+                />
+                <span className="text-xs leading-relaxed break-words">
+                  Li e aceito os{' '}
+                  <Link href="/termos" target="_blank" className="text-primary underline underline-offset-2">
+                    Termos de Uso
+                  </Link>{' '}
+                  e a{' '}
+                  <Link href="/privacidade" target="_blank" className="text-primary underline underline-offset-2">
+                    Política de Privacidade
+                  </Link>
+                  .
+                </span>
+              </label>
+              {fieldErr.termsAccepted && <p className="text-xs text-warm -mt-2">{fieldErr.termsAccepted}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex gap-2.5">

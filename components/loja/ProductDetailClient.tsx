@@ -70,8 +70,6 @@ export default function ProductDetailClient({ product }: Props) {
         <Link href={`/${store.slug}`} className="hover:text-primary">{store.name}</Link>
         <span>/</span>
         <span>{catLabel}</span>
-        <span>/</span>
-        <span className="text-foreground truncate">{product.name}</span>
       </nav>
 
       <Link

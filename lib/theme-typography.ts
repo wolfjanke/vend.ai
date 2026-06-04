@@ -74,9 +74,9 @@ export const THEME_TYPOGRAPHY: Record<ThemeName, ThemeTypography> = {
     fsModalBtn: '1rem',
   },
   street: {
-    fsNome: '1.125rem',
+    fsNome: '1.0625rem',
     lhNome: '1.2',
-    fsPreco: '1.125rem',
+    fsPreco: '1.1875rem',
     lhPreco: '1.2',
     fsPrecoOld: '0.875rem',
     fsParcela: '0.875rem',

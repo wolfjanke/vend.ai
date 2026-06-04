@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getSessionSafe } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
+import { getTakeRates, getTakeRateSync } from '@/lib/take-rates'
+import type { PlanSlug } from '@/types'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -19,6 +21,12 @@ export async function GET(req: NextRequest) {
   const to   = req.nextUrl.searchParams.get('to')   ?? defaultTo
 
   try {
+    const storeRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const plan = (storeRows[0]?.plan ?? 'free') as PlanSlug
+    const rates = await getTakeRates()
+    const platformTakePct = getTakeRateSync(plan, rates)
+    const merchantRetainPct = Math.round((100 - platformTakePct) * 10) / 10
+
     // GMV e taxa plataforma totais
     const summary = await sql`
       SELECT
@@ -63,6 +71,8 @@ export async function GET(req: NextRequest) {
       summary:     summary[0],
       bySource,
       bySplitStatus,
+      merchantRetainPct,
+      platformTakePct,
     })
   } catch (err) {
     logServerError('[GET /api/admin/financeiro]', err)

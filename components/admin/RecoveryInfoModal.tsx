@@ -1,10 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Info } from 'lucide-react'
 
 export default function RecoveryInfoModal() {
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   return (
     <>
@@ -22,8 +31,12 @@ export default function RecoveryInfoModal() {
           className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-bg/80"
           role="dialog"
           aria-modal="true"
+          onClick={() => setOpen(false)}
         >
-          <div className="bg-surface border border-border rounded-2xl p-5 w-full max-w-md shadow-xl max-h-[calc(100vh-32px)] overflow-y-auto">
+          <div
+            className="bg-surface border border-border rounded-2xl p-5 w-full max-w-md shadow-xl max-h-[calc(100vh-32px)] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
             <h3 className="font-syne font-bold text-base text-foreground mb-3">Recuperação de pedidos</h3>
             <p className="text-sm text-muted leading-relaxed mb-3">
               Quando um cliente inicia um pedido mas não finaliza, ele fica como <strong className="text-foreground">Novo</strong> na

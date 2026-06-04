@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import {
   Store,
-  MessageCircle,
   Star,
   ArrowRight,
   CheckCircle2,
@@ -12,6 +11,7 @@ import {
 } from 'lucide-react'
 import LandingHeader from '@/components/landing/LandingHeader'
 import LandingHeroDevices from '@/components/landing/LandingHeroDevices'
+import LandingHeroMobile from '@/components/landing/LandingHeroMobile'
 import ScrollReveal from '@/components/landing/ScrollReveal'
 import LandingPlans from '@/components/landing/LandingPlans'
 import LandingFooter from '@/components/landing/LandingFooter'
@@ -92,7 +92,7 @@ export default function LandingPage() {
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} size={12} className="fill-accent text-accent" />
                 ))}
-                <span className="ml-1">4,9/5</span>
+                <span className="ml-1">Avaliação dos lojistas</span>
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle2 size={13} className="text-accent" />
@@ -102,6 +102,7 @@ export default function LandingPage() {
           </div>
         </div>
 
+        <LandingHeroMobile />
         <LandingHeroDevices />
       </section>
 
@@ -393,7 +394,7 @@ export default function LandingPage() {
                 Porque no vend.ai você tem catálogo inteligente, IA que sugere produtos ao cliente e pedido formatado direto no seu WhatsApp — sem planilha, sem confusão, sem perder venda.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
               {[
                 { label: 'Link na bio', items: ['Só mostra uma foto', 'Cliente precisa te chamar', 'Você responde manualmente', 'Sem controle de estoque'] },
                 { label: 'vend.ai', items: ['Catálogo completo', 'Vi atende 24h', 'Pedido no WhatsApp', 'Estoque atualizado'] },
@@ -425,8 +426,11 @@ export default function LandingPage() {
           <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-4 leading-tight break-words">
             Junte-se a quem já vende mais
           </h2>
-          <p className="text-muted text-sm sm:text-base mb-12 max-w-xl break-words">
+          <p className="text-muted text-sm sm:text-base mb-2 max-w-xl break-words">
             Lojistas de todo o Brasil usando o vend.ai para vender mais com menos esforço.
+          </p>
+          <p className="text-[11px] text-muted/80 mb-12 max-w-xl break-words">
+            Exemplos ilustrativos de experiências com a plataforma.
           </p>
         </ScrollReveal>
 

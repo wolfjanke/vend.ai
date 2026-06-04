@@ -94,7 +94,7 @@ export default function ProductStrip({
           <button
             onClick={() => scrollBy('left')}
             aria-label="Rolar para esquerda"
-            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-foreground/10 text-foreground shadow-md transition-opacity duration-200 touch-manipulation"
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full bg-background/80 backdrop-blur-sm border border-foreground/10 text-foreground shadow-md transition-opacity duration-200 touch-manipulation"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="15 18 9 12 15 6" />
@@ -106,7 +106,7 @@ export default function ProductStrip({
           <button
             onClick={() => scrollBy('right')}
             aria-label="Rolar para direita"
-            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-foreground/10 text-foreground shadow-md transition-opacity duration-200 touch-manipulation"
+            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center min-w-[44px] min-h-[44px] rounded-full bg-background/80 backdrop-blur-sm border border-foreground/10 text-foreground shadow-md transition-opacity duration-200 touch-manipulation"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="9 18 15 12 9 6" />

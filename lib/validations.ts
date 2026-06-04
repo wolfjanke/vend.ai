@@ -11,10 +11,12 @@ const themeNameRegister = z.enum([
 ]).optional()
 
 export const registerSchema = z.object({
+  ownerName: z.string().min(1, 'Informe seu nome').max(200),
   email:     z.string().email('E-mail inválido'),
   password:  z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
   storeName: z.string().min(1, 'Nome da loja obrigatório').max(200),
   whatsapp:  phoneDigits,
+  termsAccepted: z.literal(true, { message: 'Aceite os termos de uso para continuar' }),
   genderFocus: z.enum(['feminine', 'masculine', 'unisex', 'mixed']).optional(),
   ageGroup:    z.enum(['adult', 'kids', 'all']).optional(),
   theme_name:            themeNameRegister,

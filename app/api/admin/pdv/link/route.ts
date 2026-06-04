@@ -6,6 +6,7 @@ import { calculateInstallmentQuote } from '@/lib/payments/installment-fees'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/asaas/client'
 import type { Store, PlanSlug } from '@/types'
+import { canUsePdv } from '@/lib/pdv-access'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -32,7 +33,11 @@ export async function POST(req: NextRequest) {
   `
   const store = storeRows[0] as Store & { id: string } | undefined
 
-  if (!store?.asaas_wallet_id || store.asaas_onboarding_status !== 'APPROVED') {
+  if (!store || !canUsePdv((store.plan ?? 'free') as PlanSlug)) {
+    return NextResponse.json({ error: 'PDV disponível apenas no plano Loja' }, { status: 403 })
+  }
+
+  if (!store.asaas_wallet_id || store.asaas_onboarding_status !== 'APPROVED') {
     return NextResponse.json({ error: 'Pagamentos não disponíveis — configure o cadastro em Pagamentos' }, { status: 403 })
   }
 

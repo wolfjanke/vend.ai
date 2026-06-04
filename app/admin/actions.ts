@@ -96,28 +96,45 @@ export async function removeCustomCategory(value: string) {
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-  await sql`UPDATE orders SET status = ${status}::order_status WHERE id = ${orderId}`
+  const session = await getSession()
+  if (!session?.storeId) throw new Error('Não autorizado')
+
+  const rows = await sql`
+    UPDATE orders SET status = ${status}::order_status
+    WHERE id = ${orderId} AND store_id = ${session.storeId}
+    RETURNING id
+  `
+  if (rows.length === 0) throw new Error('Pedido não encontrado')
+
   revalidatePath('/admin/pedidos')
   revalidatePath('/admin/dashboard')
 }
 
 export async function toggleProductActive(productId: string, active: boolean) {
+  const session = await getSession()
+  if (!session?.storeId) throw new Error('Não autorizado')
+
   const rows = await sql`
     UPDATE products SET active = ${!active}
-    WHERE id = ${productId}
+    WHERE id = ${productId} AND store_id = ${session.storeId}
     RETURNING store_id
   `
-  const storeId = rows[0]?.store_id as string | undefined
+  if (rows.length === 0) throw new Error('Produto não encontrado')
+
   revalidatePath('/admin/produtos')
-  if (storeId) await revalidateStorePaths(storeId)
+  await revalidateStorePaths(session.storeId)
 }
 
 export async function deleteProduct(productId: string) {
+  const session = await getSession()
+  if (!session?.storeId) throw new Error('Não autorizado')
+
   const rows = await sql`
-    DELETE FROM products WHERE id = ${productId}
+    DELETE FROM products WHERE id = ${productId} AND store_id = ${session.storeId}
     RETURNING store_id
   `
-  const storeId = rows[0]?.store_id as string | undefined
+  if (rows.length === 0) throw new Error('Produto não encontrado')
+
   revalidatePath('/admin/produtos')
-  if (storeId) await revalidateStorePaths(storeId)
+  await revalidateStorePaths(session.storeId)
 }

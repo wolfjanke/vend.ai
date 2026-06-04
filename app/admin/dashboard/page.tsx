@@ -150,7 +150,7 @@ export default async function DashboardPage() {
   const hasProducts = productCount > 0
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''
   const storePublicUrl = baseUrl && store?.slug ? `${baseUrl}/${store.slug}` : ''
-  const showOnboarding = recentRows.length === 0 && storePublicUrl
+  const showOnboarding = storePublicUrl && (!hasLogo || !hasProducts)
 
   return (
     <div className={adminPage}>

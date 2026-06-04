@@ -306,6 +306,7 @@ html.js .reveal-none.is-visible {
 .store-theme-root .produto-parcela {
   font-size: var(--theme-fs-parcela);
   line-height: var(--theme-lh-parcela);
+  color: var(--theme-text-muted);
 }
 
 .store-theme-root .produto-variant-color {
@@ -399,9 +400,24 @@ html.js .reveal-none.is-visible {
   padding: 16px;
 }
 
-.store-theme-root .produto-card:hover .card-info-hover,
-.store-theme-root .produto-card:focus-within .card-info-hover {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .store-theme-root .produto-card:hover .card-info-hover,
+  .store-theme-root .produto-card:focus-within .card-info-hover {
+    opacity: 1;
+  }
+}
+
+/* Touch: info sempre visível abaixo da imagem (tema Editorial/hover) */
+@media (hover: none), (pointer: coarse) {
+  .store-theme-root .card-info-hover {
+    position: static;
+    inset: auto;
+    opacity: 1;
+    width: 100%;
+    background: var(--theme-card-bg);
+    border-top: 1px solid var(--theme-card-border);
+    padding: 10px 12px;
+  }
 }
 
 .store-theme-root .card-info-badge {
@@ -418,23 +434,24 @@ html.js .reveal-none.is-visible {
 }
 
 .store-theme-root .card-info-sidebar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  top: 0;
-  width: 45%;
+  position: static;
+  width: auto;
   min-width: 0;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 16px;
-  color: #fff;
+  background: var(--theme-card-bg);
+  padding: 10px 12px;
+  color: inherit;
 }
 
-.store-theme-root .card-info-sidebar .produto-nome,
+.store-theme-root .card-info-sidebar .produto-nome {
+  color: var(--theme-text);
+}
+
 .store-theme-root .card-info-sidebar .produto-preco {
-  color: #fff;
+  color: var(--theme-price);
+}
+
+.store-theme-root .card-info-sidebar .produto-preco-old {
+  color: var(--theme-price-old);
 }
 
 .store-theme-root .filter-chip {
