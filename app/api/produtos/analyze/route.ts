@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { analyzeProductPhoto, buildProductAnalysisPrompt, GEMINI_MODELS } from '@/lib/gemini'
+import { parseProductAnalysisRaw, type ProductAnalysisItem } from '@/lib/product-analysis'
 import type { StoreSettings, ProductAnalysisHints } from '@/types'
 import { getStoreProfile, normalizeProductCategory } from '@/types'
 import { logServerError } from '@/lib/logger'
@@ -11,11 +12,14 @@ import { checkPhotoAnalysisLimit, incrementPhotoAnalysis } from '@/lib/photo-ana
 export { dynamic } from '@/lib/route-dynamic'
 
 
-interface AnalysisResult {
-  nome:       string
-  descricao:  string
-  categoria:  string
-  variantes:  Array<{ cor: string; corHex: string }>
+function normalizeItem(
+  item: ProductAnalysisItem,
+  customSlugs: string[],
+): ProductAnalysisItem {
+  return {
+    ...item,
+    categoria: normalizeProductCategory(String(item.categoria ?? 'outro'), customSlugs),
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -57,27 +61,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Máximo de 10 imagens por análise' }, { status: 400 })
     }
 
-    const productPrompt = buildProductAnalysisPrompt(profile, customCats, hints)
+    const mode = hints?.mode ?? 'single'
+    const productPrompt = buildProductAnalysisPrompt(profile, customCats, hints, images.length)
 
     const raw = await analyzeProductPhoto(images, productPrompt)
-
-    let analysisResult: AnalysisResult
-    try {
-      analysisResult = JSON.parse(raw)
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/)
-      if (!match) throw new Error('IA não retornou JSON válido')
-      analysisResult = JSON.parse(match[0])
-    }
-
-    analysisResult = {
-      ...analysisResult,
-      categoria: normalizeProductCategory(String(analysisResult.categoria ?? 'outro'), customSlugs),
-    }
+    const parsed = parseProductAnalysisRaw(raw)
 
     await incrementPhotoAnalysis(session.storeId)
 
-    return NextResponse.json(analysisResult)
+    if (parsed.mode === 'batch') {
+      const produtos = parsed.products.map(p => normalizeItem(p, customSlugs))
+      return NextResponse.json({ batch: true, produtos })
+    }
+
+    const product = normalizeItem(parsed.product, customSlugs)
+    return NextResponse.json(product)
   } catch (error) {
     logServerError('[/api/produtos/analyze]', error)
     const msg = error instanceof Error ? error.message : 'Erro na análise'
@@ -94,6 +92,12 @@ export async function POST(req: NextRequest) {
             `O modelo de análise (${GEMINI_MODELS.photoAnalysis}) não está disponível. Verifique GEMINI_API_KEY e permissões do projeto Google AI.`,
         },
         { status: 500 },
+      )
+    }
+    if (msg.includes('JSON') || msg.includes('JSON válido')) {
+      return NextResponse.json(
+        { error: 'A IA retornou um formato inválido. Tente de novo ou ajuste o modo (um produto vs vários).' },
+        { status: 502 },
       )
     }
     return NextResponse.json({ error: msg || 'Erro na análise' }, { status: 500 })

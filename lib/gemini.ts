@@ -53,9 +53,21 @@ const AUDIENCE_HINT_LABELS: Record<string, string> = {
 function formatProductHintsBlock(
   hints?: ProductAnalysisHints | null,
   customCategories?: CustomCategory[] | null,
+  imageCount = 1,
 ): string {
   if (!hints) return ''
   const lines: string[] = []
+  const mode = hints.mode ?? 'single'
+  const count = hints.productCount ?? imageCount
+
+  if (mode === 'multi') {
+    lines.push(`- Quantidade informada: ${count} produto(s) diferentes`)
+    lines.push(`- Fotos enviadas: ${imageCount} (1 foto por produto, mesma ordem)`)
+    lines.push('- Não agrupe fotos diferentes como variações de cor do mesmo item')
+  } else {
+    lines.push('- Quantidade: 1 produto (fotos extras = variações de cor)')
+  }
+
   const piece = hints.pieceType?.trim()
   if (piece) {
     const label = getCategoryDisplayLabel(piece, customCategories)
@@ -80,6 +92,7 @@ export function buildProductAnalysisPrompt(
   profile: StoreProfile,
   customCategories?: CustomCategory[] | null,
   hints?: ProductAnalysisHints | null,
+  imageCount = 1,
 ): string {
   const std = new Set(PRODUCT_CATEGORY_SLUGS)
   const extra = (customCategories ?? [])
@@ -87,6 +100,43 @@ export function buildProductAnalysisPrompt(
     .filter(v => v && !std.has(v))
   const allSlugs = [...PRODUCT_CATEGORY_SLUGS, ...extra]
   const cats = allSlugs.join(' | ')
+  const mode = hints?.mode ?? 'single'
+  const hintsBlock = formatProductHintsBlock(hints, customCategories, imageCount)
+
+  if (mode === 'multi') {
+    const n = hints?.productCount ?? imageCount
+    return `Você é um especialista em moda e vestuário. Analise as ${imageCount} imagem(ns) enviadas — cada uma é um PRODUTO DIFERENTE.
+Retorne JSON com exatamente ${n} item(ns) em "produtos" (ordem = ordem das imagens):
+
+{
+  "produtos": [
+    {
+      "fotoIndice": 0,
+      "nome": "nome comercial",
+      "descricao": "2-3 frases",
+      "categoria": "slug: ${cats}",
+      "variantes": [{ "cor": "nome da cor", "corHex": "#RRGGBB" }]
+    }
+  ]
+}
+
+Regras:
+- fotoIndice começa em 0 e segue a ordem das imagens (0, 1, 2…)
+- Cada produto tem UMA variante de cor (a cor principal daquela foto)
+- Não misture peças de fotos diferentes no mesmo produto
+- categoria: um slug da lista (${cats})
+- nome: curto e comercial (até ~6 palavras), extraído da foto — ex.: "Regata Preta Brasil", "Camiseta Oversized Estampada", "Camiseta Feminina Amarela". O lojista NÃO descreveu cada peça; você identifica modelo, cor e estilo pela imagem
+- descricao: 2 frases objetivas (tecido, corte, uso)
+
+Contexto da loja:
+${getSegmentLabel(profile)}
+
+Instruções por segmento:
+${segmentInstructions(profile)}${hintsBlock}
+
+Retorne APENAS o JSON, sem markdown, sem explicação extra.`
+  }
+
   return `Você é um especialista em moda e vestuário (loja de roupas em geral). Analise as imagens de produtos enviadas e retorne um JSON com:
 
 {
@@ -108,7 +158,8 @@ Instruções por segmento:
 ${segmentInstructions(profile)}
 
 Se houver múltiplas fotos com cores diferentes, liste cada cor como uma variante separada.
-O campo "categoria" deve ser obrigatoriamente um dos slugs listados acima (use "outro" se nenhum encaixar bem). Os slugs extras após os padrões são categorias da própria loja — prefira o mais adequado à imagem.${formatProductHintsBlock(hints, customCategories)}
+O campo "categoria" deve ser obrigatoriamente um dos slugs listados acima (use "outro" se nenhum encaixar bem). Os slugs extras após os padrões são categorias da própria loja — prefira o mais adequado à imagem.
+O campo "nome" deve ser comercial e curto, inferido da foto (modelo + cor + detalhe marcante quando houver).${hintsBlock}
 
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`
 }

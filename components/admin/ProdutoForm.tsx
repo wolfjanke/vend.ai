@@ -9,6 +9,7 @@ import type {
   VariantType,
   ProductAnalysisHints,
   ProductAudienceHint,
+  ProductAnalysisMode,
 } from '@/types'
 import { PRODUCT_CATEGORIES, SIZES, getCategoryDisplayLabel } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
@@ -29,6 +30,14 @@ interface VariantState {
   existingPhotoUrls?: string[]
   stock:             Record<string, number>
   variantType:       VariantType
+}
+
+type BatchProductDraft = {
+  nome:       string
+  descricao:  string
+  categoria:  string
+  variantes:  Array<{ cor: string; corHex: string }>
+  file:       File
 }
 
 const VARIANT_TYPE_OPTIONS: Array<{ value: VariantType; label: string }> = [
@@ -141,10 +150,14 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const [analyzed,  setAnalyzed]  = useState(!!initialProduct)
   const [saving,    setSaving]    = useState(false)
   const [savedAnalysisImages, setSavedAnalysisImages] = useState<string[]>([])
-  const [hintPiece, setHintPiece]     = useState('')
+  const [hintMode, setHintMode]           = useState<ProductAnalysisMode>('single')
+  const [hintQuantity, setHintQuantity]   = useState(1)
+  const [hintPiece, setHintPiece]       = useState('')
   const [hintAudience, setHintAudience] = useState<ProductAudienceHint>('')
-  const [hintColors, setHintColors]   = useState('')
-  const [hintNote, setHintNote]       = useState('')
+  const [hintColors, setHintColors]     = useState('')
+  const [hintNote, setHintNote]         = useState('')
+  const [batchQueue, setBatchQueue]     = useState<BatchProductDraft[]>([])
+  const [batchIndex, setBatchIndex]     = useState(0)
   const [active,    setActive]    = useState(true)
   const [postAiPhotoNote, setPostAiPhotoNote] = useState('')
 
@@ -178,6 +191,16 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     )
   }, [initialProduct])
 
+  useEffect(() => {
+    if (hintMode === 'single') setHintQuantity(1)
+  }, [hintMode])
+
+  useEffect(() => {
+    if (hintMode === 'multi' && files.length >= 2 && files.length > hintQuantity) {
+      setHintQuantity(files.length)
+    }
+  }, [hintMode, files.length, hintQuantity])
+
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.length) return
     const newFiles = Array.from(e.target.files)
@@ -208,13 +231,129 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setStep(1)
   }
 
-  function buildAnalysisHints(): ProductAnalysisHints | undefined {
-    const hints: ProductAnalysisHints = {}
+  function buildAnalysisHints(): ProductAnalysisHints {
+    const hints: ProductAnalysisHints = {
+      mode:         hintMode,
+      productCount: hintMode === 'single' ? 1 : hintQuantity,
+    }
     if (hintPiece.trim()) hints.pieceType = hintPiece.trim()
     if (hintAudience) hints.audience = hintAudience
-    if (hintColors.trim()) hints.colorsNote = hintColors.trim()
+    if (hintMode === 'single' && hintColors.trim()) hints.colorsNote = hintColors.trim()
     if (hintNote.trim()) hints.freeText = hintNote.trim()
-    return Object.keys(hints).length ? hints : undefined
+    return hints
+  }
+
+  function applySingleAnalysis(
+    data: { nome?: string; descricao?: string; categoria?: string; variantes?: Array<{ cor: string; corHex: string }> },
+    filesSnapshot: File[],
+  ) {
+    setBatchQueue([])
+    setBatchIndex(0)
+    setProdName(data.nome ?? '')
+    setProdDesc(data.descricao ?? '')
+    setProdCat(data.categoria ?? '')
+    setAiBadges({ name: true, desc: true, cat: true })
+
+    const rawVariantes = data.variantes ?? []
+    let generatedVariants: VariantState[] = rawVariantes.map(
+      (v: { cor: string; corHex: string }) => ({
+        id:          crypto.randomUUID(),
+        color:       v.cor,
+        colorHex:    v.corHex ?? '#888888',
+        photos:      [] as File[],
+        stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+        variantType: 'cor' as VariantType,
+      }),
+    )
+
+    if (generatedVariants.length === 0) {
+      generatedVariants = [{
+        id:          crypto.randomUUID(),
+        color:       'Único',
+        colorHex:    '#888888',
+        photos:      [...filesSnapshot],
+        stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+        variantType: 'cor' as VariantType,
+      }]
+    } else {
+      const buckets = distributeFilesAcrossVariants(filesSnapshot, generatedVariants.length)
+      generatedVariants = generatedVariants.map((gv, i) => ({
+        ...gv,
+        photos: buckets[i] ?? [],
+      }))
+    }
+
+    const n = generatedVariants.length
+    const m = filesSnapshot.length
+    if (n > 1 && m > n) {
+      setPostAiPhotoNote('Fotos extra foram agrupadas na última cor — ajuste abaixo se precisar.')
+    } else if (m === n && n > 1) {
+      setPostAiPhotoNote('A 1.ª foto corresponde à 1.ª cor listada abaixo, e assim por diante.')
+    } else if (m < n) {
+      setPostAiPhotoNote('Há mais variações de cor do que fotos: algumas cores ficaram sem foto até você adicionar.')
+    } else {
+      setPostAiPhotoNote('')
+    }
+
+    setVariants(generatedVariants)
+    setAiStatus(`✓ ${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''} identificada${generatedVariants.length > 1 ? 's' : ''}`)
+  }
+
+  function loadBatchProduct(queue: BatchProductDraft[], index: number) {
+    const item = queue[index]
+    if (!item) return
+    setProdName(item.nome)
+    setProdDesc(item.descricao)
+    setProdCat(item.categoria)
+    setProdPrice('')
+    setProdPromo('')
+    setAiBadges({ name: true, desc: true, cat: true })
+    const v = item.variantes[0] ?? { cor: 'Único', corHex: '#888888' }
+    setVariants([{
+      id:          crypto.randomUUID(),
+      color:       v.cor,
+      colorHex:    v.corHex ?? '#888888',
+      photos:      [item.file],
+      stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+      variantType: 'cor' as VariantType,
+    }])
+    setPostAiPhotoNote(
+      queue.length > 1
+        ? `Produto ${index + 1} de ${queue.length}. Revise, publique e em seguida cadastramos o próximo.`
+        : '',
+    )
+    setAiStatus(`✓ ${queue.length} produto${queue.length > 1 ? 's' : ''} identificado${queue.length > 1 ? 's' : ''}`)
+  }
+
+  function applyBatchAnalysis(
+    produtos: Array<{
+      nome?: string
+      descricao?: string
+      categoria?: string
+      variantes?: Array<{ cor: string; corHex: string }>
+      fotoIndice?: number
+    }>,
+    filesSnapshot: File[],
+  ) {
+    const queue: BatchProductDraft[] = produtos
+      .map((p, i) => {
+        const idx = typeof p.fotoIndice === 'number' ? p.fotoIndice : i
+        const file = filesSnapshot[idx] ?? filesSnapshot[i]
+        if (!file) return null
+        return {
+          nome:       p.nome ?? `Produto ${i + 1}`,
+          descricao:  p.descricao ?? '',
+          categoria:  p.categoria ?? 'outro',
+          variantes:  p.variantes?.length ? p.variantes : [{ cor: 'Único', corHex: '#888888' }],
+          file,
+        }
+      })
+      .filter(Boolean) as BatchProductDraft[]
+
+    if (!queue.length) throw new Error('Não foi possível associar fotos aos produtos detectados.')
+    setBatchQueue(queue)
+    setBatchIndex(0)
+    loadBatchProduct(queue, 0)
   }
 
   async function runAnalysis(imageList: string[], filesSnapshot: File[]) {
@@ -244,55 +383,15 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         throw new Error(msg)
       }
 
-      setProdName(data.nome ?? '')
-      setProdDesc(data.descricao ?? '')
-      setProdCat(data.categoria ?? '')
-      setAiBadges({ name: true, desc: true, cat: true })
-
-      const rawVariantes = data.variantes ?? []
-      let generatedVariants: VariantState[] = rawVariantes.map(
-        (v: { cor: string; corHex: string }, i: number) => ({
-          id:          crypto.randomUUID(),
-          color:       v.cor,
-          colorHex:    v.corHex ?? '#888888',
-          photos:      [] as File[],
-          stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
-          variantType: 'cor' as VariantType,
-        })
-      )
-
-      if (generatedVariants.length === 0) {
-        generatedVariants = [{
-          id:          crypto.randomUUID(),
-          color:       'Único',
-          colorHex:    '#888888',
-          photos:      [...filesSnapshot],
-          stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
-          variantType: 'cor' as VariantType,
-        }]
+      if (data.batch && Array.isArray(data.produtos)) {
+        applyBatchAnalysis(data.produtos, filesSnapshot)
       } else {
-        const buckets = distributeFilesAcrossVariants(filesSnapshot, generatedVariants.length)
-        generatedVariants = generatedVariants.map((gv, i) => ({
-          ...gv,
-          photos: buckets[i] ?? [],
-        }))
+        applySingleAnalysis(data, filesSnapshot)
       }
 
-      const n = generatedVariants.length
-      const m = filesSnapshot.length
-      if (n > 1 && m > n) {
-        setPostAiPhotoNote('Fotos extra foram agrupadas na última cor — ajuste abaixo se precisar.')
-      } else if (m === n && n > 1) {
-        setPostAiPhotoNote('A 1.ª foto corresponde à 1.ª cor listada abaixo, e assim por diante.')
-      } else if (m < n) {
-        setPostAiPhotoNote('Há mais variações de cor do que fotos: algumas cores ficaram sem foto até você adicionar.')
-      }
-
-      setVariants(generatedVariants)
       setAnalyzed(true)
       setFiles([])
       setPreviews([])
-      setAiStatus(`✓ ${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''} identificada${generatedVariants.length > 1 ? 's' : ''}`)
       if (!isEdit) setStep(3)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro na análise — preencha manualmente'
@@ -321,6 +420,16 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       return
     }
     if (!previews.length) return
+    if (hintMode === 'multi') {
+      if (hintQuantity < 2) {
+        alert('Informe ao menos 2 produtos no modo "Vários produtos".')
+        return
+      }
+      if (files.length !== hintQuantity) {
+        alert(`Adicione exatamente ${hintQuantity} foto${hintQuantity > 1 ? 's' : ''} (1 por produto). Você selecionou ${files.length}.`)
+        return
+      }
+    }
     const imgs = previews.slice(0, 10)
     const filesForRun = [...files].slice(0, imgs.length)
     setSavedAnalysisImages(imgs)
@@ -464,6 +573,16 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? 'Erro ao salvar produto')
       }
+
+      if (!isEdit && batchQueue.length > 0 && batchIndex < batchQueue.length - 1) {
+        const next = batchIndex + 1
+        setBatchIndex(next)
+        loadBatchProduct(batchQueue, next)
+        setStep(3)
+        return
+      }
+
+      setBatchQueue([])
       router.push('/admin/produtos')
       router.refresh()
     } catch (e) {
@@ -544,9 +663,69 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
           <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 mb-4">
             <div className="font-syne font-bold text-sm mb-1">Contexto para a IA</div>
-            <p className="text-[11px] text-muted mb-4 break-words">Opcional — quanto mais você informar, menos erro na sugestão.</p>
+            <p className="text-[11px] text-muted mb-4 break-words">
+              A IA gera nome, descrição e categoria a partir das fotos. Você só indica quantos produtos são e o tipo geral.
+            </p>
             <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-2">Como são essas fotos?</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setHintMode('single'); setHintQuantity(1) }}
+                    className={`min-h-[44px] p-3 rounded-xl border text-left transition-colors ${
+                      hintMode === 'single'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm">Um produto</div>
+                    <div className="text-[11px] mt-0.5 break-words opacity-90">Várias fotos = cores do mesmo item</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHintMode('multi')
+                      setHintQuantity(Math.max(2, files.length))
+                    }}
+                    className={`min-h-[44px] p-3 rounded-xl border text-left transition-colors ${
+                      hintMode === 'multi'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm">Vários produtos</div>
+                    <div className="text-[11px] mt-0.5 break-words opacity-90">1 foto ≈ 1 peça diferente</div>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Quantidade</label>
+                  {hintMode === 'single' ? (
+                    <div className="min-h-[44px] flex items-center px-3.5 bg-surface2 border border-border rounded-xl text-sm text-muted">
+                      1 produto
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                        value={hintQuantity}
+                        onChange={e => setHintQuantity(Number(e.target.value))}
+                      >
+                        {Array.from({ length: 9 }, (_, i) => i + 2).map(n => (
+                          <option key={n} value={n}>{n} produtos</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-muted mt-1.5 break-words">
+                        {files.length > 0 && files.length !== hintQuantity
+                          ? `Selecione ${hintQuantity} foto${hintQuantity > 1 ? 's' : ''} — hoje ${files.length}.`
+                          : `Envie ${hintQuantity} foto${hintQuantity > 1 ? 's' : ''} (1 por produto).`}
+                      </p>
+                    </>
+                  )}
+                </div>
                 <div className="min-w-0">
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Tipo de peça</label>
                   <select
@@ -576,20 +755,26 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   </select>
                 </div>
               </div>
+
+              {hintMode === 'single' && (
+                <div>
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Cores que você vê</label>
+                  <input
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+                    placeholder="Ex.: preto, off-white, azul marinho"
+                    value={hintColors}
+                    onChange={e => setHintColors(e.target.value)}
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Cores que você vê</label>
-                <input
-                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
-                  placeholder="Ex.: preto, off-white, azul marinho"
-                  value={hintColors}
-                  onChange={e => setHintColors(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Observação</label>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">
+                  Observação <span className="normal-case font-normal text-muted">(opcional)</span>
+                </label>
                 <textarea
-                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[72px] resize-y break-words"
-                  placeholder="Ex.: 3 fotos = 3 cores; bermuda masculina tamanho M"
+                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[56px] resize-y break-words"
+                  placeholder="Só se algo importante não aparecer na foto"
                   value={hintNote}
                   onChange={e => setHintNote(e.target.value)}
                 />
@@ -644,6 +829,11 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
                 Etapa 3 de 4
               </span>
+              {batchQueue.length > 1 && (
+                <span className="text-accent bg-accent/10 border border-accent/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                  Produto {batchIndex + 1}/{batchQueue.length}
+                </span>
+              )}
             </div>
             {aiStatus && (
               <p className={`text-xs mb-4 break-words ${aiStatus.startsWith('✓') ? 'text-accent' : 'text-warm'}`}>{aiStatus}</p>
@@ -984,7 +1174,13 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               disabled={saving}
               className="flex-[2] min-h-[44px] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-wait"
             >
-              {saving ? (isEdit ? 'Salvando…' : 'Publicando…') : (isEdit ? '✓ Salvar alterações' : '✓ Publicar produto')}
+              {saving
+                ? (isEdit ? 'Salvando…' : 'Publicando…')
+                : (isEdit
+                  ? '✓ Salvar alterações'
+                  : batchQueue.length > 1
+                    ? `✓ Publicar ${batchIndex + 1}/${batchQueue.length}`
+                    : '✓ Publicar produto')}
             </button>
           </div>
         </>

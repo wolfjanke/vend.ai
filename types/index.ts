@@ -338,11 +338,16 @@ export interface StoreContext {
 /** Dicas opcionais no cadastro guiado (fotos + texto → IA). */
 export type ProductAudienceHint = '' | GenderFocus | 'kids'
 
+/** single = várias fotos do mesmo produto (cores); multi = 1 foto ≈ 1 produto */
+export type ProductAnalysisMode = 'single' | 'multi'
+
 export interface ProductAnalysisHints {
-  pieceType?:  string
-  audience?:   ProductAudienceHint
-  colorsNote?: string
-  freeText?:   string
+  mode?:         ProductAnalysisMode
+  productCount?: number
+  pieceType?:    string
+  audience?:     ProductAudienceHint
+  colorsNote?:   string
+  freeText?:     string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
