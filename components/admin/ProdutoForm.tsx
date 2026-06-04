@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter }        from 'next/navigation'
+import { ImagePlus } from 'lucide-react'
 import type {
   Product,
   ProductVariant,
@@ -12,6 +13,7 @@ import type {
   ProductAnalysisMode,
 } from '@/types'
 import { PRODUCT_CATEGORIES, SIZES, getCategoryDisplayLabel } from '@/types'
+import { adminCard } from '@/lib/admin-ui'
 import MaskedInput from '@/components/ui/MaskedInput'
 import { numberToCurrencyInput, parseCurrency } from '@/lib/masks'
 
@@ -38,6 +40,7 @@ type BatchProductDraft = {
   categoria:  string
   variantes:  Array<{ cor: string; corHex: string }>
   file:       File
+  photoFiles?: File[]
 }
 
 const VARIANT_TYPE_OPTIONS: Array<{ value: VariantType; label: string }> = [
@@ -59,6 +62,32 @@ const AUDIENCE_HINT_OPTIONS: Array<{ value: ProductAudienceHint; label: string }
   { value: 'mixed',     label: 'Misto' },
 ]
 
+function BatchDraftThumb({ file }: { file: File }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file)
+    setUrl(objectUrl)
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [file])
+  if (!url) {
+    return <div className="w-14 h-14 rounded-xl bg-surface2 border border-border shrink-0" />
+  }
+  return (
+    <img
+      src={url}
+      alt=""
+      className="w-14 h-14 rounded-xl object-cover border border-border shrink-0"
+    />
+  )
+}
+
+function hintModeCardClass(selected: boolean): string {
+  const base = `${adminCard} p-5 min-h-[5.5rem] w-full text-left transition-colors`
+  return selected
+    ? `${base} border-primary bg-primary/10 text-primary`
+    : `${base} bg-surface2 hover:border-primary/40`
+}
+
 function WizardStepIndicator({ step }: { step: CadastroStep }) {
   const items: Array<{ n: CadastroStep; label: string }> = [
     { n: 1, label: 'Fotos' },
@@ -74,7 +103,7 @@ function WizardStepIndicator({ step }: { step: CadastroStep }) {
         return (
           <div
             key={n}
-            className={`flex-1 min-w-0 flex flex-col items-center gap-1 px-1 py-2 rounded-xl border text-center transition-colors ${
+            className={`flex-1 min-w-0 flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl border text-center transition-colors ${
               active
                 ? 'border-primary bg-primary/10 text-primary'
                 : done
@@ -82,8 +111,8 @@ function WizardStepIndicator({ step }: { step: CadastroStep }) {
                   : 'border-border bg-surface2 text-muted'
             }`}
           >
-            <span className="font-syne font-bold text-xs tabular-nums">{n}</span>
-            <span className="text-[10px] sm:text-[11px] font-medium truncate w-full">{label}</span>
+            <span className="font-syne font-bold text-sm tabular-nums">{n}</span>
+            <span className="text-xs font-medium truncate w-full">{label}</span>
           </div>
         )
       })}
@@ -299,6 +328,35 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setAiStatus(`✓ ${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''} identificada${generatedVariants.length > 1 ? 's' : ''}`)
   }
 
+  function persistCurrentBatchDraft(source: BatchProductDraft[] = batchQueue): BatchProductDraft[] {
+    if (source.length === 0) return source
+    return source.map((item, i) => {
+      if (i !== batchIndex) return item
+      const mainPhotos =
+        variants.length > 0 && variants[0].photos.length > 0
+          ? variants[0].photos
+          : item.photoFiles ?? [item.file]
+      return {
+        ...item,
+        nome:      prodName,
+        descricao: prodDesc,
+        categoria: prodCat,
+        variantes: variants.length
+          ? variants.map(v => ({ cor: v.color, corHex: v.colorHex }))
+          : item.variantes,
+        photoFiles: mainPhotos,
+      }
+    })
+  }
+
+  function selectBatchProduct(index: number) {
+    if (index === batchIndex || index < 0 || index >= batchQueue.length) return
+    const updated = persistCurrentBatchDraft()
+    setBatchQueue(updated)
+    setBatchIndex(index)
+    loadBatchProduct(updated, index)
+  }
+
   function loadBatchProduct(queue: BatchProductDraft[], index: number) {
     const item = queue[index]
     if (!item) return
@@ -309,17 +367,18 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setProdPromo('')
     setAiBadges({ name: true, desc: true, cat: true })
     const v = item.variantes[0] ?? { cor: 'Único', corHex: '#888888' }
+    const photoFiles = item.photoFiles?.length ? item.photoFiles : [item.file]
     setVariants([{
       id:          crypto.randomUUID(),
       color:       v.cor,
       colorHex:    v.corHex ?? '#888888',
-      photos:      [item.file],
+      photos:      [...photoFiles],
       stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
       variantType: 'cor' as VariantType,
     }])
     setPostAiPhotoNote(
       queue.length > 1
-        ? `Produto ${index + 1} de ${queue.length}. Revise, publique e em seguida cadastramos o próximo.`
+        ? 'Revise cada produto abaixo e publique um por vez na etapa final.'
         : '',
     )
     setAiStatus(`✓ ${queue.length} produto${queue.length > 1 ? 's' : ''} identificado${queue.length > 1 ? 's' : ''}`)
@@ -435,18 +494,6 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setSavedAnalysisImages(imgs)
     if (!isEdit) setStep(2)
     await runAnalysis(imgs, filesForRun)
-  }
-
-  async function reanalyzeFromReview() {
-    const imgs = savedAnalysisImages.length > 0 ? savedAnalysisImages : previews.slice(0, 10)
-    if (!imgs.length) {
-      alert('Adicione fotos na etapa 1 para analisar novamente.')
-      setStep(1)
-      return
-    }
-    const filesFromVariants = variants.flatMap(v => v.photos)
-    setStep(2)
-    await runAnalysis(imgs, filesFromVariants.length > 0 ? filesFromVariants : [...files])
   }
 
   function addVariant() {
@@ -625,7 +672,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       {!isEdit && step === 1 && (
         <>
           <div
-            className={`border-2 border-dashed rounded-2xl transition-all cursor-pointer mb-4 ${
+            className={`${adminCard} border-2 border-dashed mb-4 transition-all cursor-pointer ${
               files.length ? 'border-border' : 'border-border hover:border-primary hover:bg-primary/5'
             }`}
             onClick={() => !files.length && fileRef.current?.click()}
@@ -633,13 +680,15 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
             {files.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                <div className="text-5xl mb-3">🖼️</div>
-                <div className="font-syne font-semibold text-sm mb-1">Fotos do produto</div>
-                <div className="text-xs text-muted mb-4 break-words max-w-sm">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <ImagePlus size={28} strokeWidth={1.75} aria-hidden />
+                </div>
+                <div className="font-syne font-semibold text-base mb-1">Fotos do produto</div>
+                <div className="text-sm text-muted mb-4 break-words max-w-md">
                   Uma foto por cor ajuda a IA. Depois você revisa tudo antes de publicar.
                 </div>
-                <div className="px-4 py-2 min-h-[44px] flex items-center bg-primary/10 border border-primary rounded-xl text-primary text-xs font-semibold">
-                  📂 Abrir galeria
+                <div className="px-5 py-2.5 min-h-[44px] flex items-center bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold">
+                  Abrir galeria
                 </div>
               </div>
             ) : (
@@ -661,26 +710,24 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             )}
           </div>
 
-          <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 mb-4">
-            <div className="font-syne font-bold text-sm mb-1">Contexto para a IA</div>
-            <p className="text-[11px] text-muted mb-4 break-words">
+          <div className={`${adminCard} mb-4`}>
+            <div className="font-syne font-bold text-base mb-1">Contexto para a IA</div>
+            <p className="text-sm text-muted mb-5 break-words">
               A IA gera nome, descrição e categoria a partir das fotos. Você só indica quantos produtos são e o tipo geral.
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               <div>
-                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-2">Como são essas fotos?</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-3">Como são essas fotos?</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => { setHintMode('single'); setHintQuantity(1) }}
-                    className={`min-h-[44px] p-3 rounded-xl border text-left transition-colors ${
-                      hintMode === 'single'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border bg-surface2 text-muted hover:border-primary/40'
-                    }`}
+                    className={hintModeCardClass(hintMode === 'single')}
                   >
-                    <div className="font-semibold text-sm">Um produto</div>
-                    <div className="text-[11px] mt-0.5 break-words opacity-90">Várias fotos = cores do mesmo item</div>
+                    <div className="font-syne font-semibold text-base mb-1">Um produto</div>
+                    <div className={`text-sm break-words ${hintMode === 'single' ? 'text-primary/90' : 'text-muted'}`}>
+                      Várias fotos = cores do mesmo item
+                    </div>
                   </button>
                   <button
                     type="button"
@@ -688,21 +735,19 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                       setHintMode('multi')
                       setHintQuantity(Math.max(2, files.length))
                     }}
-                    className={`min-h-[44px] p-3 rounded-xl border text-left transition-colors ${
-                      hintMode === 'multi'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border bg-surface2 text-muted hover:border-primary/40'
-                    }`}
+                    className={hintModeCardClass(hintMode === 'multi')}
                   >
-                    <div className="font-semibold text-sm">Vários produtos</div>
-                    <div className="text-[11px] mt-0.5 break-words opacity-90">1 foto ≈ 1 peça diferente</div>
+                    <div className="font-syne font-semibold text-base mb-1">Vários produtos</div>
+                    <div className={`text-sm break-words ${hintMode === 'multi' ? 'text-primary/90' : 'text-muted'}`}>
+                      1 foto ≈ 1 peça diferente
+                    </div>
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="min-w-0">
-                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Quantidade</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Quantidade</label>
                   {hintMode === 'single' ? (
                     <div className="min-h-[44px] flex items-center px-3.5 bg-surface2 border border-border rounded-xl text-sm text-muted">
                       1 produto
@@ -727,7 +772,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   )}
                 </div>
                 <div className="min-w-0">
-                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Tipo de peça</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Tipo de peça</label>
                   <select
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
                     value={hintPiece}
@@ -743,7 +788,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   </select>
                 </div>
                 <div className="min-w-0">
-                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Público</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Público</label>
                   <select
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
                     value={hintAudience}
@@ -758,7 +803,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
               {hintMode === 'single' && (
                 <div>
-                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Cores que você vê</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Cores que você vê</label>
                   <input
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
                     placeholder="Ex.: preto, off-white, azul marinho"
@@ -769,7 +814,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               )}
 
               <div>
-                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
                   Observação <span className="normal-case font-normal text-muted">(opcional)</span>
                 </label>
                 <textarea
@@ -791,7 +836,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             {previewsStillLoading
               ? 'Carregando fotos…'
               : files.length
-                ? '✦ Continuar com análise da IA'
+                ? 'Continuar com análise da IA'
                 : 'Adicione ao menos uma foto'}
           </button>
         </>
@@ -799,7 +844,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
       {/* Etapa 2 — analisando */}
       {!isEdit && step === 2 && (
-        <div className="bg-surface border border-border rounded-2xl p-8 mb-4 text-center">
+        <div className={`${adminCard} mb-4 text-center`}>
           <div className="text-4xl mb-4 animate-pulse" aria-hidden>✦</div>
           <div className="font-syne font-bold text-base mb-2">Analisando com IA…</div>
           <p className="text-sm text-primary break-words">{aiStatus || 'Aguarde um momento'}</p>
@@ -818,24 +863,71 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       {/* Etapa 3 — revisar sugestões */}
       {showReview && (
         <>
-          {postAiPhotoNote && (
+          {postAiPhotoNote && batchQueue.length <= 1 && (
             <div className="mb-4 p-4 bg-surface2 border border-border rounded-2xl text-sm text-muted break-words">
               {postAiPhotoNote}
             </div>
           )}
-          <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-            <div className="flex flex-wrap items-center gap-2 mb-4 font-syne font-bold text-sm">
-              Revise a sugestão da IA
+
+          {batchQueue.length > 1 && (
+            <div className={`${adminCard} mb-4`}>
+              <div className="flex flex-wrap items-center gap-2 mb-1 font-syne font-bold text-base">
+                {batchQueue.length} produtos identificados
+                {aiStatus && (
+                  <span className="text-accent bg-accent/10 border border-accent/30 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                    {aiStatus.replace(/^✓\s*/, '')}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted mb-4 break-words">
+                A IA separou cada foto em um produto. Toque em um card para revisar nome, descrição e categoria antes de publicar.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {batchQueue.map((item, i) => {
+                  const isActive = i === batchIndex
+                  const displayName = isActive ? (prodName.trim() || item.nome) : item.nome
+                  const displayCat = isActive ? (prodCat || item.categoria) : item.categoria
+                  const thumbFile = item.photoFiles?.[0] ?? item.file
+                  return (
+                    <button
+                      key={`${item.file.name}-${i}`}
+                      type="button"
+                      onClick={() => selectBatchProduct(i)}
+                      className={`${adminCard} p-4 min-h-[44px] w-full text-left transition-colors ${
+                        isActive
+                          ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                          : 'bg-surface2 hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <BatchDraftThumb file={thumbFile} />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-muted uppercase tracking-wide mb-1">
+                            Produto {i + 1}
+                          </div>
+                          <div className="font-syne font-semibold text-sm line-clamp-2 break-words mb-0.5">
+                            {displayName || `Produto ${i + 1}`}
+                          </div>
+                          <div className="text-xs text-muted truncate">
+                            {getCategoryDisplayLabel(displayCat, customCategories)}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className={`${adminCard} mb-4`}>
+            <div className="flex flex-wrap items-center gap-2 mb-4 font-syne font-bold text-base">
+              {batchQueue.length > 1 ? `Revisando produto ${batchIndex + 1}` : 'Revise a sugestão da IA'}
               <span className="text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
                 Etapa 3 de 4
               </span>
-              {batchQueue.length > 1 && (
-                <span className="text-accent bg-accent/10 border border-accent/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                  Produto {batchIndex + 1}/{batchQueue.length}
-                </span>
-              )}
             </div>
-            {aiStatus && (
+            {aiStatus && batchQueue.length <= 1 && (
               <p className={`text-xs mb-4 break-words ${aiStatus.startsWith('✓') ? 'text-accent' : 'text-warm'}`}>{aiStatus}</p>
             )}
             <div className="flex flex-col gap-3">
@@ -865,9 +957,9 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             </div>
           </div>
 
-          <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-            <div className="font-syne font-bold text-sm mb-1">Variações detectadas</div>
-            <p className="text-[11px] text-muted mb-4 break-words">Ajuste nomes de cor antes de definir preço e estoque.</p>
+          <div className={`${adminCard} mb-4`}>
+            <div className="font-syne font-bold text-base mb-1">Variações detectadas</div>
+            <p className="text-sm text-muted mb-4 break-words">Ajuste nomes de cor antes de definir preço e estoque.</p>
             {variants.map(v => (
               <div key={v.id} className="flex items-center gap-2.5 mb-3 flex-wrap min-w-0">
                 <div className="w-5 h-5 rounded-full border-2 border-white/20 shrink-0" style={{ background: v.colorHex }} />
@@ -915,25 +1007,19 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             <button
               type="button"
               onClick={() => {
-                if (!window.confirm('A IA vai gerar novas sugestões e pode substituir nome, descrição e variações. Continuar?')) return
-                void reanalyzeFromReview()
-              }}
-              disabled={analyzing}
-              className="flex-1 min-h-[44px] py-3 border border-primary/40 rounded-xl text-primary text-sm hover:bg-primary/10 transition-all disabled:opacity-60"
-            >
-              Analisar de novo
-            </button>
-            <button
-              type="button"
-              onClick={() => {
                 if (!prodName.trim()) { alert('Informe o nome do produto'); return }
                 if (!prodCat) { alert('Selecione a categoria'); return }
                 if (!variants.length) { alert('Adicione ao menos uma variação'); return }
+                if (batchQueue.length > 1) {
+                  setBatchQueue(persistCurrentBatchDraft())
+                }
                 setStep(4)
               }}
               className="flex-[2] min-h-[44px] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all"
             >
-              Confirmar e continuar →
+              {batchQueue.length > 1
+                ? `Continuar produto ${batchIndex + 1} →`
+                : 'Confirmar e continuar →'}
             </button>
           </div>
         </>
@@ -960,8 +1046,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             </div>
           )}
 
-          <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-            <div className="flex items-center gap-2 mb-4 font-syne font-bold text-sm flex-wrap">
+          <div className={`${adminCard} mb-4`}>
+            <div className="flex items-center gap-2 mb-4 font-syne font-bold text-base flex-wrap">
               Informações do Produto
               {!isEdit && (
                 <span className="text-accent bg-accent/10 border border-accent/30 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
@@ -1045,9 +1131,9 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           </div>
 
           {/* Variants */}
-          <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-            <div className="font-syne font-bold text-sm mb-1">Variações</div>
-            <p className="text-[11px] text-muted mb-4 break-words">Cor, modelo ou estampa diferente = produto diferente (conta no limite do plano). Tamanho = variação gratuita.</p>
+          <div className={`${adminCard} mb-4`}>
+            <div className="font-syne font-bold text-base mb-1">Variações</div>
+            <p className="text-sm text-muted mb-4 break-words">Cor, modelo ou estampa diferente = produto diferente (conta no limite do plano). Tamanho = variação gratuita.</p>
 
             {variants.map(v => {
               const noPhoto = variantHasNoPhoto(v)

@@ -1,6 +1,10 @@
 export default function StoreLoading() {
   return (
-    <div className="min-h-screen animate-pulse p-4 space-y-6 max-w-lg mx-auto">
+    <div
+      className="min-h-screen animate-pulse p-4 space-y-6 max-w-lg mx-auto bg-[var(--bg,#08080F)]"
+      aria-busy="true"
+      aria-label="Carregando loja"
+    >
       <div className="h-12 bg-surface2 rounded-xl" />
       <div className="grid grid-cols-2 gap-3">
         {[1, 2, 3, 4].map(i => (

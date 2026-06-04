@@ -3,6 +3,7 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import AdminPageError from '@/components/admin/AdminPageError'
 import ProdutoForm    from '@/components/admin/ProdutoForm'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 import type { StoreSettings } from '@/types'
 
 export default async function NovoProdutoPage() {
@@ -23,9 +24,9 @@ export default async function NovoProdutoPage() {
   }
 
   return (
-    <div className="animate-fade-up max-w-2xl">
-      <div className="mb-6">
-        <h1 className="font-syne font-extrabold text-2xl mb-1">Novo Produto 📸</h1>
+    <div className={adminPage}>
+      <div className={adminHeader}>
+        <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Novo produto</h1>
         <p className="text-sm text-muted">
           Selecione as fotos da galeria — a IA identifica variações de cor e preenche tudo automaticamente
         </p>

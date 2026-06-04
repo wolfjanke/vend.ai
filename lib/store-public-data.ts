@@ -5,9 +5,31 @@ import type { Product, ProductVariant } from '@/types'
 
 export type StorePublicRow = Record<string, unknown>
 
+const QUERY_TIMEOUT_MS = 12_000
+
+async function withQueryTimeout<T>(
+  promise: Promise<T>,
+  label: string,
+  ms = QUERY_TIMEOUT_MS,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error(`[db] ${label} timed out after ${ms}ms`)),
+      ms,
+    )
+  })
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
 /** Uma query por request — compartilhada entre layout, page e generateMetadata. */
 export const getStorePublicRow = cache(async (slug: string): Promise<StorePublicRow | undefined> => {
-  const rows = await sql`
+  const rows = await withQueryTimeout(
+    sql`
     SELECT
       id, slug, name, logo_url, tagline, whatsapp, settings_json, created_at,
       cep, logradouro, numero, complemento, bairro, cidade, uf,
@@ -17,7 +39,9 @@ export const getStorePublicRow = cache(async (slug: string): Promise<StorePublic
     FROM stores
     WHERE slug = ${slug}
     LIMIT 1
-  `
+  `,
+    `getStorePublicRow(${slug})`,
+  )
   return rows[0] as StorePublicRow | undefined
 })
 
@@ -47,14 +71,17 @@ export function slimProductsForVi(products: Product[]): Product[] {
 }
 
 function fetchActiveProducts(storeId: string): Promise<Product[]> {
-  return sql`
+  return withQueryTimeout(
+    sql`
     SELECT
       id, store_id, name, slug, description, category, price, promo_price,
       variants_json, active, created_at
     FROM products
     WHERE store_id = ${storeId} AND active = true
     ORDER BY created_at DESC
-  ` as Promise<Product[]>
+  ` as Promise<Product[]>,
+    `fetchActiveProducts(${storeId})`,
+  )
 }
 
 /** Cache entre requests na vitrine (Neon + RSC). Invalidar com tag \`store-{slug}\`. */

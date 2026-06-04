@@ -17,6 +17,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://vendai.club'),
   title:       'vend.ai — Moda com IA',
   description: 'Catálogo digital com IA integrada para lojas de roupas. Pedidos direto no WhatsApp.',
   keywords:    ['loja online', 'moda', 'roupas', 'IA', 'WhatsApp', 'catálogo digital'],
@@ -26,6 +27,12 @@ export const metadata: Metadata = {
     description: 'Catálogo inteligente + assistente IA + pedidos no WhatsApp',
     type:        'website',
   },
+}
+
+export const viewport = {
+  width:        'device-width',
+  initialScale: 1,
+  viewportFit:  'cover' as const,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
