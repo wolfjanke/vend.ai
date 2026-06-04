@@ -237,7 +237,7 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
       }
       return [...prev, item]
     })
-    showToast(`✓ ${item.name} adicionado!`)
+    showToast(`${item.name} adicionado!`)
   }, [showToast])
 
   const changeQty = useCallback((idx: number, delta: number) => {
@@ -281,7 +281,7 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        showToast(err?.error ?? '⚠️ Não foi possível registrar o pedido')
+        showToast(err?.error ?? 'Não foi possível registrar o pedido')
         return
       }
       const data = await res.json()
@@ -301,9 +301,9 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
       window.open(buildWhatsAppUrl(store.whatsapp, msg), '_blank')
       setCart([])
       setCartOpen(false)
-      showToast('🎉 Pedido enviado com sucesso!')
+      showToast('Pedido enviado com sucesso!')
     } catch {
-      showToast('⚠️ Erro ao registrar pedido')
+      showToast('Erro ao registrar pedido')
     }
   }, [cart, store, showToast])
 
@@ -383,9 +383,8 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
         {dialogVisible && (
           <div className="fixed inset-0 z-[300] bg-bg/85 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-surface border border-border rounded-3xl p-6 sm:p-8 max-w-sm w-full max-w-[calc(100vw-16px)] text-center">
-              <div className="text-5xl mb-4">👋</div>
-              <h3 className="font-syne font-bold text-xl mb-2">Ainda está por aqui?</h3>
-              <p className="text-sm text-muted mb-6 break-words leading-relaxed">
+              <h3 className="inactivity-modal-title font-syne font-bold mb-2">Ainda está por aqui?</h3>
+              <p className="inactivity-modal-body text-muted mb-6 break-words">
                 Posso te ajudar a encontrar algo especial ou prefere falar com a gente?
               </p>
               <div className="flex flex-col gap-2.5">
@@ -395,14 +394,14 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
                     window.open(`https://wa.me/${store.whatsapp}?text=Olá!`, '_blank')
                     dismissInactivityDialog()
                   }}
-                  className="w-full min-h-[44px] py-3.5 bg-accent text-bg rounded-xl font-syne font-bold text-sm"
+                  className="inactivity-modal-btn w-full min-h-[44px] py-3.5 bg-accent text-bg rounded-xl font-syne font-bold"
                 >
                   Falar com vendedor
                 </button>
                 <button
                   type="button"
                   onClick={dismissInactivityDialog}
-                  className="w-full min-h-[44px] py-3.5 border border-border text-muted rounded-xl text-sm"
+                  className="inactivity-modal-btn w-full min-h-[44px] py-3.5 border border-border text-muted rounded-xl"
                 >
                   Continuar escolhendo
                 </button>

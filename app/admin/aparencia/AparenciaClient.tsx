@@ -17,6 +17,7 @@ import StoreThemePreview from '@/components/admin/StoreThemePreview'
 import ThemeSuggestionCards from '@/components/admin/ThemeSuggestionCards'
 import type { StorePreviewProduct } from '@/lib/preview-products'
 import type { LogoBackgroundAnalysis, ThemeAnalysisSuggestion } from '@/lib/theme-ai'
+import { adminCard } from '@/lib/admin-ui'
 
 type Initial = {
   theme_name:            string
@@ -387,7 +388,7 @@ export default function AparenciaClient({
       <div className="lg:col-span-2 space-y-5 min-w-0">
 
         {/* ── Tema ── */}
-        <section className="space-y-3">
+        <section className={`${adminCard} space-y-3`}>
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Tema</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {THEME_NAMES.map(name => {
@@ -399,7 +400,7 @@ export default function AparenciaClient({
                   type="button"
                   disabled={locked}
                   onClick={() => selectTheme(name)}
-                  className={`text-left p-3 rounded-xl border min-h-[44px] min-w-0 transition-colors ${
+                  className={`text-left p-4 rounded-xl border min-h-[44px] min-w-0 transition-colors ${
                     themeName === name
                       ? 'border-primary bg-primary/10'
                       : 'border-border bg-surface2 hover:border-primary/40'
@@ -414,8 +415,8 @@ export default function AparenciaClient({
           </div>
         </section>
 
-        {/* ── Cores ── */}
-        <section className="space-y-3">
+        {/* ── Cores & fundo ── */}
+        <section className={`${adminCard} space-y-4`}>
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Cores</h2>
           {([
             { key: 'primary' as const, label: 'Primária', val: primary, set: setPrimary },
@@ -438,10 +439,9 @@ export default function AparenciaClient({
                 />
               </div>
             ))}
-        </section>
 
         {/* ── Fundo ── */}
-        <section className="space-y-2">
+        <div className="space-y-2">
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Fundo</h2>
           <div className="flex flex-wrap gap-2">
             {themeDef.allowLightBackground && (
@@ -467,7 +467,7 @@ export default function AparenciaClient({
               </button>
             )}
           </div>
-        </section>
+        </div>
 
         {/* ── Shimmer ── */}
         {canShimmer && (
@@ -482,9 +482,11 @@ export default function AparenciaClient({
           </label>
         )}
 
+        </section>
+
         {/* ── Logo & IA — plano pago + Cloudinary configurado no servidor ── */}
         {showLogoSection ? (
-          <section className="space-y-2 border-t border-border pt-4">
+          <section className={`${adminCard} space-y-2`}>
             <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Logo & IA</h2>
             <p className="text-xs text-muted break-words rounded-lg border border-border bg-surface2/80 px-3 py-2">
               A logo principal da loja (WhatsApp e compartilhamentos) fica em{' '}
@@ -536,7 +538,7 @@ export default function AparenciaClient({
             </button>
           </section>
         ) : !canAnalyze ? (
-          <div className="border-t border-border pt-4">
+          <div className={adminCard}>
             <div className="flex items-center gap-2 text-sm text-muted">
               <span>📸</span>
               <span>Upload de logo disponível nos planos pagos</span>
@@ -549,7 +551,7 @@ export default function AparenciaClient({
         )}
 
         {logoHarmony && (
-          <div className="rounded-xl border border-border bg-surface2 p-4 space-y-3 min-w-0">
+          <div className={`${adminCard} space-y-3 min-w-0`}>
             <h3 className="font-syne font-semibold text-sm">Dica de harmonização</h3>
             <p className="text-xs text-muted break-words">{logoHarmony.harmony_note}</p>
             <p className="text-[11px] text-muted break-words">

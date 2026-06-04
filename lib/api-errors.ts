@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-export const ORDER_REJECT_MESSAGE =
+const ORDER_REJECT_MESSAGE =
   'Não foi possível processar o pedido. Atualize a página e tente novamente.'
 
 export function orderReject422() {

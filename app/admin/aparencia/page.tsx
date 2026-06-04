@@ -6,6 +6,7 @@ import type { PlanSlug } from '@/lib/plans'
 import { toStorePreviewProducts } from '@/lib/preview-products'
 import AdminPageError from '@/components/admin/AdminPageError'
 import AparenciaClient from './AparenciaClient'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 export default async function AparenciaPage() {
   const session = await getSessionSafe()
@@ -54,8 +55,8 @@ export default async function AparenciaPage() {
   const displayLogo = store.theme_logo_url?.trim() || store.logo_url?.trim() || null
 
   return (
-    <div className="animate-fade-up max-w-6xl min-w-0">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Aparência</h1>
         <p className="text-sm text-muted break-words">
           Temas visuais, cores e preview da vitrine

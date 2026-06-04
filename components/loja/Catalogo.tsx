@@ -41,7 +41,7 @@ function buildCatalogSections(
   if (promoItems.length > 0) {
     sections.push({
       key:   'promo',
-      title: '🔥 Promoções',
+      title: 'Promoções',
       items: promoItems,
     })
   }
@@ -91,7 +91,7 @@ function buildCatalogSections(
   if (outros.length > 0) {
     sections.push({
       key:   'outros-produtos',
-      title: '📦 Outros produtos',
+      title: 'Outros produtos',
       items: outros,
     })
   }
@@ -127,7 +127,7 @@ export default function Catalogo({
       { value: '', label: 'Tudo' },
       ...categoryFilters,
       ...customFilters,
-      ...(hasPromo ? [{ value: 'sale', label: '🔥 Promoções' }] : []),
+      ...(hasPromo ? [{ value: 'sale', label: 'Promoções' }] : []),
     ]
   }, [visibleProducts, customCategories])
 
@@ -167,7 +167,7 @@ export default function Catalogo({
   )
 
   const filteredTitle = useMemo(() => {
-    if (catFilter === 'sale') return '🔥 Promoções'
+    if (catFilter === 'sale') return 'Promoções'
     if (catFilter) {
       return getCategoryDisplayLabel(catFilter, customCategories)
     }
@@ -197,7 +197,7 @@ export default function Catalogo({
                 setSearch(e.target.value)
                 onInteract?.()
               }}
-              className="w-full pl-11 pr-4 py-3.5 bg-surface border border-border rounded-2xl text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+              className="w-full pl-11 pr-4 py-3.5 bg-surface border border-border rounded-2xl text-foreground vitrine-search-input outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
               placeholder={getSearchPlaceholder(profile)}
             />
           </div>
@@ -213,7 +213,7 @@ export default function Catalogo({
                   setCatFilter(f.value)
                   onInteract?.()
                 }}
-                className={`filter-chip flex-shrink-0 px-4 py-1.5 min-h-[36px] text-sm font-medium transition-all ${
+                className={`filter-chip flex-shrink-0 px-4 py-1.5 min-h-[36px] font-medium transition-all ${
                   catFilter === f.value ? 'active' : ''
                 }`}
               >
@@ -240,7 +240,6 @@ export default function Catalogo({
               />
             ) : (
               <div className="text-center py-20 text-muted px-6">
-                <div className="text-5xl mb-3">🔍</div>
                 <p className="font-medium">Nenhum produto encontrado</p>
                 <p className="text-sm mt-1">Tente outro termo ou categoria</p>
               </div>
@@ -266,7 +265,6 @@ export default function Catalogo({
               ))
             ) : (
               <div className="text-center py-20 text-muted px-6">
-                <div className="text-5xl mb-3">🛍️</div>
                 <p className="font-medium">Nenhum produto na vitrine</p>
                 <p className="text-sm mt-1">Quando houver itens ativos, eles aparecerão aqui.</p>
               </div>

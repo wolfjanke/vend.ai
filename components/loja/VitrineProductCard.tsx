@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { Product, ProductVariant } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import { getVariantPhotoUrl } from '@/lib/product-media'
@@ -29,8 +30,9 @@ function PriceBlock({
   className?:      string
   inverted?:       boolean
 }) {
-  const priceCls = inverted ? 'text-white' : 'produto-preco font-bold text-sm tabular-nums shrink-0'
-  const mutedCls = inverted ? 'text-white/70' : 'produto-preco-old text-[11px] tabular-nums'
+  const priceCls = inverted ? 'text-white' : 'produto-preco font-bold tabular-nums shrink-0'
+  const mutedCls = inverted ? 'text-white/70' : 'produto-preco-old tabular-nums'
+  const parcelaCls = inverted ? 'text-white/70' : 'produto-preco-old produto-parcela'
   return (
     <div className={`flex flex-col gap-0.5 min-w-0 ${className}`}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
@@ -38,14 +40,55 @@ function PriceBlock({
           R${effectivePrice.toFixed(2).replace('.', ',')}
         </span>
         {promoPrice != null && (
-          <span className={`text-[11px] line-through tabular-nums ${mutedCls}`}>
+          <span className={`line-through tabular-nums ${mutedCls}`}>
             R${Number(promoPrice).toFixed(2).replace('.', ',')}
           </span>
         )}
       </div>
       {installmentText && (
-        <p className={`text-[11px] leading-snug break-words ${mutedCls}`}>{installmentText}</p>
+        <p className={`break-words ${parcelaCls}`}>{installmentText}</p>
       )}
+    </div>
+  )
+}
+
+function CardMedia({
+  photoUrl,
+  product,
+  variant,
+  imgClassName,
+}: {
+  photoUrl:     string | null
+  product:      Product
+  variant:      ProductVariant | undefined
+  imgClassName: string
+}) {
+  const [imgFailed, setImgFailed] = useState(false)
+
+  useEffect(() => {
+    setImgFailed(false)
+  }, [photoUrl])
+
+  const showPhoto = Boolean(photoUrl) && !imgFailed
+
+  if (showPhoto) {
+    return (
+      <img
+        src={photoUrl!}
+        alt={product.name}
+        className={imgClassName}
+        onError={() => setImgFailed(true)}
+      />
+    )
+  }
+
+  return (
+    <div className="absolute inset-0">
+      <ProductPlaceholder
+        category={product.category}
+        colorHex={variant?.colorHex}
+        className="w-full h-full"
+      />
     </div>
   )
 }
@@ -62,35 +105,30 @@ export default function VitrineProductCard({
 }: Props) {
   const photoUrl = getVariantPhotoUrl(variant)
   const radius = cardTheme.borderRadius
-  const ratio = cardTheme.aspectRatio
   const shadow = cardTheme.shadow
     ? 'shadow-lg hover:shadow-xl'
     : 'hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)]'
   const baseCard = `produto-card group overflow-hidden h-full flex min-h-0 ${shadow}`
+  const mediaBtnCls =
+    'produto-card-media relative w-full shrink-0 overflow-hidden bg-surface2 text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset'
+  const imgClsCover =
+    'absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
+  const imgClsStatic = 'absolute inset-0 w-full h-full object-cover'
 
   const imageBtn = (
     <button
       type="button"
       onClick={onOpenDetail}
       title="Ver detalhes do produto"
-      className="relative w-full shrink-0 overflow-hidden bg-surface2 text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
-      style={{ aspectRatio: ratio, borderRadius: radius }}
+      className={mediaBtnCls}
+      style={{ borderRadius: radius }}
     >
-      {photoUrl ? (
-        <img
-          src={photoUrl}
-          alt={product.name}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-      ) : (
-        <div className="absolute inset-0">
-          <ProductPlaceholder
-            category={product.category}
-            colorHex={variant?.colorHex}
-            className="w-full h-full"
-          />
-        </div>
-      )}
+      <CardMedia
+        photoUrl={photoUrl}
+        product={product}
+        variant={variant}
+        imgClassName={imgClsCover}
+      />
       {isSoldOut && (
         <>
           <div className="absolute inset-0 bg-bg/70" />
@@ -122,22 +160,17 @@ export default function VitrineProductCard({
         <button
           type="button"
           onClick={onOpenDetail}
-          className="relative block w-full text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          style={{ aspectRatio: ratio, borderRadius: radius }}
+          className={`${mediaBtnCls} block`}
+          style={{ borderRadius: radius }}
         >
-          {photoUrl ? (
-            <img
-              src={photoUrl}
-              alt={product.name}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0">
-              <ProductPlaceholder category={product.category} colorHex={variant?.colorHex} className="w-full h-full" />
-            </div>
-          )}
+          <CardMedia
+            photoUrl={photoUrl}
+            product={product}
+            variant={variant}
+            imgClassName={imgClsStatic}
+          />
           <div className="card-info-overlay absolute inset-0 flex flex-col justify-end min-w-0">
-            <span className="produto-nome font-semibold text-sm line-clamp-2 break-words mb-1">
+            <span className="produto-nome font-semibold line-clamp-2 break-words mb-1">
               {product.name}
             </span>
             <PriceBlock
@@ -155,22 +188,22 @@ export default function VitrineProductCard({
   if (cardTheme.infoPosition === 'badge') {
     return (
       <div
-        className={baseCard}
+        className={`${baseCard} flex flex-col`}
         style={{ borderRadius: radius }}
         data-shimmer={cardTheme.shimmer ? 'true' : 'false'}
       >
-        <div className="relative">
-          <span className="absolute top-2 left-2 right-2 z-10 px-2 py-1 rounded-full bg-primary text-white text-[10px] font-bold text-center truncate">
-            {product.promo_price ? '🔥 Promo' : product.name}
+        <div className="relative w-full shrink-0 min-w-0">
+          <span className="absolute top-2 left-2 right-2 z-10 px-2 py-1 rounded-full bg-primary text-white produto-badge font-bold text-center truncate">
+            {product.promo_price ? 'Promo' : product.name}
           </span>
           {imageBtn}
         </div>
         <button
           type="button"
           onClick={onOpenDetail}
-          className="card-info-below w-full min-w-0 text-left border-t border-border/60 hover:bg-surface2/80 transition-colors"
+          className="card-info-below w-full min-w-0 shrink-0 text-left border-t border-border/60 hover:bg-surface2/80 transition-colors"
         >
-          <span className="produto-nome font-semibold text-sm line-clamp-2 break-words block mb-1">{product.name}</span>
+          <span className="produto-nome font-semibold line-clamp-2 break-words block mb-1">{product.name}</span>
           <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
         </button>
       </div>
@@ -195,7 +228,7 @@ export default function VitrineProductCard({
             onClick={onOpenDetail}
             className="card-info-sidebar w-full min-w-0 p-2.5 text-left border-t border-border/60"
           >
-            <span className="produto-nome font-bold text-sm uppercase tracking-wide line-clamp-1 break-words">{product.name}</span>
+            <span className="produto-nome font-bold uppercase tracking-wide line-clamp-1 break-words">{product.name}</span>
             <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
           </button>
         </div>
@@ -210,7 +243,7 @@ export default function VitrineProductCard({
         style={{ borderRadius: radius }}
         data-shimmer={cardTheme.shimmer ? 'true' : 'false'}
       >
-        <div className="relative">
+        <div className="relative w-full shrink-0 min-w-0">
           {imageBtn}
           <button
             type="button"
@@ -219,7 +252,7 @@ export default function VitrineProductCard({
             style={{ borderRadius: radius }}
           >
             <div className="min-w-0">
-              <span className="produto-nome font-semibold text-sm line-clamp-2 break-words block mb-1">{product.name}</span>
+              <span className="produto-nome font-semibold line-clamp-2 break-words block mb-1">{product.name}</span>
               <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
             </div>
           </button>
@@ -241,10 +274,10 @@ export default function VitrineProductCard({
         onClick={onOpenDetail}
         className="card-info-below w-full min-w-0 flex-1 flex flex-col min-h-0 text-left p-2.5 sm:p-3 border-t border-border/60 hover:bg-surface2/80 transition-colors"
       >
-        <span className="produto-nome font-semibold text-sm line-clamp-2 break-words mb-1.5 block min-h-[2.625rem] leading-snug">
+        <span className="produto-nome font-semibold line-clamp-2 break-words mb-1.5 block min-h-[2.625rem]">
           {product.name}
         </span>
-        <span className="block text-[11px] text-muted line-clamp-1 break-words mb-1 min-h-[1.125rem] leading-tight">
+        <span className="produto-variant-color text-muted line-clamp-1 break-words mb-1 min-h-[1.125rem] leading-tight">
           {variant?.color?.trim() ? variant.color : 'Cor única'}
         </span>
         <div className="mt-auto pt-0.5">

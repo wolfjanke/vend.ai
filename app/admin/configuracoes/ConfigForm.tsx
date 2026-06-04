@@ -13,6 +13,7 @@ import CepInput from '@/components/ui/CepInput'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import { maskPhone } from '@/lib/masks'
 import SectionHeader from '@/components/admin/SectionHeader'
+import { adminCard } from '@/lib/admin-ui'
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
 
 function initialWppDisplay(w: string) {
@@ -263,7 +264,7 @@ export default function ConfigForm({ store, viStats }: Props) {
   return (
     <>
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-      <div className="bg-surface border border-border rounded-2xl p-4 sm:p-6 flex flex-col gap-2 xl:col-span-8">
+      <div className={`${adminCard} flex flex-col gap-2 xl:col-span-8`}>
         <SectionHeader title="Informações básicas" />
         <div>
           <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Nome da loja</label>
@@ -640,7 +641,7 @@ export default function ConfigForm({ store, viStats }: Props) {
       </div>
 
       <div className="xl:col-span-4 space-y-6">
-      <div className="bg-surface border border-border rounded-2xl p-6 space-y-4 xl:sticky xl:top-24">
+      <div className={`${adminCard} space-y-4 xl:sticky xl:top-24`}>
         <SectionHeader title="Vi — Assistente IA" />
         {viStats && (
           <div className="text-sm space-y-1 text-muted break-words">
@@ -750,7 +751,7 @@ export default function ConfigForm({ store, viStats }: Props) {
         )}
       </div>
 
-      <div className="bg-surface border border-warm/20 rounded-2xl p-6">
+      <div className={`${adminCard} border-warm/20`}>
         <h3 className="font-syne font-bold text-sm text-warm mb-2">Zona de risco</h3>
         <p className="text-xs text-muted mb-4 break-words">
           Essas ações são sensíveis. Para exclusão de dados e conta, envie um e-mail conforme a LGPD.

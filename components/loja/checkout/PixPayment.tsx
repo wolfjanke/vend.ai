@@ -124,7 +124,7 @@ export default function PixPayment({ paymentId, statusToken, pixQrCode, pixCopia
             onClick={handleCopy}
             className="w-full min-h-[44px] py-3 border border-primary text-primary font-syne font-semibold text-sm rounded-xl hover:bg-primary/10 transition-all"
           >
-            {copied ? '✓ Copiado!' : 'Copiar código PIX'}
+            {copied ? 'Copiado!' : 'Copiar código PIX'}
           </button>
         </div>
       )}

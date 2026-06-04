@@ -2,7 +2,7 @@
  * Slugs que não devem ser tratados como loja — evita que `/favicon.ico` etc.
  * caiam em `app/[slug]` e disparem SQL (500 no browser + erro de RSC).
  */
-export const RESERVED_STORE_SLUGS = new Set([
+const RESERVED_STORE_SLUGS = new Set([
   'favicon.ico',
   'favicon.png',
   'favicon.svg',

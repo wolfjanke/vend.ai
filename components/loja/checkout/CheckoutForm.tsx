@@ -131,7 +131,6 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
   if (step === 'confirmed') {
     return (
       <div className="text-center py-16">
-        <div className="text-5xl mb-4">✓</div>
         <h2 className="font-syne font-bold text-xl mb-2">Pagamento confirmado!</h2>
         <p className="text-muted text-sm">Você receberá a confirmação em breve.</p>
         <a href={`/${storeSlug}`} className="mt-6 inline-block text-primary text-sm font-semibold underline underline-offset-2">
@@ -197,7 +196,7 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
                 method === m ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:border-primary/50'
               }`}
             >
-              {m === 'PIX' ? '💠 PIX' : '💳 Cartão'}
+              {m === 'PIX' ? 'PIX' : 'Cartão'}
             </button>
           ))}
         </div>
@@ -216,7 +215,7 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
                   <div key={n}>
                     {mudou && (
                       <div className="text-[10px] text-warm font-semibold px-2 py-1 bg-warm/10 border border-warm/20 rounded-lg mb-1 break-words">
-                        ⚠ A partir de {n}x a taxa muda para {(q.platformTakePct).toFixed(1)}%. Parcela: {formatCurrency(q.installmentValue)}/mês.
+                        Atenção: a partir de {n}x a taxa muda para {(q.platformTakePct).toFixed(1)}%. Parcela: {formatCurrency(q.installmentValue)}/mês.
                       </div>
                     )}
                     <button
@@ -261,7 +260,7 @@ export default function CheckoutForm({ storeSlug, plan, items, grossValue }: Pro
 
       {faixaMudou && method === 'CREDIT_CARD' && (
         <div className="p-3 bg-warm/10 border border-warm/30 rounded-xl text-xs text-warm break-words">
-          ⚠ A taxa muda a partir de 4 parcelas. Verifique o total antes de confirmar.
+          Atenção: a taxa muda a partir de 4 parcelas. Verifique o total antes de confirmar.
         </div>
       )}
 

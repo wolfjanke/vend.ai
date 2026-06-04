@@ -26,10 +26,6 @@ export function getWolfHubWalletId(): string | undefined {
   return process.env.WOLF_HUB_WALLET_ID?.trim() || undefined
 }
 
-export function getVendaiWalletId(): string | undefined {
-  return process.env.VENDAI_ASAAS_WALLET_ID?.trim() || undefined
-}
-
 export function logSandbox(context: string, data?: Record<string, unknown>): void {
   if (!isSandboxMode()) return
   console.info(`[payments] SANDBOX MODE — ${context}`, data ?? {})

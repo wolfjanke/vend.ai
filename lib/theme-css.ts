@@ -9,6 +9,7 @@ import {
 import { getGoogleFontsUrl } from '@/lib/theme-fonts'
 import { deriveThemeColors } from '@/lib/theme-derive'
 import { hexWithAlpha } from '@/lib/theme-contrast'
+import { getThemeTypography, themeTypographyCssVars } from '@/lib/theme-typography'
 
 export type StoreThemeRow = {
   theme_name?:              string | null
@@ -38,6 +39,7 @@ export function generateThemeCss(
       : theme.defaultColors.backgroundLight
 
   const c = deriveThemeColors(primary, accent, background, pageBg)
+  const typography = themeTypographyCssVars(getThemeTypography(theme.name))
   const shadow =
     background === 'dark'
       ? '0 4px 20px rgba(0,0,0,0.4)'
@@ -116,6 +118,8 @@ export function generateThemeCss(
     --faint: ${c.faint};
     background-color: ${c.pageBg};
     color: ${c.textPrimary};
+
+    ${typography}
   `.trim()
 }
 

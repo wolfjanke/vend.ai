@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Crown } from 'lucide-react'
 import { formatPlanPrice } from '@/lib/plans'
+import { adminCard } from '@/lib/admin-ui'
 import type { PlanSlug, SubscriptionStatus } from '@/types'
 
 interface PlanOption {
@@ -142,7 +143,7 @@ export default function PlanoClient() {
     : isPaid ? 'Ativo' : 'Grátis'
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5 min-w-0">
       {error && (
         <div className="rounded-xl border border-warm/30 bg-warm/10 px-4 py-3 text-sm text-warm break-words">
           {error}
@@ -151,7 +152,7 @@ export default function PlanoClient() {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
       {/* Plano atual */}
-      <div className="bg-surface border border-primary/30 rounded-2xl p-5 xl:col-span-4 xl:sticky xl:top-24 h-fit">
+      <div className={`${adminCard} xl:col-span-4 xl:sticky xl:top-24 h-fit border-primary/30`}>
         <div className="flex items-center gap-2 mb-3">
           <Crown size={18} className="text-primary shrink-0" />
           <span className="font-syne font-bold text-base">Plano atual</span>
@@ -221,15 +222,15 @@ export default function PlanoClient() {
       <div className="xl:col-span-8 space-y-5">
       <div>
         <h2 className="font-syne font-bold text-sm mb-3">Planos disponíveis</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2">
           {data.plans.map(p => {
             const isCurrent = p.slug === data.plan
             const isPopular = p.slug === 'pro'
             return (
               <div
                 key={p.slug}
-                className={`bg-surface border rounded-2xl p-4 flex flex-col ${
-                  isPopular ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'
+                className={`${adminCard} flex flex-col ${
+                  isPopular ? 'border-primary/50 ring-1 ring-primary/20' : ''
                 }`}
               >
                 {isPopular && (

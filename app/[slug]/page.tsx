@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { sql } from '@/lib/db'
 import { isReservedStoreSlug } from '@/lib/reserved-slugs'
 import type { Product, Store } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
 import { toPublicStore, publicStoreAsStore } from '@/lib/public-store'
 import { resolveStoreTheme } from '@/lib/theme-css'
+import { getCachedActiveProducts, getStoreNameBySlug, getStorePublicRow } from '@/lib/store-public-data'
 import StoreClient from './StoreClient'
 
 interface Props {
@@ -17,9 +17,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'vend.ai' }
   }
   try {
-    const rows = (await sql`SELECT name FROM stores WHERE slug = ${params.slug} LIMIT 1`) as { name: string }[]
-    if (!rows[0]) return { title: 'Loja não encontrada' }
-    return { title: `${rows[0].name} — vend.ai` }
+    const name = await getStoreNameBySlug(params.slug)
+    if (!name) return { title: 'Loja não encontrada' }
+    return { title: `${name} — vend.ai` }
   } catch {
     return { title: 'vend.ai' }
   }
@@ -30,18 +30,7 @@ export default async function StorePage({ params }: Props) {
 
   let storeRow: Record<string, unknown> | undefined
   try {
-    const rows = await sql`
-      SELECT
-        id, slug, name, logo_url, tagline, whatsapp, settings_json, created_at,
-        cep, logradouro, numero, complemento, bairro, cidade, uf,
-        theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-        theme_background, theme_shimmer, theme_logo_url,
-        plan, assistant_name, assistant_welcome_message, assistant_tone
-      FROM stores
-      WHERE slug = ${params.slug}
-      LIMIT 1
-    `
-    storeRow = rows[0] as Record<string, unknown> | undefined
+    storeRow = await getStorePublicRow(params.slug)
   } catch (e) {
     console.error('[store/page]', params.slug, e)
     notFound()
@@ -50,6 +39,7 @@ export default async function StorePage({ params }: Props) {
   if (!storeRow) notFound()
 
   const storeId = String(storeRow.id)
+  const slug = params.slug
   const publicStore = toPublicStore(storeRow)
   const themeResolved = resolveStoreTheme(storeRow)
   const store: Store = {
@@ -63,11 +53,7 @@ export default async function StorePage({ params }: Props) {
 
   let products: Product[]
   try {
-    products = (await sql`
-      SELECT * FROM products
-      WHERE store_id = ${storeId} AND active = true
-      ORDER BY created_at DESC
-    `) as Product[]
+    products = await getCachedActiveProducts(storeId, slug)
   } catch (e) {
     console.error('[store/page] products', params.slug, e)
     notFound()

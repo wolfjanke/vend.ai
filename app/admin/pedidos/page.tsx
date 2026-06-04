@@ -4,6 +4,7 @@ import { sql }         from '@/lib/db'
 import PedidoCard      from '@/components/admin/PedidoCard'
 import AdminPageError  from '@/components/admin/AdminPageError'
 import Pagination      from '@/components/ui/Pagination'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 import type { Order, OrderStatus } from '@/types'
 
 const STATUS_FILTERS: Array<{ value: OrderStatus | 'TODOS'; label: string }> = [
@@ -101,8 +102,8 @@ export default async function PedidosPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="animate-fade-up">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Pedidos</h1>
         <p className="text-sm text-muted">Acompanhe e gerencie todos os pedidos da sua loja</p>
         <p className="text-xs text-muted mt-2 tabular-nums">
@@ -209,7 +210,7 @@ export default async function PedidosPage({ searchParams }: Props) {
 
       {orders.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-3">
             {(orders as Order[]).map(order => (
               <PedidoCard key={order.id} order={order} storeId={storeId} />
             ))}
@@ -218,7 +219,6 @@ export default async function PedidosPage({ searchParams }: Props) {
         </>
       ) : (
         <div className="text-center py-20 text-muted">
-          <div className="text-5xl mb-3">📋</div>
           <p className="font-medium">Nenhum pedido encontrado</p>
           <p className="text-sm mt-1">
             {hasStatus || hasSource

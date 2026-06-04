@@ -9,7 +9,7 @@ interface Props {
 
 export default function OnboardingPending({ onboardingUrl, status }: Props) {
   return (
-    <div className="bg-surface border border-border rounded-2xl p-6">
+    <div className="bg-surface border border-border rounded-2xl p-5">
       <div className="flex items-center gap-2 mb-3">
         <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
         <span className="font-syne font-bold">Cadastro em análise</span>

@@ -76,7 +76,7 @@ export default function PdvHistory({ storeId }: Props) {
       </div>
 
       {/* Total do dia */}
-      <div className="bg-surface border border-accent/30 rounded-2xl p-4 flex items-center justify-between">
+      <div className="bg-surface border border-accent/30 rounded-2xl p-5 flex items-center justify-between">
         <div>
           <div className="text-xs text-muted mb-0.5">Total vendido (confirmado)</div>
           <div className="font-syne font-extrabold text-xl text-accent tabular-nums">{formatCurrency(totalVendido)}</div>
@@ -96,7 +96,7 @@ export default function PdvHistory({ storeId }: Props) {
           {orders.map(o => {
             const st = STATUS_LABELS[o.payment_status ?? ''] ?? { label: o.payment_status ?? '—', cls: 'text-muted border-border' }
             return (
-              <div key={o.id} className="bg-surface border border-border rounded-2xl p-4 flex items-start justify-between gap-3">
+              <div key={o.id} className="bg-surface border border-border rounded-2xl p-5 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="font-syne font-bold text-sm">{o.order_number}</div>
                   <div className="text-xs text-muted mt-0.5 truncate">{o.customer_name}</div>

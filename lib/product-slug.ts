@@ -2,7 +2,7 @@ import { slugify } from '@/lib/masks'
 import { sql } from '@/lib/db'
 
 /** Gera slug único entre os já usados na loja. */
-export function uniqueProductSlug(name: string, existing: Set<string>): string {
+function uniqueProductSlug(name: string, existing: Set<string>): string {
   const base = slugify(name) || `produto-${Date.now()}`
   if (!existing.has(base)) return base
   let n = 2

@@ -221,7 +221,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
 
       {products.length > 0 ? (
         <>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {(products as Product[]).map(p => {
               const nVar = p.variants_json?.length ?? 0
               const oos = productOutOfStock(p)
@@ -244,7 +244,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-syne font-semibold text-sm truncate" title={p.name}>
+                        <div className="font-syne font-semibold text-sm line-clamp-2 break-words" title={p.name}>
                           {p.name}
                         </div>
                         <div className="text-xs text-muted">{getCategoryLabel(p.category)}</div>

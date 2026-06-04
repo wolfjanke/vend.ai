@@ -275,7 +275,6 @@ export default function Carrinho({
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 min-h-0 overscroll-contain">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[12rem] gap-3 text-muted text-center">
-              <span className="text-5xl opacity-40">🛍️</span>
               <p>Seu carrinho está vazio</p>
               <p className="text-xs">Adicione produtos para começar</p>
             </div>
@@ -286,7 +285,7 @@ export default function Carrinho({
                   <div className="w-[60px] h-[75px] bg-surface2 rounded-xl flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">
                     {item.photo
                       ? <img src={item.photo} alt="" className="w-full h-full object-cover" />
-                      : '👗'}
+                      : <span className="text-[10px] text-muted/70 text-center px-1">Sem foto</span>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold break-words">{item.name}</div>
@@ -444,7 +443,7 @@ export default function Carrinho({
               <div>
                 <input
                   className={`w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border rounded-xl text-foreground text-sm outline-none transition-all placeholder:text-muted ${errors.name ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
-                  placeholder="👤 Seu nome completo"
+                  placeholder="Seu nome completo"
                   value={name}
                   onChange={e => { setName(e.target.value); setErrors(p => { const n = { ...p }; delete n.name; return n }) }}
                 />
@@ -454,7 +453,7 @@ export default function Carrinho({
                 <MaskedInput
                   mask="phone"
                   className={`w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border rounded-xl text-foreground text-sm outline-none transition-all placeholder:text-muted ${errors.phone ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
-                  placeholder="📱 Seu WhatsApp (11) 99999-9999"
+                  placeholder="Seu WhatsApp (11) 99999-9999"
                   value={phone}
                   onChange={v => { setPhone(v); setErrors(p => { const n = { ...p }; delete n.phone; return n }) }}
                   autoComplete="tel"
@@ -463,7 +462,7 @@ export default function Carrinho({
               </div>
               <input
                 className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-                placeholder="📝 Observações (opcional)"
+                placeholder="Observações (opcional)"
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
               />

@@ -347,18 +347,18 @@ export interface ProductAnalysisHints {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export const PRODUCT_CATEGORIES = [
-  { value: 'vestido',  label: '👗 Vestidos' },
-  { value: 'blusa',    label: '👚 Blusas' },
-  { value: 'camiseta', label: '👕 Camisetas' },
-  { value: 'calca',    label: '👖 Calças' },
-  { value: 'bermuda',  label: '🩳 Bermudas' },
-  { value: 'shorts',   label: '🩳 Shorts' },
-  { value: 'conjunto', label: '✨ Conjuntos' },
-  { value: 'saia',     label: '🌸 Saias' },
-  { value: 'moletom',  label: '🧥 Moletons' },
-  { value: 'casaco',   label: '🧥 Casacos / jaquetas' },
-  { value: 'infantil', label: '👶 Infantil' },
-  { value: 'outro',    label: '📦 Outro' },
+  { value: 'vestido',  label: 'Vestidos' },
+  { value: 'blusa',    label: 'Blusas' },
+  { value: 'camiseta', label: 'Camisetas' },
+  { value: 'calca',    label: 'Calças' },
+  { value: 'bermuda',  label: 'Bermudas' },
+  { value: 'shorts',   label: 'Shorts' },
+  { value: 'conjunto', label: 'Conjuntos' },
+  { value: 'saia',     label: 'Saias' },
+  { value: 'moletom',  label: 'Moletons' },
+  { value: 'casaco',   label: 'Casacos / jaquetas' },
+  { value: 'infantil', label: 'Infantil' },
+  { value: 'outro',    label: 'Outro' },
 ]
 
 export const PRODUCT_CATEGORY_SLUGS = PRODUCT_CATEGORIES.map(c => c.value)
@@ -369,12 +369,12 @@ export function getCategoryDisplayLabel(
   customCategories?: CustomCategory[] | null
 ): string {
   const s = String(slug ?? '').trim()
-  if (!s) return '📦 Outro'
+  if (!s) return 'Outro'
   const fromStd = PRODUCT_CATEGORIES.find(c => c.value === s)?.label
   if (fromStd) return fromStd
   const fromCustom = customCategories?.find(c => c.value === s)?.label
   if (fromCustom) return fromCustom
-  return s === 'outro' ? '📦 Outro' : s
+  return s === 'outro' ? 'Outro' : s
 }
 
 /** Normaliza categoria vinda da IA para um slug conhecido (padrão ou customizado da loja). */

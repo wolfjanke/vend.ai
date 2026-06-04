@@ -1,7 +1,7 @@
 'use server'
 
 import { sql }           from '@/lib/db'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { getSession } from '@/lib/auth'
 import type { OrderStatus, StoreSettings, CustomCategory } from '@/types'
 import { PRODUCT_CATEGORY_SLUGS } from '@/types'
@@ -32,7 +32,11 @@ async function revalidateStorePaths(storeId: string) {
   revalidatePath('/admin/categorias')
   revalidatePath('/admin/produtos')
   revalidatePath('/admin/produtos/novo')
-  if (slug) revalidatePath(`/${slug}`)
+  if (slug) {
+    revalidateTag(`store-${slug}`)
+    revalidatePath(`/${slug}`)
+    revalidatePath(`/${slug}`, 'layout')
+  }
 }
 
 export async function addCustomCategory(label: string): Promise<CustomCategory> {
@@ -98,11 +102,22 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 }
 
 export async function toggleProductActive(productId: string, active: boolean) {
-  await sql`UPDATE products SET active = ${!active} WHERE id = ${productId}`
+  const rows = await sql`
+    UPDATE products SET active = ${!active}
+    WHERE id = ${productId}
+    RETURNING store_id
+  `
+  const storeId = rows[0]?.store_id as string | undefined
   revalidatePath('/admin/produtos')
+  if (storeId) await revalidateStorePaths(storeId)
 }
 
 export async function deleteProduct(productId: string) {
-  await sql`DELETE FROM products WHERE id = ${productId}`
+  const rows = await sql`
+    DELETE FROM products WHERE id = ${productId}
+    RETURNING store_id
+  `
+  const storeId = rows[0]?.store_id as string | undefined
   revalidatePath('/admin/produtos')
+  if (storeId) await revalidateStorePaths(storeId)
 }

@@ -34,7 +34,7 @@ function relativeLuminance(hex: string): number {
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs
 }
 
-export function contrastRatio(fg: string, bg: string): number {
+function contrastRatio(fg: string, bg: string): number {
   const l1 = relativeLuminance(fg)
   const l2 = relativeLuminance(bg)
   const lighter = Math.max(l1, l2)
@@ -42,7 +42,7 @@ export function contrastRatio(fg: string, bg: string): number {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-export function meetsWcagAA(fg: string, bg: string): boolean {
+function meetsWcagAA(fg: string, bg: string): boolean {
   return contrastRatio(fg, bg) >= 4.5
 }
 

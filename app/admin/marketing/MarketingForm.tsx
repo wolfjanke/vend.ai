@@ -6,6 +6,7 @@ import type { Store, BannerMessage, CouponRule } from '@/types'
 import { getStoreProfile } from '@/types'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import SectionHeader from '@/components/admin/SectionHeader'
+import { adminCard } from '@/lib/admin-ui'
 
 interface Props {
   store: Store
@@ -130,7 +131,8 @@ export default function MarketingForm({ store }: Props) {
   }
 
   return (
-    <div className="bg-surface border border-border rounded-2xl p-4 sm:p-6 flex flex-col gap-2">
+    <div className="space-y-6">
+      <div className={adminCard}>
       <SectionHeader
         title="Desconto PIX"
         description="Percentual automático quando o cliente escolhe PIX no checkout."
@@ -158,6 +160,9 @@ export default function MarketingForm({ store }: Props) {
         Aplicado automaticamente no checkout quando o cliente selecionar PIX.
       </p>
 
+      </div>
+
+      <div className={adminCard}>
       <SectionHeader
         title="Cupons de desconto"
         description="Cada loja possui seus próprios cupons. Você pode ativar ou desativar por período."
@@ -300,6 +305,9 @@ export default function MarketingForm({ store }: Props) {
         </div>
       )}
 
+      </div>
+
+      <div className={adminCard}>
       <SectionHeader
         title="Banners da vitrine"
         description="Aparecem na loja em faixa rotativa. Opcional: datas para épocas (Páscoa, Natal)."
@@ -363,6 +371,8 @@ export default function MarketingForm({ store }: Props) {
           </div>
         ))
       )}
+
+      </div>
 
       {error && <p className="text-sm text-warm">{error}</p>}
 

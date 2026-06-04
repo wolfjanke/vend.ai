@@ -14,16 +14,6 @@ export async function computeTotalMrr(): Promise<number> {
   return rows.reduce((sum, r) => sum + planPriceCents(r.plan as string), 0)
 }
 
-export const PLAN_CASE_SQL = `
-  CASE plan
-    WHEN 'starter' THEN 4990
-    WHEN 'pro' THEN 9990
-    WHEN 'loja' THEN 19990
-    WHEN 'enterprise' THEN 39990
-    ELSE 0
-  END
-`
-
 export function getViLimit(plan: string): number {
   const slug = (plan in PLANS ? plan : 'free') as PlanSlug
   return PLANS[slug].viMessagesLimit

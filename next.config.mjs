@@ -25,6 +25,22 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@react-pdf/renderer'],
   },
+  /** Menos rebuilds em cascata quando vários arquivos mudam de uma vez (ex.: sync OneDrive, agent). */
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/.next/**',
+          '**/.cursor/**',
+        ],
+        aggregateTimeout: 400,
+      }
+    }
+    return config
+  },
   async rewrites() {
     return [
       /** Pedidos legados a `.ico` servem o SVG em `public/favicon.svg`. */

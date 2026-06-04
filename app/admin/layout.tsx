@@ -1,6 +1,6 @@
 import { Globe } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
-import { sql } from '@/lib/db'
+import { getAdminShellData } from '@/lib/admin-layout-data'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import MobileNav from '@/components/admin/MobileNav'
 import SandboxBanner from '@/components/admin/SandboxBanner'
@@ -26,13 +26,9 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   let store: { name: string; slug: string; plan?: string } | undefined
   let newOrdersCount = 0
   try {
-    const rows = await sql`SELECT name, slug, plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
-    store = rows[0] as { name: string; slug: string; plan?: string } | undefined
-    const countRows = await sql`
-      SELECT COUNT(*)::int as c FROM orders
-      WHERE store_id = ${session.storeId} AND status = 'NOVO'
-    `
-    newOrdersCount = Number(countRows[0]?.c ?? 0)
+    const shell = await getAdminShellData(session.storeId)
+    store = shell.store
+    newOrdersCount = shell.newOrdersCount
   } catch (e) {
     console.error('[admin/layout] stores query:', e)
     return (
@@ -86,7 +82,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 md:p-6 xl:p-8 pb-[max(5rem,calc(64px+env(safe-area-inset-bottom,0px)))] md:pb-6">
-          <div className="w-full max-w-[1600px] mx-auto min-w-0">
+          <div className="w-full min-w-0">
             <SandboxBanner />
             {children}
           </div>

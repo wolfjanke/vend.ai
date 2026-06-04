@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { sql } from '@/lib/db'
 import { isReservedStoreSlug } from '@/lib/reserved-slugs'
+import { getCachedActiveProducts, getStoreNameBySlug, getStorePublicRow } from '@/lib/store-public-data'
 import type { Product, Store } from '@/types'
 import { toPublicStore, publicStoreAsStore } from '@/lib/public-store'
 import { resolveStoreTheme } from '@/lib/theme-css'
@@ -20,14 +21,12 @@ function appBaseUrl(): string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (isReservedStoreSlug(params.slug)) return { title: 'vend.ai' }
 
-  const storeRows = await sql`
-    SELECT name FROM stores WHERE slug = ${params.slug} LIMIT 1
-  `
-  if (!storeRows[0]) return { title: 'Loja não encontrada' }
+  const storeName = await getStoreNameBySlug(params.slug)
+  if (!storeName) return { title: 'Loja não encontrada' }
 
-  const storeRowsFull = await sql`SELECT id FROM stores WHERE slug = ${params.slug} LIMIT 1`
-  const storeId = storeRowsFull[0]?.id
-  if (!storeId) return { title: storeRows[0].name }
+  const storeRow = await getStorePublicRow(params.slug)
+  const storeId = storeRow?.id
+  if (!storeId) return { title: storeName }
 
   const products = await sql`
     SELECT name, description, price, promo_price, variants_json, slug
@@ -36,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     LIMIT 1
   `
   const product = products[0] as Product | undefined
-  if (!product) return { title: storeRows[0].name }
+  if (!product) return { title: storeName }
 
   const price = Number(product.promo_price ?? product.price)
   const variants = product.variants_json as Product['variants_json']
@@ -45,11 +44,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const url = `${base}/${params.slug}/produto/${params.productSlug}`
 
   return {
-    title: `${product.name} — ${storeRows[0].name}`,
-    description: product.description?.slice(0, 160) || `${product.name} disponível em ${storeRows[0].name}`,
+    title: `${product.name} — ${storeName}`,
+    description: product.description?.slice(0, 160) || `${product.name} disponível em ${storeName}`,
     openGraph: {
       title:       `${product.name} — R$${price.toFixed(2).replace('.', ',')}`,
-      description: `Disponível em ${storeRows[0].name}. Compre pelo WhatsApp!`,
+      description: `Disponível em ${storeName}. Compre pelo WhatsApp!`,
       images:      mainPhoto ? [{ url: mainPhoto }] : undefined,
       url,
     },
@@ -64,32 +63,26 @@ export default async function ProductPage({ params }: Props) {
   let allProducts: Product[]
 
   try {
-    const storeRows = await sql`
-      SELECT
-        id, slug, name, logo_url, whatsapp, settings_json, created_at, plan,
-        cep, logradouro, numero, complemento, bairro, cidade, uf,
-        theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-        theme_background, theme_shimmer, theme_logo_url,
-        assistant_name, assistant_welcome_message, assistant_tone
-      FROM stores
-      WHERE slug = ${params.slug}
-      LIMIT 1
-    `
-    storeRow = storeRows[0] as Record<string, unknown> | undefined
+    storeRow = await getStorePublicRow(params.slug)
     if (!storeRow) notFound()
 
     const storeId = String(storeRow.id)
-    const productRows = await sql`
-      SELECT * FROM products
-      WHERE store_id = ${storeId} AND slug = ${params.productSlug} AND active = true
-      LIMIT 1
-    `
+    const slug = params.slug
+
+    const [productRows, catalog] = await Promise.all([
+      sql`
+        SELECT
+          id, store_id, name, slug, description, category, price, promo_price,
+          variants_json, active, created_at
+        FROM products
+        WHERE store_id = ${storeId} AND slug = ${params.productSlug} AND active = true
+        LIMIT 1
+      `,
+      getCachedActiveProducts(storeId, slug),
+    ])
     product = productRows[0] as Product | undefined
     if (!product) notFound()
-
-    allProducts = (await sql`
-      SELECT * FROM products WHERE store_id = ${storeId} AND active = true ORDER BY created_at DESC
-    `) as Product[]
+    allProducts = catalog
   } catch (e) {
     console.error('[store/product]', params.slug, params.productSlug, e)
     notFound()

@@ -120,7 +120,7 @@ export default function PdvSale({ storeId, products, storeHasAsaas, storeWhatsap
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
       {/* Busca de produtos */}
-      <div className="bg-surface border border-border rounded-2xl p-4 xl:col-span-7">
+      <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-7">
         <div className="font-syne font-bold text-sm mb-3">Adicionar produtos</div>
         <input
           className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary transition-all mb-3"
@@ -171,7 +171,7 @@ export default function PdvSale({ storeId, products, storeHasAsaas, storeWhatsap
       {/* Carrinho PDV */}
       {cart.length > 0 && (
         <div className="xl:col-span-5 space-y-4">
-          <div className="bg-surface border border-border rounded-2xl p-4 xl:sticky xl:top-24">
+          <div className="bg-surface border border-border rounded-2xl p-5 xl:sticky xl:top-24">
           <div className="font-syne font-bold text-sm mb-3">Itens da venda</div>
           <div className="space-y-2 mb-4">
             {cart.map((item, i) => (
@@ -235,7 +235,7 @@ export default function PdvSale({ storeId, products, storeHasAsaas, storeWhatsap
           </div>
 
           {/* Dados do cliente (opcional) */}
-          <div className="bg-surface border border-border rounded-2xl p-4">
+          <div className="bg-surface border border-border rounded-2xl p-5">
             <div className="font-syne font-bold text-sm mb-3">Cliente (opcional)</div>
             <div className="grid grid-cols-2 gap-3">
               <div>

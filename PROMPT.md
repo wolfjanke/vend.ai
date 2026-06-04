@@ -1,16 +1,16 @@
 # vend.ai — Vi System Prompt
 
-O prompt da assistente Vi é gerado em **`lib/gemini.ts`** (`buildViSystemPrompt`) com o estoque e dados da loja em tempo real.
+O prompt da assistente Vi é gerado em **`lib/vi-prompt.ts`** (`buildViSystemPrompt`) com o estoque e dados da loja em tempo real.
 
 ## Stack de IA
 
-| Uso | Modelo | Função em `lib/gemini.ts` |
-|-----|--------|---------------------------|
-| Análise de foto no cadastro | `gemini-2.5-flash` | `analyzeProductPhoto()` |
-| Chat com o cliente | `gemini-2.5-flash` | `viChatResponse()` |
-| Busca semântica no estoque | `gemini-2.5-flash-lite` | `searchStock()` |
+| Uso | Modelo | Módulo / função |
+|-----|--------|-----------------|
+| Análise de foto no cadastro | `gemini-2.5-flash` | `lib/gemini.ts` → `analyzeProductPhoto()` |
+| Chat com o cliente | `gemini-2.5-flash` | `lib/gemini.ts` → `viChatResponse()` |
+| Prompt da Vi | — | `lib/vi-prompt.ts` → `buildViSystemPrompt()` |
 
-Plano **Grátis**: chat usa `flash-lite`, resposta sem streaming; limite 1.000 msgs/mês sem excedente.
+Plano **Grátis**: chat usa `gemini-2.5-flash-lite` (`lib/vi-limits.ts`), resposta sem streaming; limite 1.000 msgs/mês sem excedente.
 
 ## Limites da Vi
 

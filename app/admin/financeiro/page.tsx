@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import FinanceiroClient from './FinanceiroClient'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 export default async function FinanceiroPage() {
   const session = await getSessionSafe()
@@ -11,8 +12,8 @@ export default async function FinanceiroPage() {
   const plan = storeRows[0]?.plan ?? 'free'
 
   return (
-    <div className="animate-fade-up max-w-7xl min-w-0">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Financeiro</h1>
         <p className="text-sm text-muted">Extrato de vendas processadas pelo checkout e PDV</p>
       </div>

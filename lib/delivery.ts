@@ -1,7 +1,7 @@
 import type { DeliveryZone, StoreSettings } from '@/types'
 
 /** Normaliza cidade para comparação (minúsculas, sem acentos). */
-export function normalizeCityKey(city: string): string {
+function normalizeCityKey(city: string): string {
   return String(city ?? '')
     .trim()
     .toLowerCase()
@@ -9,7 +9,7 @@ export function normalizeCityKey(city: string): string {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
-export function findDeliveryZone(
+function findDeliveryZone(
   cidade: string,
   uf: string,
   zones: DeliveryZone[] | undefined
@@ -28,7 +28,7 @@ export function findDeliveryZone(
   return null
 }
 
-export interface DeliveryQuoteInput {
+interface DeliveryQuoteInput {
   settings:      StoreSettings | null | undefined
   cidade:        string
   uf:              string
@@ -36,7 +36,7 @@ export interface DeliveryQuoteInput {
   subtotalAfterCoupon: number
 }
 
-export interface DeliveryQuote {
+interface DeliveryQuote {
   fee:           number
   freeShipping:  boolean
   zoneMatched:   boolean

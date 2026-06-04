@@ -32,7 +32,7 @@ const DEFAULT_LOGO_BACKGROUND: LogoBackgroundAnalysis = {
   harmony_note:               'Use o fundo escuro para destacar logos claras ou coloridas.',
 }
 
-export function buildThemeAnalysisPrompt(input: {
+function buildThemeAnalysisPrompt(input: {
   segment:      string
   audience:     string
   personality:  string

@@ -15,7 +15,7 @@ const SENSITIVE_KEYS = new Set([
  * Substitui campos sensíveis por '[REDACTED]' antes de logar.
  * Percorre recursivamente objetos e arrays.
  */
-export function maskSensitive(obj: unknown): unknown {
+function maskSensitive(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj
   if (typeof obj !== 'object') return obj
 

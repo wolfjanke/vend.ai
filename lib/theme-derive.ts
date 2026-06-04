@@ -1,6 +1,6 @@
 import type { ThemeBackground } from '@/lib/themes'
 
-export interface DerivedThemeColors {
+interface DerivedThemeColors {
   primary: string
   accent: string
   background: ThemeBackground
@@ -60,7 +60,7 @@ export function expandHex(hex: string): string {
   return `#${r}${g}${b}`.toUpperCase()
 }
 
-export function hexToHsl(hex: string): [number, number, number] {
+function hexToHsl(hex: string): [number, number, number] {
   const { r, g, b } = hexToRgb(expandHex(hex))
   const rn = r / 255
   const gn = g / 255
@@ -98,7 +98,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   }
 }
 
-export function hslToHex(h: number, s: number, l: number): string {
+function hslToHex(h: number, s: number, l: number): string {
   const sn = s / 100
   const ln = l / 100
   const c = (1 - Math.abs(2 * ln - 1)) * sn
@@ -126,17 +126,17 @@ export function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase()
 }
 
-export function lighten(hex: string, amount: number): string {
+function lighten(hex: string, amount: number): string {
   const [h, s, l] = hexToHsl(hex)
   return hslToHex(h, s, Math.min(100, l + amount))
 }
 
-export function darken(hex: string, amount: number): string {
+function darken(hex: string, amount: number): string {
   const [h, s, l] = hexToHsl(hex)
   return hslToHex(h, s, Math.max(0, l - amount))
 }
 
-export function alpha(hex: string, opacity: number): string {
+function alpha(hex: string, opacity: number): string {
   const { r, g, b } = hexToRgb(expandHex(hex))
   return `rgba(${r}, ${g}, ${b}, ${opacity})`
 }

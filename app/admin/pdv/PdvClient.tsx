@@ -18,7 +18,7 @@ export default function PdvClient({ storeId, products, storeHasAsaas, storeWhats
   const [tab, setTab] = useState<Tab>('venda')
 
   return (
-    <div className="max-w-7xl">
+    <div className="min-w-0">
       <div className="flex gap-2 mb-5">
         {(['venda', 'historico'] as Tab[]).map(t => (
           <button
@@ -29,7 +29,7 @@ export default function PdvClient({ storeId, products, storeHasAsaas, storeWhats
               tab === t ? 'bg-primary text-white' : 'border border-border text-muted hover:text-foreground hover:border-primary/50'
             }`}
           >
-            {t === 'venda' ? '🛒 Nova venda' : '📋 Histórico'}
+            {t === 'venda' ? 'Nova venda' : 'Histórico'}
           </button>
         ))}
       </div>

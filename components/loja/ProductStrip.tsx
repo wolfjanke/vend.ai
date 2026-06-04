@@ -80,7 +80,7 @@ export default function ProductStrip({
   return (
     <section className="mb-8 md:mb-10 min-w-0" aria-labelledby={headingId}>
       <div className="flex items-baseline justify-between gap-2 px-4 md:px-6 mb-3 min-w-0">
-        <h2 id={headingId} className="font-syne font-bold text-base sm:text-lg md:text-xl truncate min-w-0">
+        <h2 id={headingId} className="catalog-section-title font-syne font-bold truncate min-w-0">
           {title}
         </h2>
         {countLabel != null && (

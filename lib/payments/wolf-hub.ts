@@ -132,11 +132,6 @@ export async function cancelSubscriptionAsaas(subscriptionId: string): Promise<v
   await wolfHubFetch(`/subscriptions/${subscriptionId}`, { method: 'DELETE' })
 }
 
-export async function getSubscriptionAsaas(subscriptionId: string): Promise<Record<string, unknown>> {
-  assertPaymentsConfigured()
-  return wolfHubFetch<Record<string, unknown>>(`/subscriptions/${subscriptionId}`)
-}
-
 export function paymentsNotConfiguredMessage(): string {
   if (isSandboxMode()) {
     return 'Pagamentos em modo teste — configure WOLF_HUB_ASAAS_KEY e WOLF_HUB_WALLET_ID para ativar cobranças reais no sandbox.'

@@ -24,6 +24,7 @@ import AdminPageError from '@/components/admin/AdminPageError'
 import { getViUsageStats } from '@/lib/vi-limits'
 import type { Order } from '@/types'
 import type { PlanSlug } from '@/types'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 function todayRange() {
   const start = new Date()
@@ -152,8 +153,8 @@ export default async function DashboardPage() {
   const showOnboarding = recentRows.length === 0 && storePublicUrl
 
   return (
-    <div className="animate-fade-up">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">
           {greeting()}, {store?.name ?? 'loja'}!
         </h1>
@@ -165,7 +166,7 @@ export default async function DashboardPage() {
       <ViLimitBanner percent={viStats.percent} />
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 mb-4">
+      <div className="grid w-full gap-3 grid-cols-2 lg:grid-cols-4 mb-4">
         <MetricCard
           icon={<ShoppingCart size={22} className="text-primary" />}
           value={countNovo}
@@ -193,16 +194,16 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-8">
+      <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-8">
         <ViUsageCard used={viStats.used} limit={viStats.limit} percent={viStats.percent} />
-        <div className="bg-surface border border-border rounded-2xl p-4 flex items-start gap-3">
+        <div className="bg-surface border border-border rounded-2xl p-5 flex items-start gap-3">
           <TrendingUp size={20} className="text-muted shrink-0 mt-0.5" aria-hidden />
           <div className="min-w-0">
             <p className="text-xs text-muted mb-1">Esta semana</p>
             <p className="font-syne font-extrabold text-xl text-foreground tabular-nums">{fmtMoney(totalSemana)}</p>
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-2xl p-4 flex items-start gap-3">
+        <div className="bg-surface border border-border rounded-2xl p-5 flex items-start gap-3">
           <Calendar size={20} className="text-muted shrink-0 mt-0.5" aria-hidden />
           <div className="min-w-0">
             <p className="text-xs text-muted mb-1">Este mês</p>

@@ -4,6 +4,7 @@ import { sql }            from '@/lib/db'
 import AdminPageError     from '@/components/admin/AdminPageError'
 import type { Product }   from '@/types'
 import PdvClient          from './PdvClient'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 export default async function PdvPage() {
   const session = await getSessionSafe()
@@ -41,8 +42,8 @@ export default async function PdvPage() {
   const storeHasAsaas = store.asaas_onboarding_status === 'APPROVED' && !!store.asaas_wallet_id
 
   return (
-    <div className="animate-fade-up">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Mini PDV</h1>
         <p className="text-sm text-muted">Venda presencial — registre e finalize em segundos</p>
       </div>

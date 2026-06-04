@@ -11,11 +11,7 @@ export const CHECKOUT_TAKE_RATE: Record<PlanSlug, number> = {
   enterprise: 0.015,
 }
 
-export function getCheckoutTakeRate(plan: PlanSlug): number {
-  return CHECKOUT_TAKE_RATE[plan] ?? CHECKOUT_TAKE_RATE.free
-}
-
-export interface AsaasSplitEntry {
+interface AsaasSplitEntry {
   walletId: string
   percentualValue: number
 }

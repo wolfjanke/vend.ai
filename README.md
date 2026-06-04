@@ -85,10 +85,9 @@ Acesse `http://localhost:3000`.
 | Função              | Modelo                 | Arquivo / rota              |
 |--------------------|------------------------|-----------------------------|
 | Análise de foto    | `gemini-2.5-flash`     | `lib/gemini.ts` → `/api/produtos/analyze` |
-| Chat Vi            | `gemini-2.5-flash`     | `lib/gemini.ts` → `/api/vi` |
-| Busca no estoque   | `gemini-2.5-flash-lite`| `lib/gemini.ts` → `searchStock()` |
+| Chat Vi            | `gemini-2.5-flash`     | `lib/gemini.ts` → `/api/vi` (prompt em `lib/vi-prompt.ts`) |
 
-Plano **Grátis**: Vi com `flash-lite`, sem streaming; ao atingir limite mensal redireciona para WhatsApp.
+Plano **Grátis**: Vi com `gemini-2.5-flash-lite`, sem streaming; ao atingir limite mensal redireciona para WhatsApp.
 
 ## Estrutura principal
 

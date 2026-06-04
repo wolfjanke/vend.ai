@@ -3,6 +3,7 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { Store } from '@/types'
 import CategoriesManager from './CategoriesManager'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 export default async function CategoriasPage() {
   const session = await getSessionSafe()
@@ -25,8 +26,8 @@ export default async function CategoriasPage() {
   }
 
   return (
-    <div className="animate-fade-up max-w-7xl min-w-0">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Categorias</h1>
         <p className="text-sm text-muted break-words">
           Categorias padrão do sistema e categorias extras da sua loja (perfumes, acessórios etc.). Os

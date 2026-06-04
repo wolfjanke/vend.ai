@@ -3,6 +3,7 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { Store } from '@/types'
 import MarketingForm from './MarketingForm'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 export default async function MarketingPage() {
   const session = await getSessionSafe()
@@ -14,8 +15,8 @@ export default async function MarketingPage() {
   if (!store) redirect('/cadastro')
 
   return (
-    <div className="animate-fade-up max-w-3xl">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Marketing</h1>
         <p className="text-sm text-muted">Gerencie promoções, cupons e banners da loja</p>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { adminCard } from '@/lib/admin-ui'
 
 interface Summary {
   gmv_total:   number
@@ -81,7 +82,7 @@ export default function FinanceiroClient({ plan }: Props) {
   return (
     <div className="space-y-5">
       {/* Filtro de período */}
-      <div className="bg-surface border border-border rounded-2xl p-4">
+      <div className={adminCard}>
         <div className="font-syne font-bold text-sm mb-3">Período</div>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
           <div className="flex-1">
@@ -105,25 +106,25 @@ export default function FinanceiroClient({ plan }: Props) {
       ) : (
         <>
           {/* Resumo */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            <div className="bg-surface border border-accent/30 rounded-2xl p-4 text-center">
+          <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+            <div className={`${adminCard} text-center border-accent/30`}>
               <div className="text-xs text-muted mb-1">GMV total</div>
               <div className="font-syne font-extrabold text-xl text-accent tabular-nums">{formatCurrency(data.summary.gmv_total)}</div>
               <div className="text-[10px] text-muted mt-1">{data.summary.order_count} pedidos</div>
             </div>
-            <div className="bg-surface border border-border rounded-2xl p-4 text-center">
+            <div className={`${adminCard} text-center`}>
               <div className="text-xs text-muted mb-1">Taxa plataforma</div>
               <div className="font-syne font-extrabold text-xl tabular-nums">{formatCurrency(data.summary.fee_total)}</div>
               <div className="text-[10px] text-muted mt-1">Você retém ~{merchantPct}%</div>
             </div>
-            <div className="bg-surface border border-border rounded-2xl p-4 text-center">
+            <div className={`${adminCard} text-center`}>
               <div className="text-xs text-muted mb-1">Estimativa líquida</div>
               <div className="font-syne font-extrabold text-xl text-accent tabular-nums">
                 {formatCurrency(data.summary.gmv_total - data.summary.fee_total)}
               </div>
               <div className="text-[10px] text-muted mt-1">GMV − taxa</div>
             </div>
-            <div className="bg-surface border border-border rounded-2xl p-4 text-center">
+            <div className={`${adminCard} text-center`}>
               <div className="text-xs text-muted mb-1">Ticket médio</div>
               <div className="font-syne font-extrabold text-xl tabular-nums">
                 {formatCurrency(data.summary.order_count > 0 ? data.summary.gmv_total / data.summary.order_count : 0)}
@@ -132,10 +133,14 @@ export default function FinanceiroClient({ plan }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <div className={`grid w-full gap-3 ${
+            data.bySource.length > 0 && data.bySplitStatus.length > 0
+              ? 'grid-cols-1 xl:grid-cols-2'
+              : 'grid-cols-1'
+          }`}>
             {/* Por origem */}
             {data.bySource.length > 0 && (
-              <div className="bg-surface border border-border rounded-2xl p-4">
+              <div className={adminCard}>
                 <div className="font-syne font-bold text-sm mb-3">Por canal de venda</div>
                 <div className="space-y-2">
                   {data.bySource.map(s => (
@@ -152,7 +157,7 @@ export default function FinanceiroClient({ plan }: Props) {
 
             {/* Por status de split */}
             {data.bySplitStatus.length > 0 && (
-              <div className="bg-surface border border-border rounded-2xl p-4">
+              <div className={adminCard}>
                 <div className="font-syne font-bold text-sm mb-3">Status de repasse</div>
                 <div className="space-y-2">
                   {data.bySplitStatus.map(s => {

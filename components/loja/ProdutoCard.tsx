@@ -8,6 +8,7 @@ import type { StoreThemeConfig } from '@/lib/themes'
 import { getTheme, themeToCardConfig } from '@/lib/themes'
 import { getVariantPhotoUrl } from '@/lib/product-media'
 import ProductPlaceholder from './ProductPlaceholder'
+import ProductPhotoLightbox from './ProductPhotoLightbox'
 import VitrineProductCard from './VitrineProductCard'
 
 function sumStock(v: Product['variants_json'][0]): number {
@@ -67,6 +68,8 @@ export default function ProdutoCard({
   const [selectedSize,       setSelectedSize]       = useState<string | null>(null)
   const [added,              setAdded]              = useState(false)
   const [detailOpen,         setDetailOpen]         = useState(false)
+  const [lightboxOpen,       setLightboxOpen]       = useState(false)
+  const [lightboxIndex,      setLightboxIndex]      = useState(0)
   const [portalReady,        setPortalReady]        = useState(false)
   const [portalTarget,       setPortalTarget]       = useState<HTMLElement | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -99,9 +102,15 @@ export default function ProdutoCard({
   }, [product.id, layout, displayVariantIndex])
 
   useEffect(() => {
-    if (!detailOpen) return
+    if (!detailOpen) {
+      setLightboxOpen(false)
+      return
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDetailOpen(false)
+      if (e.key === 'Escape') {
+        if (lightboxOpen) setLightboxOpen(false)
+        else setDetailOpen(false)
+      }
     }
     window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
@@ -110,10 +119,17 @@ export default function ProdutoCard({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [detailOpen])
+  }, [detailOpen, lightboxOpen])
+
+  useEffect(() => {
+    setLightboxIndex(0)
+  }, [selectedVariantIdx, product.id])
 
   const variant  = product.variants_json[selectedVariantIdx]
   const variantPhotoUrl = getVariantPhotoUrl(variant)
+  const variantPhotos = (variant?.photos ?? []).filter(
+    (u): u is string => typeof u === 'string' && u.trim().length > 0,
+  )
   const allSizes = variant
     ? Object.entries(variant.stock).filter(([, q]) => Number(q) > 0).map(([s]) => s)
     : []
@@ -297,14 +313,19 @@ export default function ProdutoCard({
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words mb-3" style={{ color: 'var(--theme-text-muted)' }}>
               {descTrimmed || 'Sem descrição adicional.'}
             </p>
-            {storeSlug && product.slug && (
-              <a
-                href={`/${storeSlug}/produto/${product.slug}`}
-                className="inline-block text-sm font-medium mb-5 min-h-[44px] leading-[44px]"
+            {variantPhotos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLightboxIndex(0)
+                  setLightboxOpen(true)
+                  onInteract?.()
+                }}
+                className="inline-block text-sm font-medium mb-5 min-h-[44px] leading-[44px] text-left touch-manipulation"
                 style={{ color: 'var(--theme-primary)' }}
               >
-                Ver página do produto →
-              </a>
+                Ver foto ampliada →
+              </button>
             )}
 
             {!isSoldOut && (
@@ -412,11 +433,19 @@ export default function ProdutoCard({
                       }
                 }
               >
-                {added ? '✓ Adicionado ao carrinho' : 'Adicionar ao carrinho'}
+                {added ? 'Adicionado ao carrinho' : 'Adicionar ao carrinho'}
               </button>
             </div>
           )}
         </div>
+        {lightboxOpen && (
+          <ProductPhotoLightbox
+            photos={variantPhotos}
+            initialIndex={lightboxIndex}
+            productName={product.name}
+            onClose={() => setLightboxOpen(false)}
+          />
+        )}
       </div>,
       portalTarget ?? document.body,
     )
@@ -591,7 +620,7 @@ export default function ProdutoCard({
                   : 'bg-primary/10 border-primary text-primary hover:bg-primary hover:text-white hover:shadow-[0_4px_20px_var(--primary-glow)]'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {added ? '✓ Adicionado!' : '+ Adicionar'}
+              {added ? 'Adicionado!' : '+ Adicionar'}
             </button>
           )}
         </div>

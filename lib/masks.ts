@@ -23,10 +23,6 @@ export function maskCep(value: string): string {
 
 const BRL_FMT = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
-export function formatCurrencyBRL(value: number): string {
-  return BRL_FMT.format(value)
-}
-
 /**
  * Máscara monetária BR a partir de dígitos (centavos): digitar vira R$ 0,00 → R$ 12,34
  */

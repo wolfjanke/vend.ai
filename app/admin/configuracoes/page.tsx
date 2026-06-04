@@ -6,6 +6,7 @@ import AdminPageError from '@/components/admin/AdminPageError'
 import type { Store } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
 import { getViUsageStats } from '@/lib/vi-limits'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 const EMPTY_VI_STATS = {
   used:      0,
@@ -40,8 +41,8 @@ export default async function ConfiguracoesPage() {
   }
 
   return (
-    <div className="animate-fade-up max-w-7xl min-w-0">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Configurações</h1>
         <p className="text-sm text-muted">Gerencie os dados gerais da sua loja</p>
       </div>

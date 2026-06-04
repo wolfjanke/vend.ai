@@ -27,16 +27,6 @@ export const registerSchema = z.object({
   theme_onboarding_done: z.boolean().optional(),
 })
 
-export const storeAddressSchema = z.object({
-  cep:         z.string().optional(),
-  logradouro:  z.string().optional(),
-  numero:      z.string().optional(),
-  complemento: z.string().optional(),
-  bairro:      z.string().optional(),
-  cidade:      z.string().optional(),
-  uf:          z.string().max(2).optional(),
-})
-
 export const storeSettingsPatchSchema = z.object({
   name:           z.string().min(1).max(200),
   tagline:        z.string().max(60).nullable().optional(),

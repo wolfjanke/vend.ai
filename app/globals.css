@@ -263,13 +263,16 @@ html.js .reveal-none.is-visible {
 
 /* ─── Vitrine: cards, tipografia e chips por tema ─────────────────────────── */
 .store-theme-root .produto-card {
-  aspect-ratio: var(--theme-card-ratio);
   border-radius: var(--theme-card-radius);
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
   box-shadow: var(--theme-shadow);
   font-family: var(--theme-font-body);
   transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.store-theme-root .produto-card-media {
+  aspect-ratio: var(--theme-card-ratio);
 }
 
 .store-theme-root .produto-card:hover {
@@ -282,15 +285,68 @@ html.js .reveal-none.is-visible {
   font-family: var(--theme-font-display);
   font-weight: var(--theme-font-weight-display);
   color: var(--theme-text);
+  font-size: var(--theme-fs-nome);
+  line-height: var(--theme-lh-nome);
 }
 
 .store-theme-root .produto-preco {
   color: var(--theme-price);
+  font-size: var(--theme-fs-preco);
+  line-height: var(--theme-lh-preco);
 }
 
 .store-theme-root .produto-preco-old {
   color: var(--theme-price-old);
   text-decoration: line-through;
+  font-size: var(--theme-fs-preco-old);
+}
+
+.store-theme-root .produto-parcela {
+  font-size: var(--theme-fs-parcela);
+  line-height: var(--theme-lh-parcela);
+}
+
+.store-theme-root .produto-variant-color {
+  font-size: var(--theme-fs-variant-color);
+}
+
+.store-theme-root .produto-badge {
+  font-size: var(--theme-fs-badge);
+}
+
+.store-theme-root .catalog-section-title {
+  font-size: var(--theme-fs-section);
+  line-height: var(--theme-lh-section);
+}
+
+@media (min-width: 640px) {
+  .store-theme-root .catalog-section-title {
+    font-size: var(--theme-fs-section-sm);
+  }
+}
+
+@media (min-width: 768px) {
+  .store-theme-root .catalog-section-title {
+    font-size: var(--theme-fs-section-md);
+  }
+}
+
+.store-theme-root .vitrine-search-input {
+  font-size: var(--theme-fs-search);
+}
+
+.store-theme-root .inactivity-modal-title {
+  font-size: var(--theme-fs-modal-title);
+  line-height: var(--theme-lh-modal-title);
+}
+
+.store-theme-root .inactivity-modal-body {
+  font-size: var(--theme-fs-modal-body);
+  line-height: var(--theme-lh-modal-body);
+}
+
+.store-theme-root .inactivity-modal-btn {
+  font-size: var(--theme-fs-modal-btn);
 }
 
 .store-theme-root .btn-adicionar {
@@ -354,7 +410,7 @@ html.js .reveal-none.is-visible {
   color: var(--theme-btn-text);
   padding: 4px 10px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: var(--theme-fs-badge);
   font-weight: 700;
   z-index: 2;
 }
@@ -384,6 +440,7 @@ html.js .reveal-none.is-visible {
   color: var(--theme-chip-text);
   border: 1px solid var(--theme-card-border);
   border-radius: calc(var(--theme-card-radius) * 1.5);
+  font-size: var(--theme-fs-filter);
 }
 
 .store-theme-root .filter-chip.active {

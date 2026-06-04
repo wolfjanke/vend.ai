@@ -8,6 +8,7 @@ import { PLAN_PRODUCT_LIMITS } from '@/types'
 import { getTakeRates, getTakeRateSync } from '@/lib/take-rates'
 import OnboardingForm    from './OnboardingForm'
 import OnboardingPending from './OnboardingPending'
+import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 export default async function PagamentosPage() {
   const session = await getSessionSafe()
@@ -52,15 +53,15 @@ export default async function PagamentosPage() {
   }
 
   return (
-    <div className="animate-fade-up max-w-6xl min-w-0">
-      <div className="mb-6">
+    <div className={adminPage}>
+      <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Pagamentos</h1>
         <p className="text-sm text-muted">Configure o recebimento pelo checkout integrado</p>
       </div>
 
       {onboardingStatus === 'APPROVED' && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="bg-surface border border-accent/30 rounded-2xl p-6 xl:col-span-2">
+          <div className="bg-surface border border-accent/30 rounded-2xl p-5 xl:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" />
             <span className="font-syne font-bold text-accent">Pagamentos ativos</span>
@@ -90,7 +91,7 @@ export default async function PagamentosPage() {
             Taxas de parcelamento são adicionadas ao valor do cliente. Você sempre recebe o valor cheio do produto.
           </p>
           </div>
-          <div className="bg-surface border border-border rounded-2xl p-6 h-fit">
+          <div className="bg-surface border border-border rounded-2xl p-5 h-fit">
             <h2 className="font-syne font-bold text-base mb-2">Próximos passos</h2>
             <ul className="text-sm text-muted space-y-2 break-words">
               <li>• Acompanhe repasses em Financeiro.</li>
@@ -102,7 +103,7 @@ export default async function PagamentosPage() {
       )}
 
       {onboardingStatus === 'REJECTED' && (
-        <div className="bg-surface border border-warm/30 rounded-2xl p-6 max-w-3xl">
+        <div className="bg-surface border border-warm/30 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-2.5 h-2.5 rounded-full bg-warm" />
             <span className="font-syne font-bold text-warm">Cadastro recusado</span>
@@ -120,7 +121,7 @@ export default async function PagamentosPage() {
 
       {!hasAccount && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="bg-surface border border-border rounded-2xl p-6 xl:col-span-1 h-fit">
+          <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-1 h-fit">
             <h2 className="font-syne font-bold text-base mb-2">Ativar recebimentos</h2>
             <p className="text-sm text-muted mb-5 break-words">
               Para aceitar pagamentos pelo checkout, precisamos criar sua conta de recebedor. Preencha os dados abaixo — é rápido e gratuito.
@@ -131,7 +132,7 @@ export default async function PagamentosPage() {
               <p>• Após aprovação, checkout fica ativo automaticamente.</p>
             </div>
           </div>
-          <div className="bg-surface border border-border rounded-2xl p-6 xl:col-span-2">
+          <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-2">
             <OnboardingForm storeId={session.storeId} />
           </div>
         </div>
