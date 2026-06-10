@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import type { PlanSlug } from '@/types'
+import type { CheckoutRates } from '@/lib/checkout-rates'
+import CheckoutPageLayout from './CheckoutPageLayout'
 import CheckoutForm from './CheckoutForm'
 
 interface CartItem {
@@ -16,12 +18,17 @@ interface CartItem {
 }
 
 interface Props {
-  storeSlug: string
-  storeName: string
-  plan:      PlanSlug
+  storeSlug:  string
+  storeName:  string
+  storeLogo?: string | null
+  plan:       PlanSlug
+  rates:      CheckoutRates
+  asaasEnv:   'sandbox' | 'production'
 }
 
-export default function CheckoutWrapper({ storeSlug, storeName, plan }: Props) {
+export default function CheckoutWrapper({
+  storeSlug, storeName, storeLogo, plan, rates, asaasEnv,
+}: Props) {
   const [items, setItems] = useState<CartItem[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -35,42 +42,43 @@ export default function CheckoutWrapper({ storeSlug, storeName, plan }: Props) {
     setLoaded(true)
   }, [storeSlug])
 
-  if (!loaded) return (
-    <div className="min-h-screen flex items-center justify-center text-muted text-sm">
-      Carregando...
-    </div>
-  )
+  if (!loaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted text-sm">
+        Carregando...
+      </div>
+    )
+  }
 
-  if (items.length === 0) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="text-muted text-sm">Seu carrinho está vazio.</p>
-      <a
-        href={`/${storeSlug}`}
-        className="text-primary text-sm font-semibold underline underline-offset-2"
-      >
-        ← Voltar à loja
-      </a>
-    </div>
-  )
+  if (items.length === 0) {
+    return (
+      <CheckoutPageLayout storeName={storeName} storeLogo={storeLogo} storeSlug={storeSlug}>
+        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+          <p className="text-muted text-sm">Seu carrinho está vazio.</p>
+          <a
+            href={`/${storeSlug}`}
+            className="text-primary text-sm font-semibold underline underline-offset-2 min-h-[44px] flex items-center"
+          >
+            ← Voltar à loja
+          </a>
+        </div>
+      </CheckoutPageLayout>
+    )
+  }
 
   const grossValue = items.reduce((acc, i) => acc + i.price * i.qty, 0)
 
   return (
-    <div className="min-h-screen bg-bg">
-      <header className="sticky top-0 z-40 glass border-b border-border h-14 flex items-center px-4">
-        <a href={`/${storeSlug}`} className="text-muted text-sm hover:text-foreground transition-colors">
-          ← {storeName}
-        </a>
-        <span className="mx-auto font-syne font-bold text-sm">Finalizar pedido</span>
-      </header>
-      <main className="max-w-lg mx-auto p-4 pb-24">
-        <CheckoutForm
-          storeSlug={storeSlug}
-          plan={plan}
-          items={items}
-          grossValue={grossValue}
-        />
-      </main>
-    </div>
+    <CheckoutPageLayout storeName={storeName} storeLogo={storeLogo} storeSlug={storeSlug}>
+      <CheckoutForm
+        storeSlug={storeSlug}
+        storeName={storeName}
+        plan={plan}
+        rates={rates}
+        asaasEnv={asaasEnv}
+        items={items}
+        grossValue={grossValue}
+      />
+    </CheckoutPageLayout>
   )
 }
