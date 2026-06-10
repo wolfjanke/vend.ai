@@ -3,17 +3,21 @@
 import { useEffect, useRef, useState } from 'react'
 
 interface Props {
+  storeSlug:     string
   paymentId:     string
   statusToken:   string
   pixQrCode:     string
   pixCopiaECola: string
   orderNumber:   string
+  total:         number
   onConfirmed:   () => void
 }
 
-const PIX_TIMEOUT = 30 * 60 // 30 minutos em segundos
+const PIX_TIMEOUT = 15 * 60 // 15 minutos
 
-export default function PixPayment({ paymentId, statusToken, pixQrCode, pixCopiaECola, orderNumber, onConfirmed }: Props) {
+export default function PixPayment({
+  storeSlug, paymentId, statusToken, pixQrCode, pixCopiaECola, orderNumber, onConfirmed,
+}: Props) {
   const [copied, setCopied]     = useState(false)
   const [timeLeft, setTimeLeft] = useState(PIX_TIMEOUT)
   const [expired, setExpired]   = useState(false)
@@ -21,26 +25,26 @@ export default function PixPayment({ paymentId, statusToken, pixQrCode, pixCopia
   const pollingRef              = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    // Countdown timer
     intervalRef.current = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
           setExpired(true)
           clearInterval(intervalRef.current!)
+          clearInterval(pollingRef.current!)
           return 0
         }
         return t - 1
       })
     }, 1000)
 
-    // Polling de status a cada 3 segundos
     pollingRef.current = setInterval(async () => {
       try {
-        const q = new URLSearchParams({ id: paymentId, token: statusToken })
-        const res  = await fetch(`/api/checkout/status?${q}`)
+        const q = new URLSearchParams({ token: statusToken })
+        const res  = await fetch(`/api/checkout/${storeSlug}/status/${paymentId}?${q}`)
         const data = await res.json()
         if (data.status === 'CONFIRMED') {
           clearInterval(pollingRef.current!)
+          clearInterval(intervalRef.current!)
           onConfirmed()
         }
       } catch {
@@ -52,7 +56,7 @@ export default function PixPayment({ paymentId, statusToken, pixQrCode, pixCopia
       clearInterval(intervalRef.current!)
       clearInterval(pollingRef.current!)
     }
-  }, [paymentId, statusToken, onConfirmed])
+  }, [storeSlug, paymentId, statusToken, onConfirmed])
 
   async function handleCopy() {
     try {
@@ -60,7 +64,6 @@ export default function PixPayment({ paymentId, statusToken, pixQrCode, pixCopia
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)
     } catch {
-      // fallback: criar input temporário
       const inp = document.createElement('input')
       inp.value = pixCopiaECola
       document.body.appendChild(inp)
@@ -78,66 +81,61 @@ export default function PixPayment({ paymentId, statusToken, pixQrCode, pixCopia
 
   if (expired) {
     return (
-      <div className="text-center py-12">
-        <div className="text-4xl mb-4">⏰</div>
+      <div className="text-center py-12 px-4">
         <h2 className="font-syne font-bold text-lg mb-2">PIX expirado</h2>
-        <p className="text-muted text-sm mb-6">O código PIX expirou após 30 minutos.</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl min-h-[44px] hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all"
+        <p className="text-muted text-sm mb-6 break-words">
+          O prazo de 15 minutos acabou. Gere um novo código para continuar.
+        </p>
+        <a
+          href={`/${storeSlug}/checkout`}
+          className="inline-block min-h-[44px] px-6 py-3 bg-primary text-white font-semibold rounded-xl text-sm"
         >
-          Gerar novo PIX
-        </button>
+          Tentar novamente
+        </a>
       </div>
     )
   }
 
   return (
-    <div className="space-y-5">
-      <div className="text-center">
-        <h2 className="font-syne font-bold text-lg mb-1">Pague com PIX</h2>
-        <p className="text-sm text-muted">Pedido {orderNumber} — expira em <span className="font-mono text-foreground">{countdownStr}</span></p>
-      </div>
+    <div className="bg-surface border border-border rounded-2xl p-5 text-center max-w-md mx-auto">
+      <h2 className="font-syne font-bold text-lg mb-1">Pague com PIX</h2>
+      <p className="text-muted text-sm mb-1">Pedido {orderNumber}</p>
+      <p className="text-xs text-warm font-semibold mb-4">Expira em {countdownStr}</p>
 
-      {/* QR Code */}
-      {pixQrCode && (
-        <div className="flex justify-center">
-          <div className="bg-white p-3 rounded-2xl shadow-inner">
-            <img
-              src={`data:image/png;base64,${pixQrCode}`}
-              alt="QR Code PIX"
-              className="w-48 h-48 sm:w-56 sm:h-56"
-            />
-          </div>
+      {pixQrCode ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={pixQrCode.startsWith('data:') ? pixQrCode : `data:image/png;base64,${pixQrCode}`}
+          alt="QR Code PIX"
+          className="w-48 h-48 mx-auto mb-4 rounded-xl border border-border"
+        />
+      ) : (
+        <div className="w-48 h-48 mx-auto mb-4 bg-surface2 rounded-xl flex items-center justify-center text-muted text-xs">
+          QR Code indisponível
         </div>
       )}
 
-      {/* Copia e Cola */}
       {pixCopiaECola && (
-        <div className="bg-surface border border-border rounded-2xl p-4">
-          <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Código PIX copia e cola</div>
-          <div className="font-mono text-xs break-all text-muted bg-surface2 rounded-xl px-3 py-2 mb-3 leading-relaxed">
-            {pixCopiaECola.slice(0, 60)}...
-          </div>
+        <div className="mb-4">
+          <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">
+            Copia e cola
+          </p>
+          <p className="text-xs font-mono break-all bg-surface2 p-3 rounded-xl border border-border text-left max-h-24 overflow-y-auto">
+            {pixCopiaECola}
+          </p>
           <button
             type="button"
             onClick={handleCopy}
-            className="w-full min-h-[44px] py-3 border border-primary text-primary font-syne font-semibold text-sm rounded-xl hover:bg-primary/10 transition-all"
+            className="mt-3 w-full min-h-[44px] py-3 border border-primary text-primary font-semibold text-sm rounded-xl hover:bg-primary/10 transition-all"
           >
-            {copied ? 'Copiado!' : 'Copiar código PIX'}
+            {copied ? 'Copiado!' : 'Copiar código'}
           </button>
         </div>
       )}
 
-      <div className="p-3 bg-surface border border-border rounded-xl text-xs text-muted space-y-1 break-words">
-        <p className="font-semibold text-foreground">Como pagar:</p>
-        <ol className="list-decimal list-inside space-y-0.5">
-          <li>Abra o app do seu banco</li>
-          <li>Vá em PIX → Pagar → Copia e Cola</li>
-          <li>Cole o código acima e confirme</li>
-          <li>Esta página atualiza automaticamente após o pagamento</li>
-        </ol>
-      </div>
+      <p className="text-xs text-muted break-words">
+        Aguardando confirmação do pagamento… A página atualiza automaticamente.
+      </p>
     </div>
   )
 }
