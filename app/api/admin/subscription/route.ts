@@ -4,7 +4,7 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError, paymentsNotConfiguredMessage } from '@/lib/payments/wolf-hub'
-import { getWolfHubApiKey } from '@/lib/payments/config'
+import { getVendaiAsaasKey } from '@/lib/payments/config'
 import {
   cancelSubscription,
   createSubscription,
@@ -63,7 +63,7 @@ export async function GET() {
 
     return NextResponse.json({
       ...sub,
-      paymentsConfigured: !!getWolfHubApiKey(),
+      paymentsConfigured: !!getVendaiAsaasKey(),
       usage: {
         productCount,
         productLimit,
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  if (!getWolfHubApiKey()) {
+  if (!getVendaiAsaasKey()) {
     return NextResponse.json(
       { error: paymentsNotConfiguredMessage() },
       { status: 503 },

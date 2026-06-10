@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { chargeViOverage } from '@/lib/payments/subscriptions'
-import { getWolfHubApiKey } from '@/lib/payments/config'
+import { getVendaiAsaasKey } from '@/lib/payments/config'
 import { isPaidPlan, type PlanSlug } from '@/lib/plans'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!getWolfHubApiKey()) {
+  if (!getVendaiAsaasKey()) {
     return NextResponse.json({ error: 'Pagamentos não configurados', skipped: true })
   }
 

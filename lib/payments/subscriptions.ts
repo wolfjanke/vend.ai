@@ -1,6 +1,6 @@
 import { sql } from '@/lib/db'
 import { getPlan, TRIAL_DAYS_BY_PLAN, isPaidPlan, type PlanSlug } from '@/lib/plans'
-import { getWolfHubApiKey, assertPaymentsConfigured } from './config'
+import { getVendaiAsaasKey, assertPaymentsConfigured } from './config'
 import {
   createCustomer,
   createPayment,
@@ -111,8 +111,8 @@ export async function createSubscription(storeId: string, planSlug: PlanSlug): P
     throw new Error('Plano inválido para assinatura')
   }
 
-  if (!getWolfHubApiKey()) {
-    throw new Error('WOLF_HUB_ASAAS_KEY não configurada')
+  if (!getVendaiAsaasKey()) {
+    throw new Error('VENDAI_ASAAS_KEY não configurada')
   }
 
   const existing = await loadStoreBilling(storeId)
@@ -172,7 +172,7 @@ export async function cancelSubscription(storeId: string): Promise<void> {
   const store = await loadStoreBilling(storeId)
   if (!store) throw new Error('Loja não encontrada')
 
-  if (store.asaas_subscription_id && getWolfHubApiKey()) {
+  if (store.asaas_subscription_id && getVendaiAsaasKey()) {
     try {
       await cancelSubscriptionAsaas(store.asaas_subscription_id)
     } catch {
@@ -211,8 +211,8 @@ export async function chargeViOverage(storeId: string): Promise<{ charged: boole
   const amountCents = blocks * planDef.overage.price
   if (amountCents <= 0) return { charged: false, amountCents: 0 }
 
-  if (!getWolfHubApiKey()) {
-    throw new Error('WOLF_HUB_ASAAS_KEY não configurada')
+  if (!getVendaiAsaasKey()) {
+    throw new Error('VENDAI_ASAAS_KEY não configurada')
   }
 
   const customerId = await ensureBillingCustomer(storeId)
