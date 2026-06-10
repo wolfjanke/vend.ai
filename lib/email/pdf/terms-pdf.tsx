@@ -164,9 +164,8 @@ export function TermsPdfDocument({
           <Text style={styles.text}>• O plano Grátis não possui cobrança de assinatura.</Text>
           <Text style={styles.text}>• Planos pagos possuem período de trial conforme descrito na plataforma.</Text>
           <Text style={styles.text}>
-            • Sobre transações realizadas via checkout integrado incide take rate
-            conforme o plano contratado (4,5% Grátis · 4,0% Starter · 2,75% Pro ·
-            1,7% Loja · 1,5% Enterprise).
+            • O checkout integrado com pagamento online será disponibilizado futuramente,
+            com condições comerciais divulgadas na plataforma no momento da ativação.
           </Text>
           <Text style={styles.text}>
             • Mensagens da assistente Vi que ultrapassarem o limite do plano serão

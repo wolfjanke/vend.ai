@@ -30,8 +30,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
   enterprise: [
     'Tudo do plano Loja',
     '60.000 mensagens da Vi por mês',
-    'Menor take rate da plataforma (1,5%)',
-    'Atendimento dedicado',
+    'Suporte prioritário e atendimento dedicado',
   ],
 }
 

@@ -8,15 +8,15 @@ const FEATURES: Record<PlanSlug, string[]> = {
     'Até 10 produtos',
     '1.000 msgs Vi/mês',
     '10 análises de foto/mês',
-    'Checkout integrado',
     'Pedidos via WhatsApp',
+    'Temas de identidade visual',
   ],
   starter: [
     'Até 25 produtos',
     '5.000 msgs Vi/mês',
     '50 análises de foto/mês',
     'IA no cadastro',
-    'Checkout + link de pagamento',
+    'Personalização da Vi',
   ],
   pro: [
     'Até 200 produtos',
@@ -38,7 +38,7 @@ const FEATURES: Record<PlanSlug, string[]> = {
     '60.000 msgs Vi/mês',
     'Para quem escala',
     'Vi completa + suporte prioritário',
-    'Take rate reduzido',
+    'Atendimento dedicado',
   ],
 }
 
