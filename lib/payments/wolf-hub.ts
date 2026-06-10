@@ -1,7 +1,7 @@
 import {
   assertPaymentsConfigured,
   getAsaasBaseUrl,
-  getWolfHubApiKey,
+  getVendaiAsaasKey,
   isSandboxMode,
   logSandbox,
 } from './config'
@@ -33,14 +33,14 @@ export async function wolfHubFetch<T = unknown>(
   options: RequestInit = {},
   overrideApiKey?: string,
 ): Promise<T> {
-  const apiKey = overrideApiKey ?? getWolfHubApiKey()
+  const apiKey = overrideApiKey ?? getVendaiAsaasKey()
   const baseUrl = getAsaasBaseUrl()
 
   if (!apiKey) {
     throw new AsaasApiError({
       status: 0,
       code: 'MISSING_API_KEY',
-      description: 'WOLF_HUB_ASAAS_KEY (ou ASAAS_API_KEY) não configurada',
+      description: 'VENDAI_ASAAS_KEY não configurada',
     })
   }
 
@@ -118,6 +118,17 @@ export async function createPayment(body: Record<string, unknown>): Promise<{ id
   })
 }
 
+export interface AsaasPaymentStatus {
+  id: string
+  status: string
+  billingType?: string
+}
+
+export async function getPayment(paymentId: string): Promise<AsaasPaymentStatus> {
+  assertPaymentsConfigured()
+  return wolfHubFetch<AsaasPaymentStatus>(`/payments/${paymentId}`)
+}
+
 export async function asaasCreateSubscription(body: Record<string, unknown>): Promise<{ id: string }> {
   assertPaymentsConfigured()
   logSandbox('asaasCreateSubscription', { value: body.value, cycle: body.cycle })
@@ -134,7 +145,7 @@ export async function cancelSubscriptionAsaas(subscriptionId: string): Promise<v
 
 export function paymentsNotConfiguredMessage(): string {
   if (isSandboxMode()) {
-    return 'Pagamentos em modo teste — configure WOLF_HUB_ASAAS_KEY e WOLF_HUB_WALLET_ID para ativar cobranças reais no sandbox.'
+    return 'Pagamentos em modo teste — configure VENDAI_ASAAS_KEY e VENDAI_ASAAS_WALLET_ID para ativar cobranças reais no sandbox.'
   }
   return 'Pagamentos não configurados. Entre em contato com o suporte.'
 }

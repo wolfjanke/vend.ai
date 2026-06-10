@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { verifyCheckoutStatusToken } from '@/lib/checkout-status-token'
+import { handleCheckoutStatus } from '@/lib/checkout/handlers'
 export { dynamic } from '@/lib/route-dynamic'
 
-
+/** @deprecated Use GET /api/checkout/[slug]/status/[paymentId] */
 export async function GET(req: NextRequest) {
   const paymentId = req.nextUrl.searchParams.get('id')
   const token     = req.nextUrl.searchParams.get('token')
+  const slug      = req.nextUrl.searchParams.get('slug')
 
   if (!paymentId || !token) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  if (slug) {
+    return handleCheckoutStatus(slug, paymentId, token)
   }
 
   if (!verifyCheckoutStatusToken(token, paymentId)) {

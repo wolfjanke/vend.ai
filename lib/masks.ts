@@ -64,3 +64,31 @@ export function isValidBrazilPhoneDigits(d: string): boolean {
   if (ddd < 11 || ddd > 99) return false
   return true
 }
+
+/** CPF mascarado 000.000.000-00 */
+export function maskCpf(value: string): string {
+  const d = digitsOnly(value).slice(0, 11)
+  if (d.length <= 3) return d
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+}
+
+/** Valida CPF (11 dígitos + dígitos verificadores) */
+export function isValidCpf(value: string): boolean {
+  const d = digitsOnly(value)
+  if (d.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(d)) return false
+
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]!, 10) * (10 - i)
+  let mod = (sum * 10) % 11
+  if (mod === 10) mod = 0
+  if (mod !== parseInt(d[9]!, 10)) return false
+
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]!, 10) * (11 - i)
+  mod = (sum * 10) % 11
+  if (mod === 10) mod = 0
+  return mod === parseInt(d[10]!, 10)
+}

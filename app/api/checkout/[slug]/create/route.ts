@@ -6,8 +6,11 @@ export { dynamic } from '@/lib/route-dynamic'
 const RATE_LIMIT = 5
 const RATE_WINDOW = 60_000
 
-/** @deprecated Use POST /api/checkout/[slug]/create */
-export async function POST(req: NextRequest) {
+interface RouteParams {
+  params: { slug: string }
+}
+
+export async function POST(req: NextRequest, { params }: RouteParams) {
   const ip = clientIp(req)
 
   if (!checkRateLimit(`checkout:ip:${ip}`, RATE_LIMIT, RATE_WINDOW)) {
@@ -21,10 +24,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const parsed = body as { storeSlug?: string }
-  if (!parsed?.storeSlug) {
-    return NextResponse.json({ error: 'storeSlug obrigatório' }, { status: 400 })
-  }
-
-  return handleCheckoutCreate(parsed.storeSlug, body)
+  return handleCheckoutCreate(params.slug, body)
 }

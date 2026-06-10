@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { digitsOnly, isValidBrazilPhoneDigits } from '@/lib/masks'
+import { digitsOnly, isValidBrazilPhoneDigits, isValidCpf } from '@/lib/masks'
 
 const phoneDigits = z
   .string()
@@ -150,18 +150,24 @@ const checkoutCartLineSchema = z.object({
   photo:      z.string().optional(),
 })
 
+const cpfDigits = z
+  .string()
+  .transform(s => digitsOnly(s))
+  .refine(d => isValidCpf(d), 'CPF inválido')
+
 export const checkoutPaymentSchema = z.object({
-  storeSlug:        z.string().min(2).max(40),
+  storeSlug:        z.string().min(2).max(40).optional(),
   billingType:      z.enum(['PIX', 'CREDIT_CARD']),
   installments:     z.number().int().min(1).max(12).default(1),
   grossValue:       z.number().positive(),
   creditCardToken:  z.string().optional(),
+  interestBearer:   z.enum(['customer', 'merchant']).optional().default('customer'),
   cartItems:        z.array(checkoutCartLineSchema).min(1),
   customer: z.object({
     name:        z.string().min(1).max(200),
-    cpfCnpj:    z.string().optional(),
-    email:       z.string().email().optional(),
-    mobilePhone: z.string().optional(),
+    cpfCnpj:     cpfDigits,
+    email:       z.string().email('E-mail inválido'),
+    mobilePhone: phoneDigits,
   }),
   items: z.array(z.object({
     description: z.string(),
