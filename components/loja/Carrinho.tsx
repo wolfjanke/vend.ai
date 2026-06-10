@@ -36,7 +36,7 @@ interface Props {
   couponRules?: CouponRule[]
   storeSettings?: StoreSettings
   storeSlug?: string
-  asaasApproved?: boolean
+  checkoutSiteEnabled?: boolean
 }
 
 export default function Carrinho({
@@ -50,7 +50,7 @@ export default function Carrinho({
   couponRules = [],
   storeSettings,
   storeSlug,
-  asaasApproved = false,
+  checkoutSiteEnabled = false,
 }: Props) {
   const [step, setStep] = useState<Step>('cart')
   const [checkoutChannel, setCheckoutChannel] = useState<CheckoutChannel>('whatsapp')
@@ -194,7 +194,7 @@ export default function Carrinho({
   }
 
   function continueFromChannel(ch: CheckoutChannel) {
-    if (ch === 'site' && asaasApproved && storeSlug) {
+    if (ch === 'site' && checkoutSiteEnabled && storeSlug) {
       // Salva carrinho no sessionStorage e redireciona para o checkout integrado
       try {
         sessionStorage.setItem(`cart_${storeSlug}`, JSON.stringify(cart))
@@ -418,14 +418,14 @@ export default function Carrinho({
               <p className="text-sm text-muted leading-relaxed">
                 Escolha como prefere concluir: pagamento online no site (quando disponível) ou combinar tudo pelo WhatsApp.
               </p>
-              {siteEnabled && (
+              {checkoutSiteEnabled && (
                 <button
                   type="button"
                   onClick={() => continueFromChannel('site')}
                   className="w-full min-h-[48px] py-4 px-4 rounded-2xl border-2 border-primary bg-primary/10 text-left hover:bg-primary/20 transition-colors"
                 >
-                  <span className="font-syne font-bold text-foreground block">Pagar no site</span>
-                  <span className="text-xs text-muted mt-1 block">PIX ou cartão — confirmação com a loja</span>
+                  <span className="font-syne font-bold text-foreground block">Pagar pelo site</span>
+                  <span className="text-xs text-muted mt-1 block">PIX ou cartão — checkout seguro</span>
                 </button>
               )}
               {whatsappEnabled && (
@@ -543,14 +543,35 @@ export default function Carrinho({
                   <span className="text-muted text-sm">Subtotal</span>
                   <span className="text-accent text-xl font-extrabold">R${cartPricing.totalFinal.toFixed(2).replace('.', ',')}</span>
                 </div>
-                <p className="text-[10px] text-muted mb-3">Frete calculado no próximo passo.</p>
-                <button
-                  type="button"
-                  onClick={() => setStep('delivery')}
-                  className="w-full min-h-[48px] py-3.5 bg-primary text-white font-syne font-extrabold text-base rounded-[14px] flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all"
-                >
-                  Finalizar compra
-                </button>
+                <div className="flex flex-col gap-2">
+                  {whatsappEnabled && (
+                    <button
+                      type="button"
+                      onClick={() => setStep('delivery')}
+                      className="w-full min-h-[48px] py-3.5 bg-accent text-bg font-syne font-extrabold text-sm rounded-[14px] flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-all"
+                    >
+                      Finalizar pelo WhatsApp
+                    </button>
+                  )}
+                  {checkoutSiteEnabled && cart.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!storeSlug) return
+                        try {
+                          sessionStorage.setItem(`cart_${storeSlug}`, JSON.stringify(cart))
+                        } catch { /* ignore */ }
+                        window.location.href = `/${storeSlug}/checkout`
+                      }}
+                      className="w-full min-h-[48px] py-3.5 bg-primary text-white font-syne font-extrabold text-sm rounded-[14px] flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all"
+                    >
+                      Pagar pelo site
+                    </button>
+                  )}
+                </div>
+                {whatsappEnabled && (
+                  <p className="text-[10px] text-muted mt-2 break-words">Frete e cupom no fluxo WhatsApp.</p>
+                )}
               </>
             ) : step === 'delivery' ? (
               <button

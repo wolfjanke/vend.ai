@@ -5,7 +5,7 @@ import { getOnboardingUrl } from '@/lib/asaas/subaccounts'
 import AdminPageError     from '@/components/admin/AdminPageError'
 import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
 import { PLAN_PRODUCT_LIMITS } from '@/types'
-import { getTakeRates, getTakeRateSync } from '@/lib/take-rates'
+import { getTakeRates, getTakeRateSync, getFixedTransactionFee } from '@/lib/take-rates'
 import OnboardingForm    from './OnboardingForm'
 import OnboardingPending from './OnboardingPending'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
@@ -43,6 +43,7 @@ export default async function PagamentosPage() {
   const hasAccount        = !!store.asaas_account_id
 
   const takeRates  = await getTakeRates()
+  const fixedFee   = await getFixedTransactionFee()
   const takePct    = getTakeRateSync(plan, takeRates)
   const merchantPct = 100 - takePct
   const limitLabel  = PLAN_PRODUCT_LIMITS[plan] === null ? 'Ilimitado' : String(PLAN_PRODUCT_LIMITS[plan])
@@ -58,6 +59,28 @@ export default async function PagamentosPage() {
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Pagamentos</h1>
         <p className="text-sm text-muted">Configure o recebimento pelo checkout integrado</p>
       </div>
+
+      {onboardingStatus !== 'APPROVED' && (
+        <div className="mb-6 p-4 sm:p-5 rounded-2xl border border-warm/40 bg-warm/10">
+          <p className="font-syne font-bold text-sm text-warm mb-1">
+            Configure sua conta para ativar o checkout
+          </p>
+          <p className="text-sm text-muted break-words mb-3">
+            Enquanto sua subconta não for aprovada, o botão &quot;Pagar pelo site&quot; fica oculto na loja.
+            O checkout integrado é desabilitado automaticamente.
+          </p>
+          {onboardingUrl && (
+            <a
+              href={onboardingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[44px] items-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
+            >
+              Completar cadastro no Asaas →
+            </a>
+          )}
+        </div>
+      )}
 
       {onboardingStatus === 'APPROVED' && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -80,7 +103,7 @@ export default async function PagamentosPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted">Taxa plataforma</span>
-              <span className="font-semibold">{takePct.toFixed(1)}%</span>
+              <span className="font-semibold">{takePct.toFixed(1)}% + R${fixedFee.toFixed(2).replace('.', ',')}/venda</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted">Limite de produtos</span>

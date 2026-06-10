@@ -6,6 +6,7 @@ import type { PlanSlug } from '@/lib/plans'
 import { toPublicStore, publicStoreAsStore } from '@/lib/public-store'
 import { resolveStoreTheme } from '@/lib/theme-css'
 import { getCachedActiveProducts, getStoreNameBySlug, getStorePublicRow } from '@/lib/store-public-data'
+import { resolveCheckoutSiteEnabled } from '@/lib/checkout-site-enabled'
 import StoreClient from './StoreClient'
 
 interface Props {
@@ -42,6 +43,8 @@ export default async function StorePage({ params }: Props) {
   const slug = params.slug
   const publicStore = toPublicStore(storeRow)
   const themeResolved = resolveStoreTheme(storeRow)
+  const checkoutSiteEnabled = await resolveCheckoutSiteEnabled(slug, publicStore.settings_json)
+
   const store: Store = {
     ...publicStoreAsStore(publicStore),
     logo_url:                themeResolved.displayLogo ?? publicStore.logo_url,
@@ -49,6 +52,7 @@ export default async function StorePage({ params }: Props) {
     assistant_name:          (storeRow.assistant_name as string) ?? 'Vi',
     assistant_welcome_message: (storeRow.assistant_welcome_message as string | null) ?? null,
     assistant_tone:          (storeRow.assistant_tone as Store['assistant_tone']) ?? 'friendly',
+    checkoutSiteEnabled,
   }
 
   let products: Product[]

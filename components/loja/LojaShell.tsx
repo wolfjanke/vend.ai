@@ -369,7 +369,7 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
           couponRules={settings.couponRules ?? []}
           storeSettings={settings}
           storeSlug={store.slug}
-          asaasApproved={store.asaas_onboarding_status === 'APPROVED'}
+          checkoutSiteEnabled={store.checkoutSiteEnabled === true}
         />
 
         <ViChat
