@@ -1,6 +1,9 @@
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { sendOrderConfirmationEmail } from '@/lib/email/send-order-confirmation'
+import { sendMerchantOrderPaidEmail } from '@/lib/email/send-merchant-order-paid'
+import { decrementStockForOrder } from '@/lib/order-pricing'
+import type { CartItem, OrderItem } from '@/types'
 
 interface AccountStatusPayload {
   account?: {
@@ -64,10 +67,14 @@ export async function onPaymentEvent(payload: PaymentEventPayload): Promise<void
       UPDATE orders
       SET
         payment_status     = 'CONFIRMED',
+        status             = 'CONFIRMADO',
         asaas_split_status = 'DONE'
       WHERE asaas_payment_id = ${paymentId}
         AND (payment_status IS NULL OR payment_status <> 'CONFIRMED')
-      RETURNING id, order_number, customer_name, customer_email, total, store_id, payment_source
+      RETURNING
+        id, order_number, customer_name, customer_email, customer_whatsapp,
+        total, net_value, store_id, payment_source, payment_method,
+        checkout_installment_count, items_json
     `
 
     if (updated.length === 0) return
@@ -77,30 +84,81 @@ export async function onPaymentEvent(payload: PaymentEventPayload): Promise<void
       order_number: string
       customer_name: string
       customer_email: string | null
+      customer_whatsapp: string
       total: number
+      net_value: number | null
       store_id: string
       payment_source: string | null
+      payment_method: string | null
+      checkout_installment_count: number | null
+      items_json: OrderItem[]
     }
 
-    if (row.payment_source !== 'CHECKOUT') return
+    if (row.payment_source === 'CHECKOUT') {
+      const items = (row.items_json ?? []) as OrderItem[]
+      const cartItems: CartItem[] = items
+        .filter(i => i.product_id && i.variant_id)
+        .map(i => ({
+          product_id: i.product_id,
+          variant_id: i.variant_id!,
+          name:       i.name,
+          size:       i.size,
+          color:      i.color,
+          qty:        i.qty,
+          price:      i.price,
+          photo:      i.photo,
+        }))
 
-    const email = row.customer_email?.trim()
-    if (!email) return
+      if (cartItems.length > 0) {
+        try {
+          await decrementStockForOrder(row.store_id, cartItems)
+        } catch (err) {
+          logServerError('[onPaymentEvent] decrementStockForOrder', err)
+        }
+      }
+    }
 
     const storeRows = await sql`
-      SELECT name, slug FROM stores WHERE id = ${row.store_id} LIMIT 1
+      SELECT name, slug, owner_email FROM stores WHERE id = ${row.store_id} LIMIT 1
     `
-    const store = storeRows[0] as { name: string; slug: string } | undefined
+    const store = storeRows[0] as { name: string; slug: string; owner_email: string | null } | undefined
     if (!store) return
 
-    void sendOrderConfirmationEmail({
-      to:           email,
-      customerName: row.customer_name,
-      storeName:    store.name,
-      storeSlug:    store.slug,
-      orderNumber:  row.order_number,
-      total:        Number(row.total),
-    }).catch(err => logServerError('[onPaymentEvent] order confirmation email', err))
+    if (row.payment_source === 'CHECKOUT') {
+      const customerEmail = row.customer_email?.trim()
+      if (customerEmail) {
+        void sendOrderConfirmationEmail({
+          to:           customerEmail,
+          customerName: row.customer_name,
+          storeName:    store.name,
+          storeSlug:    store.slug,
+          orderNumber:  row.order_number,
+          total:        Number(row.total),
+        }).catch(err => logServerError('[onPaymentEvent] order confirmation email', err))
+      }
+
+      const ownerEmail = store.owner_email?.trim()
+      if (ownerEmail) {
+        void sendMerchantOrderPaidEmail({
+          to:            ownerEmail,
+          storeName:     store.name,
+          orderNumber:   row.order_number,
+          orderId:       row.id,
+          customerName:  row.customer_name,
+          customerPhone: row.customer_whatsapp,
+          total:         Number(row.total),
+          netValue:      row.net_value != null ? Number(row.net_value) : null,
+          paymentMethod: row.payment_method,
+          installments:  row.checkout_installment_count,
+          items:         (row.items_json ?? []) as OrderItem[],
+        }).catch(err => logServerError('[onPaymentEvent] merchant order email', err))
+      } else {
+        logServerError('[onPaymentEvent] owner_email ausente — notificação ao lojista ignorada', {
+          storeId: row.store_id,
+          orderId: row.id,
+        })
+      }
+    }
 
     return
   }
