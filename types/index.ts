@@ -180,6 +180,10 @@ export interface Store extends StoreAddress {
   theme_logo_url?:          string | null
   theme_onboarding_done?:   boolean
   plan?:         PlanSlug
+  /** Checkout integrado disponível na vitrine (derivado server-side). */
+  checkoutSiteEnabled?:    boolean
+  /** Loja de demonstração — checkout integrado desabilitado. */
+  is_demo?:                boolean
   asaas_account_id?:       string
   asaas_wallet_id?:        string
   asaas_onboarding_status?: AsaasOnboardingStatus
@@ -250,6 +254,7 @@ export interface CartItem {
 // ─── Order ────────────────────────────────────────────────────────────────────
 export interface OrderItem {
   product_id: string
+  variant_id?: string
   name:       string
   size:       string
   color:      string
@@ -276,6 +281,8 @@ export interface Order {
   order_number:       string
   customer_name:      string
   customer_whatsapp:  string
+  customer_email?:    string | null
+  customer_cpf_enc?:  string | null
   items_json:         OrderItem[]
   total:              number
   notes:              string
@@ -288,7 +295,7 @@ export interface Order {
   discount_coupon?:   number | null
   discount_total?:    number | null
   total_final?:       number | null
-  payment_method?:    'PIX' | 'OUTRO' | null
+  payment_method?:    'PIX' | 'CARTAO' | 'OUTRO' | null
   coupon_code_applied?: string | null
   // Campos de pagamento integrado (separado de status logístico NOVO..ENTREGUE)
   payment_source?:            PaymentSource | null
@@ -300,6 +307,11 @@ export interface Order {
   checkout_installment_value?: number | null
   platform_fee_pct?:          number | null
   platform_fee_amount?:       number | null
+  platform_fee_fixed?:        number | null
+  net_value?:                 number | null
+  checkout_url?:              string | null
+  pix_qr_code?:               string | null
+  pix_copy_paste?:            string | null
   asaas_split_status?:        AsaasSplitStatus | null
 }
 
@@ -425,9 +437,12 @@ export type AsaasSplitStatus =
 export type VariantType = 'cor' | 'modelo' | 'tamanho' | 'estampa' | 'material'
 
 export interface InstallmentQuote {
-  faixaTaxa:        number  // ex: 0.065
-  totalComJuros:    number  // ex: 639.00
-  installmentValue: number  // ex: 106.50
-  platformTakePct:  number  // ex: 6.5
-  merchantSharePct: number  // ex: 93.5
+  faixaTaxa:          number  // ex: 0.065
+  totalComJuros:      number  // ex: 639.00
+  installmentValue:   number  // ex: 106.50
+  platformTakePct:    number  // ex: 6.5 (percentual sobre valor cobrado, sem taxa fixa)
+  merchantSharePct:   number  // ex: 93.5
+  platformFeeAmount:  number  // take rate percentual em R$
+  platformFeeFixed:   number  // taxa fixa R$0,99
+  netValue:           number  // líquido estimado para o lojista
 }
