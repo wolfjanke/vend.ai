@@ -1,11 +1,14 @@
 import { sql } from '@/lib/db'
 import type { StoreSettings } from '@/types'
+import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 
 /** Indica se o checkout integrado está disponível na vitrine (sem expor campos Asaas). */
 export async function resolveCheckoutSiteEnabled(
   slug: string,
   settings?: StoreSettings,
 ): Promise<boolean> {
+  if (!isCheckoutLaunchEnabled()) return false
+
   const rows = await sql`
     SELECT
       asaas_onboarding_status,

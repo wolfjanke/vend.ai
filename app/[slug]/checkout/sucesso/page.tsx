@@ -1,6 +1,7 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { sql } from '@/lib/db'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
+import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 import CheckoutPageLayout from '@/components/loja/checkout/CheckoutPageLayout'
 
 interface Props {
@@ -10,6 +11,11 @@ interface Props {
 
 export default async function CheckoutSuccessPage({ params, searchParams }: Props) {
   const { slug } = params
+
+  if (!isCheckoutLaunchEnabled()) {
+    redirect(`/${slug}`)
+  }
+
   const orderNumber = searchParams.order?.trim()
   const totalParam  = searchParams.total ? Number(searchParams.total) : null
 

@@ -12,6 +12,7 @@ import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
 import { signCheckoutStatusToken, verifyCheckoutStatusToken } from '@/lib/checkout-status-token'
 import { getCheckoutRates } from '@/lib/checkout-rates'
 import { encryptCpf } from '@/lib/crypto/pii'
+import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 
 const ASAAS_CONFIRMED = new Set(['CONFIRMED', 'RECEIVED'])
 
@@ -22,6 +23,10 @@ function mapAsaasStatus(status: string): 'PENDING' | 'CONFIRMED' | 'FAILED' {
 }
 
 export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
+  if (!isCheckoutLaunchEnabled()) {
+    return NextResponse.json({ error: 'Checkout integrado indisponível no momento.' }, { status: 503 })
+  }
+
   const parsed = checkoutPaymentSchema.safeParse(body)
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message
@@ -258,6 +263,10 @@ export async function handleCheckoutStatus(
   paymentId: string,
   token: string | null,
 ) {
+  if (!isCheckoutLaunchEnabled()) {
+    return NextResponse.json({ error: 'Checkout integrado indisponível no momento.' }, { status: 503 })
+  }
+
   if (!token || !verifyCheckoutStatusToken(token, paymentId)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
