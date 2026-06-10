@@ -6,6 +6,7 @@ import AdminPageError from '@/components/admin/AdminPageError'
 import type { Store } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
 import { getViUsageStats } from '@/lib/vi-limits'
+import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 const EMPTY_VI_STATS = {
@@ -46,7 +47,11 @@ export default async function ConfiguracoesPage() {
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Configurações</h1>
         <p className="text-sm text-muted">Gerencie os dados gerais da sua loja</p>
       </div>
-      <ConfigForm store={store!} viStats={viStats} />
+      <ConfigForm
+        store={store!}
+        viStats={viStats}
+        checkoutLaunchEnabled={isCheckoutLaunchEnabled()}
+      />
     </div>
   )
 }

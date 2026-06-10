@@ -6,13 +6,34 @@ import AdminPageError     from '@/components/admin/AdminPageError'
 import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
 import { PLAN_PRODUCT_LIMITS } from '@/types'
 import { getTakeRates, getTakeRateSync, getFixedTransactionFee } from '@/lib/take-rates'
+import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 import OnboardingForm    from './OnboardingForm'
 import OnboardingPending from './OnboardingPending'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
+function CheckoutIntegradoEmBreve() {
+  return (
+    <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 max-w-2xl">
+      <p className="text-xs font-bold tracking-wider uppercase text-primary mb-2">Checkout integrado</p>
+      <p className="font-syne font-bold text-base sm:text-lg mb-3 break-words">
+        Em breve você poderá receber pagamentos com cartão diretamente pela sua loja.
+      </p>
+      <p className="text-sm text-muted leading-relaxed break-words mb-4">
+        Por enquanto, combine o pagamento com seus clientes pelo WhatsApp — PIX, cartão na entrega ou dinheiro.
+        Seus pedidos continuam chegando formatados no chat.
+      </p>
+      <span className="inline-flex items-center text-sm text-muted/80">
+        Saiba mais quando estiver disponível →
+      </span>
+    </div>
+  )
+}
+
 export default async function PagamentosPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
+
+  const checkoutEnabled = isCheckoutLaunchEnabled()
 
   let store: Record<string, unknown>
   try {
@@ -49,7 +70,7 @@ export default async function PagamentosPage() {
   const limitLabel  = PLAN_PRODUCT_LIMITS[plan] === null ? 'Ilimitado' : String(PLAN_PRODUCT_LIMITS[plan])
 
   let onboardingUrl: string | null = null
-  if (hasAccount && onboardingStatus !== 'APPROVED' && onboardingStatus !== 'REJECTED') {
+  if (checkoutEnabled && hasAccount && onboardingStatus !== 'APPROVED' && onboardingStatus !== 'REJECTED') {
     onboardingUrl = await getOnboardingUrl(session.storeId)
   }
 
@@ -57,108 +78,119 @@ export default async function PagamentosPage() {
     <div className={adminPage}>
       <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Pagamentos</h1>
-        <p className="text-sm text-muted">Configure o recebimento pelo checkout integrado</p>
+        <p className="text-sm text-muted break-words">
+          {checkoutEnabled
+            ? 'Configure o recebimento pelo checkout integrado'
+            : 'Receba pedidos pelo WhatsApp — checkout integrado em breve'}
+        </p>
       </div>
 
-      {onboardingStatus !== 'APPROVED' && (
-        <div className="mb-6 p-4 sm:p-5 rounded-2xl border border-warm/40 bg-warm/10">
-          <p className="font-syne font-bold text-sm text-warm mb-1">
-            Configure sua conta para ativar o checkout
-          </p>
-          <p className="text-sm text-muted break-words mb-3">
-            Enquanto sua subconta não for aprovada, o botão &quot;Pagar pelo site&quot; fica oculto na loja.
-            O checkout integrado é desabilitado automaticamente.
-          </p>
-          {onboardingUrl && (
-            <a
-              href={onboardingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-[44px] items-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
-            >
-              Completar cadastro no Asaas →
-            </a>
+      {!checkoutEnabled ? (
+        <CheckoutIntegradoEmBreve />
+      ) : (
+        <>
+          {/* TODO: reativar quando checkout estiver disponível (CHECKOUT_ENABLED=true) */}
+          {onboardingStatus !== 'APPROVED' && (
+            <div className="mb-6 p-4 sm:p-5 rounded-2xl border border-warm/40 bg-warm/10">
+              <p className="font-syne font-bold text-sm text-warm mb-1">
+                Configure sua conta para ativar o checkout
+              </p>
+              <p className="text-sm text-muted break-words mb-3">
+                Enquanto sua subconta não for aprovada, o botão &quot;Pagar pelo site&quot; fica oculto na loja.
+                O checkout integrado é desabilitado automaticamente.
+              </p>
+              {onboardingUrl && (
+                <a
+                  href={onboardingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[44px] items-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  Completar cadastro no Asaas →
+                </a>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {onboardingStatus === 'APPROVED' && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="bg-surface border border-accent/30 rounded-2xl p-5 xl:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" />
-            <span className="font-syne font-bold text-accent">Pagamentos ativos</span>
-          </div>
-          <p className="text-sm text-muted mb-4 break-words">
-            Seu checkout integrado está ativo. As vendas realizadas pelo site são processadas automaticamente com split.
-          </p>
-          <div className="bg-surface2 border border-border rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted">Plano atual</span>
-              <span className="font-semibold capitalize">{plan}</span>
+          {onboardingStatus === 'APPROVED' && (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="bg-surface border border-accent/30 rounded-2xl p-5 xl:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" />
+                <span className="font-syne font-bold text-accent">Pagamentos ativos</span>
+              </div>
+              <p className="text-sm text-muted mb-4 break-words">
+                Seu checkout integrado está ativo. As vendas realizadas pelo site são processadas automaticamente com split.
+              </p>
+              <div className="bg-surface2 border border-border rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted">Plano atual</span>
+                  <span className="font-semibold capitalize">{plan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Você retém por venda</span>
+                  <span className="font-semibold text-accent">{merchantPct.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Taxa plataforma</span>
+                  <span className="font-semibold">{takePct.toFixed(1)}% + R${fixedFee.toFixed(2).replace('.', ',')}/venda</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Limite de produtos</span>
+                  <span className="font-semibold">{limitLabel}</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted mt-3 break-words">
+                Taxas de parcelamento são adicionadas ao valor do cliente. Você sempre recebe o valor cheio do produto.
+              </p>
+              </div>
+              <div className="bg-surface border border-border rounded-2xl p-5 h-fit">
+                <h2 className="font-syne font-bold text-base mb-2">Próximos passos</h2>
+                <ul className="text-sm text-muted space-y-2 break-words">
+                  <li>• Acompanhe repasses em Financeiro.</li>
+                  <li>• Revise limites e taxa no menu Plano.</li>
+                  <li>• Use PDV para vendas presenciais.</li>
+                </ul>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted">Você retém por venda</span>
-              <span className="font-semibold text-accent">{merchantPct.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted">Taxa plataforma</span>
-              <span className="font-semibold">{takePct.toFixed(1)}% + R${fixedFee.toFixed(2).replace('.', ',')}/venda</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted">Limite de produtos</span>
-              <span className="font-semibold">{limitLabel}</span>
-            </div>
-          </div>
-          <p className="text-xs text-muted mt-3 break-words">
-            Taxas de parcelamento são adicionadas ao valor do cliente. Você sempre recebe o valor cheio do produto.
-          </p>
-          </div>
-          <div className="bg-surface border border-border rounded-2xl p-5 h-fit">
-            <h2 className="font-syne font-bold text-base mb-2">Próximos passos</h2>
-            <ul className="text-sm text-muted space-y-2 break-words">
-              <li>• Acompanhe repasses em Financeiro.</li>
-              <li>• Revise limites e taxa no menu Plano.</li>
-              <li>• Use PDV para vendas presenciais.</li>
-            </ul>
-          </div>
-        </div>
-      )}
+          )}
 
-      {onboardingStatus === 'REJECTED' && (
-        <div className="bg-surface border border-warm/30 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-warm" />
-            <span className="font-syne font-bold text-warm">Cadastro recusado</span>
-          </div>
-          <p className="text-sm text-muted mb-4 break-words">
-            Seu cadastro junto ao processador de pagamentos foi recusado. Entre em contato com o suporte para verificar os motivos ou tente novamente com dados corretos.
-          </p>
-          <OnboardingForm storeId={session.storeId} />
-        </div>
-      )}
-
-      {hasAccount && (onboardingStatus === 'PENDING' || onboardingStatus === 'AWAITING_APPROVAL') && (
-        <OnboardingPending onboardingUrl={onboardingUrl} status={onboardingStatus} />
-      )}
-
-      {!hasAccount && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-1 h-fit">
-            <h2 className="font-syne font-bold text-base mb-2">Ativar recebimentos</h2>
-            <p className="text-sm text-muted mb-5 break-words">
-              Para aceitar pagamentos pelo checkout, precisamos criar sua conta de recebedor. Preencha os dados abaixo — é rápido e gratuito.
-            </p>
-            <div className="text-xs text-muted space-y-2">
-              <p>• Cadastro é feito uma vez por loja.</p>
-              <p>• Você pode continuar vendendo por WhatsApp normalmente.</p>
-              <p>• Após aprovação, checkout fica ativo automaticamente.</p>
+          {onboardingStatus === 'REJECTED' && (
+            <div className="bg-surface border border-warm/30 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-warm" />
+                <span className="font-syne font-bold text-warm">Cadastro recusado</span>
+              </div>
+              <p className="text-sm text-muted mb-4 break-words">
+                Seu cadastro junto ao processador de pagamentos foi recusado. Entre em contato com o suporte para verificar os motivos ou tente novamente com dados corretos.
+              </p>
+              <OnboardingForm storeId={session.storeId} />
             </div>
-          </div>
-          <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-2">
-            <OnboardingForm storeId={session.storeId} />
-          </div>
-        </div>
+          )}
+
+          {hasAccount && (onboardingStatus === 'PENDING' || onboardingStatus === 'AWAITING_APPROVAL') && (
+            <OnboardingPending onboardingUrl={onboardingUrl} status={onboardingStatus} />
+          )}
+
+          {!hasAccount && (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-1 h-fit">
+                <h2 className="font-syne font-bold text-base mb-2">Ativar recebimentos</h2>
+                <p className="text-sm text-muted mb-5 break-words">
+                  Para aceitar pagamentos pelo checkout, precisamos criar sua conta de recebedor. Preencha os dados abaixo — é rápido e gratuito.
+                </p>
+                <div className="text-xs text-muted space-y-2">
+                  <p>• Cadastro é feito uma vez por loja.</p>
+                  <p>• Você pode continuar vendendo por WhatsApp normalmente.</p>
+                  <p>• Após aprovação, checkout fica ativo automaticamente.</p>
+                </div>
+              </div>
+              <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-2">
+                <OnboardingForm storeId={session.storeId} />
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -32,9 +32,11 @@ type ViStats = {
 interface Props {
   store:    Store
   viStats?: ViStats
+  /** Kill switch — quando false, canal Site fica oculto (checkout em breve). */
+  checkoutLaunchEnabled?: boolean
 }
 
-export default function ConfigForm({ store, viStats }: Props) {
+export default function ConfigForm({ store, viStats, checkoutLaunchEnabled = false }: Props) {
   const settings = store.settings_json ?? {}
   const initialProfile = getStoreProfile(settings)
   const [genderFocus, setGenderFocus] = useState<GenderFocus>(initialProfile.genderFocus)
@@ -165,7 +167,11 @@ export default function ConfigForm({ store, viStats }: Props) {
 
   async function handleSave() {
     if (!name.trim()) { setError('Nome da loja obrigatório.'); return }
-    if (!siteEnabled && !whatsappEnabled) {
+    if (!checkoutLaunchEnabled && !whatsappEnabled) {
+      setError('Ative o canal WhatsApp para finalizar pedidos.')
+      return
+    }
+    if (checkoutLaunchEnabled && !siteEnabled && !whatsappEnabled) {
       setError('Ative pelo menos um canal: site ou WhatsApp.')
       return
     }
@@ -207,7 +213,7 @@ export default function ConfigForm({ store, viStats }: Props) {
       cidade,
       uf: uf ? uf.toUpperCase() : '',
       checkoutChannels: {
-        siteEnabled,
+        siteEnabled: checkoutLaunchEnabled ? siteEnabled : false,
         whatsappEnabled,
       },
       deliveryZones:    zonesPayload,
@@ -579,7 +585,9 @@ export default function ConfigForm({ store, viStats }: Props) {
         <SectionHeader title="Checkout" description="Canais em que o cliente pode finalizar o pedido." />
         <div>
           <p className="text-xs text-muted mb-3 break-words">
-            O cliente vê essas opções após informar o endereço. Pelo menos um canal deve ficar ativo.
+            {checkoutLaunchEnabled
+              ? 'O cliente vê essas opções após informar o endereço. Pelo menos um canal deve ficar ativo.'
+              : 'Por enquanto, pedidos são finalizados apenas pelo WhatsApp.'}
           </p>
           <div className="flex flex-col gap-3">
             <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
@@ -594,18 +602,28 @@ export default function ConfigForm({ store, viStats }: Props) {
                 <span className="block text-xs text-muted">Enviar o pedido e combinar pagamento no chat (PIX, cartão na entrega, dinheiro).</span>
               </span>
             </label>
-            <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
-              <input
-                type="checkbox"
-                className="mt-1 size-4 shrink-0 accent-primary"
-                checked={siteEnabled}
-                onChange={e => setSiteEnabled(e.target.checked)}
-              />
-              <span className="text-sm text-foreground">
-                <span className="font-semibold">Site</span>
-                <span className="block text-xs text-muted">Opção “pagar no site” com aviso; o pedido segue para o WhatsApp com os dados.</span>
-              </span>
-            </label>
+            {checkoutLaunchEnabled ? (
+              <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 shrink-0 accent-primary"
+                  checked={siteEnabled}
+                  onChange={e => setSiteEnabled(e.target.checked)}
+                />
+                <span className="text-sm text-foreground">
+                  <span className="font-semibold">Site</span>
+                  <span className="block text-xs text-muted">Pagamento online com PIX ou cartão no checkout integrado.</span>
+                </span>
+              </label>
+            ) : (
+              <div className="rounded-xl border border-border bg-surface2 p-3 text-sm">
+                <p className="font-semibold text-foreground mb-1">Pagamento no site</p>
+                <p className="text-xs text-muted break-words">
+                  🔜 Checkout integrado em breve. Por enquanto, combine o pagamento com seus clientes pelo WhatsApp.
+                </p>
+              </div>
+            )}
+            {/* TODO: reativar checkbox Site quando CHECKOUT_ENABLED=true */}
           </div>
         </div>
 
