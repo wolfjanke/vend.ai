@@ -74,6 +74,38 @@ export function maskCpf(value: string): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
 }
 
+/** CNPJ mascarado 00.000.000/0000-00 */
+export function maskCnpj(value: string): string {
+  const d = digitsOnly(value).slice(0, 14)
+  if (d.length <= 2) return d
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
+}
+
+/** Valida CNPJ (14 dígitos + dígitos verificadores) */
+export function isValidCnpj(value: string): boolean {
+  const d = digitsOnly(value)
+  if (d.length !== 14) return false
+  if (/^(\d)\1{13}$/.test(d)) return false
+
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+  let sum = 0
+  for (let i = 0; i < 12; i++) sum += parseInt(d[i]!, 10) * w1[i]!
+  let mod = sum % 11
+  const d1 = mod < 2 ? 0 : 11 - mod
+  if (d1 !== parseInt(d[12]!, 10)) return false
+
+  sum = 0
+  for (let i = 0; i < 13; i++) sum += parseInt(d[i]!, 10) * w2[i]!
+  mod = sum % 11
+  const d2 = mod < 2 ? 0 : 11 - mod
+  return d2 === parseInt(d[13]!, 10)
+}
+
 /** Valida CPF (11 dígitos + dígitos verificadores) */
 export function isValidCpf(value: string): boolean {
   const d = digitsOnly(value)

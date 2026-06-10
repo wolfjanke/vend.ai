@@ -2,20 +2,13 @@ import { asaasFetch } from './client'
 import { encrypt, decrypt } from '@/lib/crypto/subaccount-key'
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
+import {
+  buildAsaasSubaccountPayload,
+  type SubaccountFormInput,
+} from './subaccount-payload'
 
-export interface CreateSubaccountData {
-  storeId:       string
-  name:          string
-  email:         string
-  cpfCnpj:       string
-  birthDate:      string
-  companyType:    string
-  phone:         string
-  mobilePhone:   string
-  address:       string
-  addressNumber: string
-  province:      string
-  postalCode:    string
+export interface CreateSubaccountData extends SubaccountFormInput {
+  storeId: string
 }
 
 interface AsaasAccountResponse {
@@ -31,7 +24,8 @@ export async function createSubaccount(data: CreateSubaccountData): Promise<{
   walletId:  string
   status:    string
 }> {
-  const { storeId, ...accountData } = data
+  const { storeId, ...formData } = data
+  const accountData = buildAsaasSubaccountPayload(formData)
 
   const response = await asaasFetch<AsaasAccountResponse>('/accounts', {
     method: 'POST',

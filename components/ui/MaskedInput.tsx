@@ -1,8 +1,8 @@
 'use client'
 
-import { maskCep, maskCpf, maskCurrencyFromDigits, maskPhone } from '@/lib/masks'
+import { maskCep, maskCnpj, maskCpf, maskCurrencyFromDigits, maskPhone } from '@/lib/masks'
 
-type Mask = 'phone' | 'currency' | 'cep' | 'cpf' | 'none'
+type Mask = 'phone' | 'currency' | 'cep' | 'cpf' | 'cnpj' | 'none'
 
 interface Props extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   mask:       Mask
@@ -29,6 +29,7 @@ export default function MaskedInput({
     }
     else if (mask === 'cep') onChange(maskCep(raw))
     else if (mask === 'cpf') onChange(maskCpf(raw))
+    else if (mask === 'cnpj') onChange(maskCnpj(raw))
     else onChange(raw)
   }
 
