@@ -1,18 +1,13 @@
 import type { InstallmentQuote } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
-import { CHECKOUT_TAKE_RATE } from './split'
+import {
+  DEFAULT_CHECKOUT_RATES,
+  takeRateFraction,
+  type CheckoutRates,
+  type FaixaKey,
+} from '@/lib/checkout-rates'
 
-type FaixaKey = '1-3' | '4-6' | '7-9' | '10-12'
-
-// Taxa aplicada ao cliente (juros embutidos no installmentValue)
-// O merchant recebe o valor cheio; a plataforma retém o percentual
-const FAIXAS: Record<PlanSlug, Record<FaixaKey, number>> = {
-  free:       { '1-3': 0.045, '4-6': 0.085, '7-9': 0.125, '10-12': 0.165 },
-  starter:    { '1-3': 0.040, '4-6': 0.075, '7-9': 0.110, '10-12': 0.145 },
-  pro:        { '1-3': 0.036, '4-6': 0.065, '7-9': 0.095, '10-12': 0.125 },
-  loja:       { '1-3': 0.035, '4-6': 0.055, '7-9': 0.080, '10-12': 0.105 },
-  enterprise: { '1-3': 0.033, '4-6': 0.050, '7-9': 0.075, '10-12': 0.100 },
-}
+export type InterestBearer = 'customer' | 'merchant'
 
 export function getFaixa(installments: number): FaixaKey {
   if (installments <= 3)  return '1-3'
@@ -29,41 +24,51 @@ function round4(n: number): number {
   return Math.round(n * 10000) / 10000
 }
 
+export interface QuoteOptions {
+  /** customer = repassa juros ao cliente (padrão); merchant = lojista absorve */
+  interestBearer?: InterestBearer
+}
+
 /**
- * Calcula a cotação de parcelamento.
- * - grossValue: valor bruto do pedido (sem juros)
- * - installments: 1–12
- * - plan: plano do lojista
- *
- * O cliente paga os juros (faixaTaxa).
- * A plataforma retém platformTakePct sobre o valor com juros.
- * O merchant recebe merchantSharePct do valor com juros = valor bruto original.
+ * Calcula cotação de parcelamento com take rate + taxa fixa R$0,99.
+ * rates pode ser injetado pelo server (global_config); client usa DEFAULT_CHECKOUT_RATES.
  */
 export function calculateInstallmentQuote(
   grossValue:   number,
   installments: number,
   plan:         PlanSlug,
+  rates:        CheckoutRates = DEFAULT_CHECKOUT_RATES,
+  options:      QuoteOptions = {},
 ): InstallmentQuote {
   if (installments < 1 || installments > 12) {
     throw new RangeError(`installments deve estar entre 1 e 12, recebido: ${installments}`)
   }
 
-  const isAVista = installments === 1
+  const interestBearer = options.interestBearer ?? 'customer'
+  const isAVista       = installments === 1
+  const fixedFee       = rates.fixedFee
 
   let faixaTaxa: number
-  let platformTakePct: number
 
   if (isAVista) {
-    faixaTaxa       = CHECKOUT_TAKE_RATE[plan]
-    platformTakePct = round4(CHECKOUT_TAKE_RATE[plan] * 100)
+    faixaTaxa = takeRateFraction(plan, rates)
   } else {
-    const faixa    = getFaixa(installments)
-    faixaTaxa      = FAIXAS[plan][faixa]
-    platformTakePct = round4(faixaTaxa * 100)
+    const faixa = getFaixa(installments)
+    faixaTaxa = rates.installmentFaixas[plan][faixa]
   }
 
-  const totalComJuros    = round2(grossValue * (1 + faixaTaxa))
+  const totalComJuros =
+    interestBearer === 'customer'
+      ? round2(grossValue * (1 + faixaTaxa))
+      : round2(grossValue)
+
   const installmentValue = round2(totalComJuros / installments)
+
+  const platformFeeAmount = round2(grossValue * faixaTaxa)
+  const platformFeeFixed  = fixedFee
+  const netValue          = round2(totalComJuros - platformFeeAmount - platformFeeFixed)
+
+  const platformTakePct  = round4((platformFeeAmount / totalComJuros) * 100)
   const merchantSharePct = round4(100 - platformTakePct)
 
   return {
@@ -72,5 +77,8 @@ export function calculateInstallmentQuote(
     installmentValue,
     platformTakePct,
     merchantSharePct,
+    platformFeeAmount,
+    platformFeeFixed,
+    netValue,
   }
 }

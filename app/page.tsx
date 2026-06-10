@@ -487,6 +487,70 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Taxas ─────────────────────────────────────────────── */}
+      <section className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24 bg-[#0F0F0F]`}>
+        <ScrollReveal className="min-w-0">
+          <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Taxas</p>
+          <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-3 leading-tight break-words">
+            Transparência total nas taxas
+          </h2>
+          <p className="text-muted text-sm sm:text-base mb-8 sm:mb-10 max-w-2xl break-words">
+            Venda de R$100 em 3x · cliente paga a taxa do cartão
+          </p>
+        </ScrollReveal>
+
+        <ScrollReveal delay={80}>
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-[#252525]">
+                  {['Plano', 'Mensalidade', 'Take rate', 'Taxa fixa', 'Parcelamento'].map(col => (
+                    <th
+                      key={col}
+                      scope="col"
+                      className="text-left py-3 px-3 sm:px-4 text-[11px] font-bold uppercase tracking-wider text-muted whitespace-nowrap first:pl-0"
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { plan: 'Grátis', monthly: 'R$0', take: '3,9%', fixed: '+R$0,99', installments: 'até 12x', highlight: false },
+                  { plan: 'Starter', monthly: 'R$49,90', take: '3,5%', fixed: '+R$0,99', installments: 'até 12x', highlight: false },
+                  { plan: 'Pro ⭐', monthly: 'R$99,90', take: '2,75%', fixed: '+R$0,99', installments: 'até 12x', highlight: true },
+                  { plan: 'Loja', monthly: 'R$199,90', take: '1,7%', fixed: '+R$0,99', installments: 'até 12x', highlight: false },
+                  { plan: 'Enterprise', monthly: 'R$399,90', take: '1,5%', fixed: '+R$0,99', installments: 'até 12x', highlight: false },
+                ].map(row => (
+                  <tr
+                    key={row.plan}
+                    className={`border-b border-[#252525] last:border-0 ${
+                      row.highlight
+                        ? 'bg-primary/10 ring-1 ring-inset ring-primary/40'
+                        : 'hover:bg-[#161616]/80'
+                    }`}
+                  >
+                    <td className={`py-3.5 px-3 sm:px-4 font-syne font-bold whitespace-nowrap first:pl-0 ${row.highlight ? 'text-primary' : 'text-foreground'}`}>
+                      {row.plan}
+                    </td>
+                    <td className="py-3.5 px-3 sm:px-4 text-foreground tabular-nums whitespace-nowrap">{row.monthly}</td>
+                    <td className="py-3.5 px-3 sm:px-4 text-accent font-semibold tabular-nums whitespace-nowrap">{row.take}</td>
+                    <td className="py-3.5 px-3 sm:px-4 text-muted tabular-nums whitespace-nowrap">{row.fixed}</td>
+                    <td className="py-3.5 px-3 sm:px-4 text-muted whitespace-nowrap">{row.installments}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs sm:text-sm text-muted mt-6 max-w-2xl leading-relaxed break-words">
+            Taxa aplicada sobre vendas via checkout integrado.
+            {' '}
+            Vendas pelo WhatsApp não têm take rate.
+          </p>
+        </ScrollReveal>
+      </section>
+
       {/* ── Planos ────────────────────────────────────────────── */}
       <section id="planos" className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24`}>
         <ScrollReveal className="min-w-0">

@@ -14,27 +14,33 @@ describe('getFaixa', () => {
 })
 
 describe('Casos obrigatórios do plano', () => {
-  it('Pro, 6x, R$600 → installmentValue = 106.50, merchantSharePct = 93.5', () => {
+  it('Pro, 6x, R$600 → installmentValue = 106.50, taxa fixa R$0,99', () => {
     const q = calculateInstallmentQuote(600, 6, 'pro')
     expect(q.installmentValue).toBe(106.50)
-    expect(q.merchantSharePct).toBe(93.5)
-    expect(q.platformTakePct).toBe(6.5)
+    expect(q.platformFeeAmount).toBe(39)
+    expect(q.platformFeeFixed).toBe(0.99)
+    expect(q.netValue).toBe(599.01)
   })
 
-  it('Loja, 12x, R$800 → installmentValue = 73.67, merchantSharePct = 89.5', () => {
-    // 800 * 1.105 (faixa 10-12) = 884.00 / 12 = 73.6666... → round2 = 73.67
+  it('Loja, 12x, R$800 → installmentValue = 73.67, taxa fixa R$0,99', () => {
     const q = calculateInstallmentQuote(800, 12, 'loja')
     expect(q.installmentValue).toBe(73.67)
-    expect(q.merchantSharePct).toBe(89.5)
-    expect(q.platformTakePct).toBe(10.5)
+    expect(q.platformFeeFixed).toBe(0.99)
+    expect(q.totalComJuros).toBe(884)
   })
 
-  it('Grátis, 1x, R$100 → platformTakePct = 4.5, merchantSharePct = 95.5', () => {
+  it('Grátis, 1x, R$100 → take 3,9% + R$0,99', () => {
     const q = calculateInstallmentQuote(100, 1, 'free')
-    expect(q.platformTakePct).toBe(4.5)
-    expect(q.merchantSharePct).toBe(95.5)
-    expect(q.totalComJuros).toBe(104.50)
-    expect(q.installmentValue).toBe(104.50)
+    expect(q.totalComJuros).toBe(103.90)
+    expect(q.platformFeeAmount).toBe(3.90)
+    expect(q.platformFeeFixed).toBe(0.99)
+    expect(q.netValue).toBe(99.01)
+  })
+
+  it('merchant absorve juros: total sem markup ao cliente', () => {
+    const q = calculateInstallmentQuote(100, 6, 'pro', undefined, { interestBearer: 'merchant' })
+    expect(q.totalComJuros).toBe(100)
+    expect(q.installmentValue).toBe(16.67)
   })
 })
 
@@ -64,7 +70,7 @@ describe('Validações de range', () => {
 
 describe('Todas as 16 combinações plano × faixa (sem falhas de arredondamento)', () => {
   const plans: PlanSlug[] = ['free', 'starter', 'pro', 'loja', 'enterprise']
-  const faixaRepresentatives = [1, 4, 7, 10] // um por faixa
+  const faixaRepresentatives = [1, 4, 7, 10]
 
   for (const plan of plans) {
     for (const n of faixaRepresentatives) {
@@ -73,9 +79,9 @@ describe('Todas as 16 combinações plano × faixa (sem falhas de arredondamento
         expect(q.installmentValue).toBeGreaterThan(0)
         expect(q.totalComJuros).toBeGreaterThanOrEqual(500)
         expect(q.faixaTaxa).toBeGreaterThan(0)
-        expect(q.platformTakePct).toBeGreaterThan(0)
-        expect(q.merchantSharePct).toBeGreaterThan(0)
-        expect(q.merchantSharePct).toBeLessThan(100)
+        expect(q.platformFeeAmount).toBeGreaterThan(0)
+        expect(q.platformFeeFixed).toBe(0.99)
+        expect(q.netValue).toBeGreaterThan(0)
       })
     }
   }
