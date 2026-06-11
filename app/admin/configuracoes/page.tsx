@@ -6,7 +6,7 @@ import AdminPageError from '@/components/admin/AdminPageError'
 import type { Store } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
 import { getViUsageStats } from '@/lib/vi-limits'
-import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
+import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
 const EMPTY_VI_STATS = {
@@ -41,6 +41,13 @@ export default async function ConfiguracoesPage() {
     )
   }
 
+  const checkoutEligible = isCheckoutEnabledForStore({
+    plan:                    (store!.plan ?? 'free') as PlanSlug,
+    asaas_onboarding_status: store!.asaas_onboarding_status,
+    asaas_wallet_id:         store!.asaas_wallet_id,
+    is_demo:                 store!.is_demo,
+  })
+
   return (
     <div className={adminPage}>
       <div className={adminHeader}>
@@ -50,7 +57,7 @@ export default async function ConfiguracoesPage() {
       <ConfigForm
         store={store!}
         viStats={viStats}
-        checkoutLaunchEnabled={isCheckoutLaunchEnabled()}
+        checkoutEligible={checkoutEligible}
       />
     </div>
   )

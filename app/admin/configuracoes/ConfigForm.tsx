@@ -15,6 +15,9 @@ import { maskPhone } from '@/lib/masks'
 import SectionHeader from '@/components/admin/SectionHeader'
 import { adminCard } from '@/lib/admin-ui'
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
+import CheckoutModeSection from '@/components/admin/CheckoutModeSection'
+import { normalizeCheckoutMode } from '@/lib/checkout-availability'
+import type { CheckoutMode } from '@/types'
 
 function initialWppDisplay(w: string) {
   const d = w.replace(/\D/g, '')
@@ -30,13 +33,12 @@ type ViStats = {
 }
 
 interface Props {
-  store:    Store
-  viStats?: ViStats
-  /** Kill switch — quando false, canal Site fica oculto (checkout em breve). */
-  checkoutLaunchEnabled?: boolean
+  store:              Store
+  viStats?:           ViStats
+  checkoutEligible:   boolean
 }
 
-export default function ConfigForm({ store, viStats, checkoutLaunchEnabled = false }: Props) {
+export default function ConfigForm({ store, viStats, checkoutEligible }: Props) {
   const settings = store.settings_json ?? {}
   const initialProfile = getStoreProfile(settings)
   const [genderFocus, setGenderFocus] = useState<GenderFocus>(initialProfile.genderFocus)
@@ -76,9 +78,11 @@ export default function ConfigForm({ store, viStats, checkoutLaunchEnabled = fal
     return () => window.removeEventListener('keydown', onKey)
   }, [pwdOpen])
 
-  const initialCc = settings.checkoutChannels ?? {}
-  const [siteEnabled, setSiteEnabled] = useState(initialCc.siteEnabled === true)
-  const [whatsappEnabled, setWhatsappEnabled] = useState(initialCc.whatsappEnabled !== false)
+  const plan = (store.plan ?? 'free') as PlanSlug
+  const checkoutMode = normalizeCheckoutMode(store.checkout_mode) as CheckoutMode
+  const canName = canUseAssistantFeature(plan, 'customName')
+  const canWelcome = canUseAssistantFeature(plan, 'customWelcome')
+  const canTone = canUseAssistantFeature(plan, 'customTone')
 
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(() => {
     const z = settings.deliveryZones
@@ -111,11 +115,6 @@ export default function ConfigForm({ store, viStats, checkoutLaunchEnabled = fal
   const [viDailyLimitStr, setViDailyLimitStr] = useState(() =>
     initialDaily != null && initialDaily > 0 ? String(initialDaily) : '200',
   )
-
-  const plan = (store.plan ?? 'free') as PlanSlug
-  const canName = canUseAssistantFeature(plan, 'customName')
-  const canWelcome = canUseAssistantFeature(plan, 'customWelcome')
-  const canTone = canUseAssistantFeature(plan, 'customTone')
 
   const [assistantName, setAssistantName] = useState(store.assistant_name?.trim() || 'Vi')
   const [assistantWelcome, setAssistantWelcome] = useState(store.assistant_welcome_message ?? '')
@@ -167,14 +166,6 @@ export default function ConfigForm({ store, viStats, checkoutLaunchEnabled = fal
 
   async function handleSave() {
     if (!name.trim()) { setError('Nome da loja obrigatório.'); return }
-    if (!checkoutLaunchEnabled && !whatsappEnabled) {
-      setError('Ative o canal WhatsApp para finalizar pedidos.')
-      return
-    }
-    if (checkoutLaunchEnabled && !siteEnabled && !whatsappEnabled) {
-      setError('Ative pelo menos um canal: site ou WhatsApp.')
-      return
-    }
     const zonesPayload: DeliveryZone[] = deliveryZones
       .filter(z => z.city.trim() && z.uf.trim().length === 2)
       .map(z => ({
@@ -212,10 +203,6 @@ export default function ConfigForm({ store, viStats, checkoutLaunchEnabled = fal
       bairro,
       cidade,
       uf: uf ? uf.toUpperCase() : '',
-      checkoutChannels: {
-        siteEnabled: checkoutLaunchEnabled ? siteEnabled : false,
-        whatsappEnabled,
-      },
       deliveryZones:    zonesPayload,
       freeShippingMin,
       installmentsMaxNoInterest,
@@ -582,50 +569,11 @@ export default function ConfigForm({ store, viStats, checkoutLaunchEnabled = fal
           </div>
         </div>
 
-        <SectionHeader title="Checkout" description="Canais em que o cliente pode finalizar o pedido." />
-        <div>
-          <p className="text-xs text-muted mb-3 break-words">
-            {checkoutLaunchEnabled
-              ? 'O cliente vê essas opções após informar o endereço. Pelo menos um canal deve ficar ativo.'
-              : 'Por enquanto, pedidos são finalizados apenas pelo WhatsApp.'}
-          </p>
-          <div className="flex flex-col gap-3">
-            <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
-              <input
-                type="checkbox"
-                className="mt-1 size-4 shrink-0 accent-primary"
-                checked={whatsappEnabled}
-                onChange={e => setWhatsappEnabled(e.target.checked)}
-              />
-              <span className="text-sm text-foreground">
-                <span className="font-semibold">WhatsApp</span>
-                <span className="block text-xs text-muted">Enviar o pedido e combinar pagamento no chat (PIX, cartão na entrega, dinheiro).</span>
-              </span>
-            </label>
-            {checkoutLaunchEnabled ? (
-              <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mt-1 size-4 shrink-0 accent-primary"
-                  checked={siteEnabled}
-                  onChange={e => setSiteEnabled(e.target.checked)}
-                />
-                <span className="text-sm text-foreground">
-                  <span className="font-semibold">Site</span>
-                  <span className="block text-xs text-muted">Pagamento online com PIX ou cartão no checkout integrado.</span>
-                </span>
-              </label>
-            ) : (
-              <div className="rounded-xl border border-border bg-surface2 p-3 text-sm">
-                <p className="font-semibold text-foreground mb-1">Pagamento no site</p>
-                <p className="text-xs text-muted break-words">
-                  🔜 Checkout integrado em breve. Por enquanto, combine o pagamento com seus clientes pelo WhatsApp.
-                </p>
-              </div>
-            )}
-            {/* TODO: reativar checkbox Site quando CHECKOUT_ENABLED=true */}
-          </div>
-        </div>
+        <CheckoutModeSection
+          plan={plan}
+          checkoutMode={checkoutMode}
+          checkoutEligible={checkoutEligible}
+        />
 
         <SectionHeader title="Conta e link da loja" />
         <div>
