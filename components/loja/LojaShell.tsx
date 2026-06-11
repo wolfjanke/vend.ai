@@ -369,7 +369,9 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
           couponRules={settings.couponRules ?? []}
           storeSettings={settings}
           storeSlug={store.slug}
+          storeWhatsapp={store.whatsapp}
           checkoutSiteEnabled={store.checkoutSiteEnabled === true}
+          checkoutWhatsappEnabled={store.checkoutWhatsappEnabled !== false}
         />
 
         <ViChat

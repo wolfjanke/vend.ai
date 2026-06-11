@@ -64,7 +64,7 @@ export interface DeliveryZone {
   fee:  number
 }
 
-/** Finalização: site (checkout online, quando disponível) vs WhatsApp. */
+/** Finalização: site (checkout online, quando disponível) vs WhatsApp. @deprecated Use checkout_mode na tabela stores. */
 export interface CheckoutChannelsConfig {
   siteEnabled?:     boolean
   whatsappEnabled?: boolean
@@ -94,6 +94,11 @@ export interface StoreSettings {
   /** Categorias extras da loja (slug + rótulo exibido na vitrine e no admin). */
   customCategories?: CustomCategory[]
 }
+
+export type CheckoutMode =
+  | 'whatsapp_only'
+  | 'whatsapp_and_checkout'
+  | 'checkout_only'
 
 /** Categoria customizada por loja (valor = slug estável no produto). */
 export interface CustomCategory {
@@ -182,6 +187,10 @@ export interface Store extends StoreAddress {
   plan?:         PlanSlug
   /** Checkout integrado disponível na vitrine (derivado server-side). */
   checkoutSiteEnabled?:    boolean
+  /** Finalizar pedido pelo WhatsApp na vitrine (derivado server-side). */
+  checkoutWhatsappEnabled?: boolean
+  /** Modo de recebimento configurado pelo lojista. */
+  checkout_mode?:          CheckoutMode
   /** Loja de demonstração — checkout integrado desabilitado. */
   is_demo?:                boolean
   asaas_account_id?:       string

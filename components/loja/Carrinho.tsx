@@ -36,7 +36,9 @@ interface Props {
   couponRules?: CouponRule[]
   storeSettings?: StoreSettings
   storeSlug?: string
+  storeWhatsapp?: string
   checkoutSiteEnabled?: boolean
+  checkoutWhatsappEnabled?: boolean
 }
 
 export default function Carrinho({
@@ -50,7 +52,9 @@ export default function Carrinho({
   couponRules = [],
   storeSettings,
   storeSlug,
+  storeWhatsapp,
   checkoutSiteEnabled = false,
+  checkoutWhatsappEnabled = true,
 }: Props) {
   const [step, setStep] = useState<Step>('cart')
   const [checkoutChannel, setCheckoutChannel] = useState<CheckoutChannel>('whatsapp')
@@ -89,10 +93,16 @@ export default function Carrinho({
     [storeSettings, pixDiscountPercent, couponRules]
   )
 
-  const siteEnabled = storeSettings?.checkoutChannels?.siteEnabled === true
-  const whatsappEnabled = storeSettings?.checkoutChannels?.whatsappEnabled !== false
-  /** Checkout integrado (kill switch + subconta + settings). */
-  const siteCheckoutActive = checkoutSiteEnabled && siteEnabled
+  const siteCheckoutActive = checkoutSiteEnabled
+  const whatsappEnabled = checkoutWhatsappEnabled
+
+  function goToIntegratedCheckout() {
+    if (!storeSlug || !siteCheckoutActive) return
+    try {
+      sessionStorage.setItem(`cart_${storeSlug}`, JSON.stringify(cart))
+    } catch { /* ignora */ }
+    window.location.href = `/${storeSlug}/checkout`
+  }
 
   const pricing = useMemo(
     () =>
@@ -187,8 +197,7 @@ export default function Carrinho({
     if (siteCheckoutActive && whatsappEnabled) {
       setStep('channel')
     } else if (siteCheckoutActive && !whatsappEnabled) {
-      setCheckoutChannel('site')
-      setStep('payment')
+      goToIntegratedCheckout()
     } else {
       setCheckoutChannel('whatsapp')
       setStep('payment')
@@ -196,12 +205,8 @@ export default function Carrinho({
   }
 
   function continueFromChannel(ch: CheckoutChannel) {
-    if (ch === 'site' && checkoutSiteEnabled && storeSlug) {
-      // Salva carrinho no sessionStorage e redireciona para o checkout integrado
-      try {
-        sessionStorage.setItem(`cart_${storeSlug}`, JSON.stringify(cart))
-      } catch { /* ignora */ }
-      window.location.href = `/${storeSlug}/checkout`
+    if (ch === 'site' && siteCheckoutActive) {
+      goToIntegratedCheckout()
       return
     }
     setCheckoutChannel(ch)
@@ -420,7 +425,6 @@ export default function Carrinho({
               <p className="text-sm text-muted leading-relaxed">
                 Escolha como prefere concluir o pedido.
               </p>
-              {/* TODO: reativar quando checkout estiver disponível (CHECKOUT_ENABLED=true)
               {siteCheckoutActive && (
                 <button
                   type="button"
@@ -431,7 +435,6 @@ export default function Carrinho({
                   <span className="text-xs text-muted mt-1 block">PIX ou cartão — checkout seguro</span>
                 </button>
               )}
-              */}
               {whatsappEnabled && (
                 <button
                   type="button"
@@ -557,23 +560,28 @@ export default function Carrinho({
                       Finalizar pelo WhatsApp
                     </button>
                   )}
-                  {/* TODO: reativar quando checkout estiver disponível (CHECKOUT_ENABLED=true)
                   {siteCheckoutActive && cart.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!storeSlug) return
-                        try {
-                          sessionStorage.setItem(`cart_${storeSlug}`, JSON.stringify(cart))
-                        } catch { }
-                        window.location.href = `/${storeSlug}/checkout`
-                      }}
+                      onClick={goToIntegratedCheckout}
                       className="w-full min-h-[48px] py-3.5 bg-primary text-white font-syne font-extrabold text-sm rounded-[14px] flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all"
                     >
                       Pagar pelo site
                     </button>
                   )}
-                  */}
+                  {!whatsappEnabled && siteCheckoutActive && storeWhatsapp && (
+                    <p className="text-[10px] text-muted mt-1 break-words">
+                      Dúvidas?{' '}
+                      <a
+                        href={`https://wa.me/${storeWhatsapp}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent underline"
+                      >
+                        Fale com a loja no WhatsApp
+                      </a>
+                    </p>
+                  )}
                 </div>
                 {whatsappEnabled && (
                   <p className="text-[10px] text-muted mt-2 break-words">Frete e cupom no fluxo WhatsApp.</p>
