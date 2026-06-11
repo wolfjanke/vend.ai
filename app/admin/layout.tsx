@@ -4,9 +4,7 @@ import { getAdminShellData } from '@/lib/admin-layout-data'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import MobileNav from '@/components/admin/MobileNav'
 import SandboxBanner from '@/components/admin/SandboxBanner'
-import CheckoutComingSoonBanner from '@/components/admin/CheckoutComingSoonBanner'
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner'
-import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 
 /** Obrigatório com getServerSession/cookies — sem isto o build pode pré-renderizar e `cookies()` lança em produção. */
@@ -86,7 +84,6 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <main className="flex-1 min-w-0 p-4 md:p-6 xl:p-8 pb-[max(5rem,calc(64px+env(safe-area-inset-bottom,0px)))] md:pb-6">
           <div className="w-full min-w-0">
             <SandboxBanner />
-            {!isCheckoutLaunchEnabled() && <CheckoutComingSoonBanner />}
             {children}
           </div>
         </main>

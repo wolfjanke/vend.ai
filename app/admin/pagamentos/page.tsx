@@ -1,30 +1,51 @@
-import { redirect }   from 'next/navigation'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
-import { sql }            from '@/lib/db'
+import { sql } from '@/lib/db'
 import { getOnboardingUrl } from '@/lib/asaas/subaccounts'
-import AdminPageError     from '@/components/admin/AdminPageError'
+import AdminPageError from '@/components/admin/AdminPageError'
 import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
-import { PLAN_PRODUCT_LIMITS } from '@/types'
+import { getPlan, isPlanCheckoutEligible } from '@/lib/plans'
 import { getTakeRates, getTakeRateSync, getFixedTransactionFee } from '@/lib/take-rates'
-import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
-import OnboardingForm    from './OnboardingForm'
+import { isCheckoutEnabledForStore, isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
+import OnboardingForm from './OnboardingForm'
 import OnboardingPending from './OnboardingPending'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
-function CheckoutIntegradoEmBreve() {
+const MEI_URL = 'https://www.gov.br/empresas-e-negocios/pt-br/empreendedor/servicos-para-mei/abertura'
+
+function EstadoGratis() {
   return (
     <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 max-w-2xl">
       <p className="text-xs font-bold tracking-wider uppercase text-primary mb-2">Checkout integrado</p>
-      <p className="font-syne font-bold text-base sm:text-lg mb-3 break-words">
-        Em breve você poderá receber pagamentos com cartão diretamente pela sua loja.
-      </p>
+      <h2 className="font-syne font-bold text-lg sm:text-xl mb-3 break-words">
+        💳 Aceite cartão na sua loja
+      </h2>
       <p className="text-sm text-muted leading-relaxed break-words mb-4">
-        Por enquanto, combine o pagamento com seus clientes pelo WhatsApp — PIX, cartão na entrega ou dinheiro.
-        Seus pedidos continuam chegando formatados no chat.
+        Seus clientes poderão pagar com cartão diretamente no site, em até 12x.
       </p>
-      <span className="inline-flex items-center text-sm text-muted/80">
-        Saiba mais quando estiver disponível →
-      </span>
+      <p className="text-sm font-semibold text-foreground mb-2">Para ativar o checkout:</p>
+      <ul className="text-sm text-muted space-y-1.5 mb-6 break-words">
+        <li>✓ Faça upgrade para o plano Starter ou superior</li>
+        <li>✓ Cadastre seu CNPJ (MEI conta!)</li>
+        <li>✓ Pronto — checkout ativo em minutos</li>
+      </ul>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Link
+          href="/admin/plano"
+          className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90"
+        >
+          Fazer upgrade →
+        </Link>
+        <a
+          href={MEI_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 border border-border text-sm font-semibold rounded-xl hover:border-primary hover:text-primary transition-colors"
+        >
+          Abrir MEI grátis no gov.br →
+        </a>
+      </div>
     </div>
   )
 }
@@ -32,8 +53,6 @@ function CheckoutIntegradoEmBreve() {
 export default async function PagamentosPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
-
-  const checkoutEnabled = isCheckoutLaunchEnabled()
 
   let store: Record<string, unknown>
   try {
@@ -43,7 +62,8 @@ export default async function PagamentosPage() {
         asaas_account_id,
         asaas_wallet_id,
         asaas_onboarding_status,
-        asaas_approved_at
+        asaas_approved_at,
+        is_demo
       FROM stores
       WHERE id = ${session.storeId}
       LIMIT 1
@@ -59,136 +79,154 @@ export default async function PagamentosPage() {
     )
   }
 
-  const plan              = (store.plan ?? 'free') as PlanSlug
-  const onboardingStatus  = (store.asaas_onboarding_status ?? null) as AsaasOnboardingStatus | null
-  const hasAccount        = !!store.asaas_account_id
+  const plan             = (store.plan ?? 'free') as PlanSlug
+  const onboardingStatus = (store.asaas_onboarding_status ?? null) as AsaasOnboardingStatus | null
+  const hasAccount       = !!store.asaas_account_id
+  const planDef          = getPlan(plan)
+
+  const storeInput = {
+    plan,
+    asaas_onboarding_status: onboardingStatus,
+    asaas_wallet_id:         store.asaas_wallet_id as string | null | undefined,
+    is_demo:                 store.is_demo as boolean | null | undefined,
+  }
+
+  const checkoutActive = isCheckoutEnabledForStore(storeInput)
+  const paidCheckoutPlan = isPlanCheckoutEligible(plan)
 
   const takeRates  = await getTakeRates()
   const fixedFee   = await getFixedTransactionFee()
   const takePct    = getTakeRateSync(plan, takeRates)
-  const merchantPct = 100 - takePct
-  const limitLabel  = PLAN_PRODUCT_LIMITS[plan] === null ? 'Ilimitado' : String(PLAN_PRODUCT_LIMITS[plan])
 
   let onboardingUrl: string | null = null
-  if (checkoutEnabled && hasAccount && onboardingStatus !== 'APPROVED' && onboardingStatus !== 'REJECTED') {
+  if (paidCheckoutPlan && hasAccount && onboardingStatus !== 'APPROVED' && onboardingStatus !== 'REJECTED') {
     onboardingUrl = await getOnboardingUrl(session.storeId)
   }
+
+  const checklist = [
+    { label: 'CNPJ cadastrado', done: hasAccount },
+    {
+      label: 'Documentos enviados',
+      done: onboardingStatus === 'PENDING' || onboardingStatus === 'AWAITING_APPROVAL' || onboardingStatus === 'APPROVED',
+    },
+    { label: 'Conta aprovada', done: onboardingStatus === 'APPROVED' },
+  ]
 
   return (
     <div className={adminPage}>
       <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Pagamentos</h1>
         <p className="text-sm text-muted break-words">
-          {checkoutEnabled
-            ? 'Configure o recebimento pelo checkout integrado'
-            : 'Receba pedidos pelo WhatsApp — checkout integrado em breve'}
+          {checkoutActive
+            ? 'Checkout ativo na sua loja'
+            : paidCheckoutPlan
+              ? 'Configure o recebimento por cartão'
+              : 'Receba pedidos pelo WhatsApp — checkout nos planos pagos'}
         </p>
       </div>
 
-      {!checkoutEnabled ? (
-        <CheckoutIntegradoEmBreve />
+      {!isCheckoutLaunchEnabled() && paidCheckoutPlan && (
+        <div className="mb-4 p-3 rounded-xl border border-warm/30 bg-warm/10 text-xs text-warm break-words">
+          Checkout temporariamente indisponível na plataforma. Tente novamente em breve.
+        </div>
+      )}
+
+      {!paidCheckoutPlan ? (
+        <EstadoGratis />
+      ) : checkoutActive ? (
+        <div className="bg-surface border border-accent/30 rounded-2xl p-5 sm:p-6 max-w-2xl">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" />
+            <span className="font-syne font-bold text-accent">Checkout ativo</span>
+          </div>
+          <p className="text-sm text-muted leading-relaxed break-words mb-4">
+            Seus clientes podem pagar com cartão na sua loja.
+            {' '}
+            Take rate: {takePct.toFixed(2).replace('.', ',')}% + R${fixedFee.toFixed(2).replace('.', ',')} por transação.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/admin/pedidos"
+              className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90"
+            >
+              Ver vendas →
+            </Link>
+            <Link
+              href="/admin/configuracoes"
+              className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 border border-border text-sm font-semibold rounded-xl hover:border-primary hover:text-primary transition-colors"
+            >
+              Configurações →
+            </Link>
+          </div>
+        </div>
       ) : (
         <>
-          {/* TODO: reativar quando checkout estiver disponível (CHECKOUT_ENABLED=true) */}
-          {onboardingStatus !== 'APPROVED' && (
-            <div className="mb-6 p-4 sm:p-5 rounded-2xl border border-warm/40 bg-warm/10">
-              <p className="font-syne font-bold text-sm text-warm mb-1">
-                Configure sua conta para ativar o checkout
+          <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 max-w-2xl mb-6">
+            <h2 className="font-syne font-bold text-base sm:text-lg mb-2 break-words">
+              Configure sua conta para receber por cartão
+            </h2>
+            <p className="text-sm text-muted break-words mb-4">
+              Você está no plano {planDef.name}. Para ativar o checkout:
+            </p>
+            <ul className="space-y-2 mb-5">
+              {checklist.map(item => (
+                <li key={item.label} className="flex items-center gap-2 text-sm">
+                  <span className={`size-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                    item.done ? 'bg-accent/20 text-accent' : 'bg-surface2 text-muted border border-border'
+                  }`}>
+                    {item.done ? '✓' : '○'}
+                  </span>
+                  <span className={item.done ? 'text-foreground' : 'text-muted'}>{item.label}</span>
+                </li>
+              ))}
+            </ul>
+            {!hasAccount && onboardingStatus !== 'REJECTED' && (
+              <p className="text-xs text-muted mb-4 break-words">
+                Preencha os dados abaixo para criar sua subconta de recebimento (CNPJ obrigatório).
               </p>
-              <p className="text-sm text-muted break-words mb-3">
-                Enquanto sua subconta não for aprovada, o botão &quot;Pagar pelo site&quot; fica oculto na loja.
-                O checkout integrado é desabilitado automaticamente.
-              </p>
-              {onboardingUrl && (
-                <a
-                  href={onboardingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-[44px] items-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
-                >
-                  Completar cadastro no Asaas →
-                </a>
-              )}
-            </div>
-          )}
-
-          {onboardingStatus === 'APPROVED' && (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="bg-surface border border-accent/30 rounded-2xl p-5 xl:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" />
-                <span className="font-syne font-bold text-accent">Pagamentos ativos</span>
-              </div>
-              <p className="text-sm text-muted mb-4 break-words">
-                Seu checkout integrado está ativo. As vendas realizadas pelo site são processadas automaticamente com split.
-              </p>
-              <div className="bg-surface2 border border-border rounded-xl p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted">Plano atual</span>
-                  <span className="font-semibold capitalize">{plan}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Você retém por venda</span>
-                  <span className="font-semibold text-accent">{merchantPct.toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Taxa plataforma</span>
-                  <span className="font-semibold">{takePct.toFixed(1)}% + R${fixedFee.toFixed(2).replace('.', ',')}/venda</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Limite de produtos</span>
-                  <span className="font-semibold">{limitLabel}</span>
-                </div>
-              </div>
-              <p className="text-xs text-muted mt-3 break-words">
-                Taxas de parcelamento são adicionadas ao valor do cliente. Você sempre recebe o valor cheio do produto.
-              </p>
-              </div>
-              <div className="bg-surface border border-border rounded-2xl p-5 h-fit">
-                <h2 className="font-syne font-bold text-base mb-2">Próximos passos</h2>
-                <ul className="text-sm text-muted space-y-2 break-words">
-                  <li>• Acompanhe repasses em Financeiro.</li>
-                  <li>• Revise limites e taxa no menu Plano.</li>
-                  <li>• Use PDV para vendas presenciais.</li>
-                </ul>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {onboardingStatus === 'REJECTED' && (
-            <div className="bg-surface border border-warm/30 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-warm" />
-                <span className="font-syne font-bold text-warm">Cadastro recusado</span>
-              </div>
+            <div className="bg-surface border border-warm/30 rounded-2xl p-5 mb-6 max-w-2xl">
+              <p className="font-syne font-bold text-warm mb-2">Cadastro recusado</p>
               <p className="text-sm text-muted mb-4 break-words">
-                Seu cadastro junto ao processador de pagamentos foi recusado. Entre em contato com o suporte para verificar os motivos ou tente novamente com dados corretos.
+                Verifique os dados do CNPJ e tente novamente ou fale com o suporte.
               </p>
               <OnboardingForm storeId={session.storeId} />
             </div>
           )}
 
           {hasAccount && (onboardingStatus === 'PENDING' || onboardingStatus === 'AWAITING_APPROVAL') && (
-            <OnboardingPending onboardingUrl={onboardingUrl} status={onboardingStatus} />
+            <div className="max-w-2xl mb-6">
+              <OnboardingPending onboardingUrl={onboardingUrl} status={onboardingStatus} />
+            </div>
           )}
 
-          {!hasAccount && (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-1 h-fit">
-                <h2 className="font-syne font-bold text-base mb-2">Ativar recebimentos</h2>
-                <p className="text-sm text-muted mb-5 break-words">
-                  Para aceitar pagamentos pelo checkout, precisamos criar sua conta de recebedor. Preencha os dados abaixo — é rápido e gratuito.
+          {!hasAccount && onboardingStatus !== 'REJECTED' && (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 max-w-4xl">
+              <div className="bg-surface border border-border rounded-2xl p-5 h-fit">
+                <p className="text-xs text-muted space-y-2 break-words">
+                  <span className="block">• Cadastro único por loja (CNPJ).</span>
+                  <span className="block">• Continue vendendo pelo WhatsApp enquanto aguarda.</span>
+                  <span className="block">• Após aprovação, ative o modo desejado em Configurações.</span>
                 </p>
-                <div className="text-xs text-muted space-y-2">
-                  <p>• Cadastro é feito uma vez por loja.</p>
-                  <p>• Você pode continuar vendendo por WhatsApp normalmente.</p>
-                  <p>• Após aprovação, checkout fica ativo automaticamente.</p>
-                </div>
               </div>
               <div className="bg-surface border border-border rounded-2xl p-5 xl:col-span-2">
                 <OnboardingForm storeId={session.storeId} />
               </div>
             </div>
+          )}
+
+          {hasAccount && onboardingStatus !== 'APPROVED' && onboardingStatus !== 'REJECTED' && onboardingStatus !== 'PENDING' && onboardingStatus !== 'AWAITING_APPROVAL' && onboardingUrl && (
+            <a
+              href={onboardingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[44px] items-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90"
+            >
+              Configurar agora →
+            </a>
           )}
         </>
       )}
