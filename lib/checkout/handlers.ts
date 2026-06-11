@@ -12,7 +12,8 @@ import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
 import { signCheckoutStatusToken, verifyCheckoutStatusToken } from '@/lib/checkout-status-token'
 import { getCheckoutRates } from '@/lib/checkout-rates'
 import { encryptCpf } from '@/lib/crypto/pii'
-import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
+import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
+import { resolveCheckoutChannelsFromStore } from '@/lib/checkout-availability'
 
 const ASAAS_CONFIRMED = new Set(['CONFIRMED', 'RECEIVED'])
 
@@ -23,10 +24,6 @@ function mapAsaasStatus(status: string): 'PENDING' | 'CONFIRMED' | 'FAILED' {
 }
 
 export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
-  if (!isCheckoutLaunchEnabled()) {
-    return NextResponse.json({ error: 'Checkout integrado indisponível no momento.' }, { status: 503 })
-  }
-
   const parsed = checkoutPaymentSchema.safeParse(body)
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message
@@ -47,7 +44,9 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
     SELECT
       id, slug, plan,
       asaas_wallet_id,
-      asaas_onboarding_status
+      asaas_onboarding_status,
+      is_demo,
+      checkout_mode
     FROM stores
     WHERE slug = ${storeSlug}
     LIMIT 1
@@ -59,21 +58,35 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
     plan: string | null
     asaas_wallet_id: string | null
     asaas_onboarding_status: string | null
+    is_demo: boolean | null
+    checkout_mode: string | null
   } | undefined
 
   if (!store) {
     return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 })
   }
 
-  if (store.asaas_onboarding_status !== 'APPROVED') {
+  const storeInput = {
+    plan:                    store.plan ?? 'free',
+    asaas_onboarding_status: store.asaas_onboarding_status,
+    asaas_wallet_id:         store.asaas_wallet_id,
+    is_demo:                 store.is_demo,
+    checkout_mode:           store.checkout_mode,
+  }
+
+  if (!isCheckoutEnabledForStore(storeInput)) {
     return NextResponse.json(
-      { error: 'Checkout não disponível. O lojista precisa configurar pagamentos.' },
-      { status: 403 },
+      { error: 'Checkout integrado indisponível para esta loja.' },
+      { status: 503 },
     )
   }
 
-  if (!store.asaas_wallet_id) {
-    return NextResponse.json({ error: 'Loja sem conta de recebimento configurada' }, { status: 403 })
+  const { siteEnabled } = resolveCheckoutChannelsFromStore(storeInput)
+  if (!siteEnabled) {
+    return NextResponse.json(
+      { error: 'Checkout desativado nas configurações da loja.' },
+      { status: 403 },
+    )
   }
 
   let lines
@@ -263,19 +276,37 @@ export async function handleCheckoutStatus(
   paymentId: string,
   token: string | null,
 ) {
-  if (!isCheckoutLaunchEnabled()) {
-    return NextResponse.json({ error: 'Checkout integrado indisponível no momento.' }, { status: 503 })
-  }
-
   if (!token || !verifyCheckoutStatusToken(token, paymentId)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
   const storeRows = await sql`
-    SELECT id FROM stores WHERE slug = ${storeSlug} LIMIT 1
+    SELECT
+      id, plan, asaas_onboarding_status, asaas_wallet_id, is_demo, checkout_mode
+    FROM stores
+    WHERE slug = ${storeSlug}
+    LIMIT 1
   `
   if (!storeRows[0]) {
     return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 })
+  }
+
+  const storeRow = storeRows[0] as {
+    id: string
+    plan: string | null
+    asaas_onboarding_status: string | null
+    asaas_wallet_id: string | null
+    is_demo: boolean | null
+    checkout_mode: string | null
+  }
+
+  if (!isCheckoutEnabledForStore({
+    plan:                    storeRow.plan ?? 'free',
+    asaas_onboarding_status: storeRow.asaas_onboarding_status,
+    asaas_wallet_id:         storeRow.asaas_wallet_id,
+    is_demo:                 storeRow.is_demo,
+  })) {
+    return NextResponse.json({ error: 'Checkout integrado indisponível no momento.' }, { status: 503 })
   }
 
   const rows = await sql`
@@ -291,7 +322,7 @@ export async function handleCheckoutStatus(
 
   const row = rows[0] as { payment_status: string | null; order_number: string; store_id: string }
 
-  if (row.store_id !== storeRows[0].id) {
+  if (row.store_id !== storeRow.id) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 

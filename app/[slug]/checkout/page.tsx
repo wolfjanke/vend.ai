@@ -3,7 +3,7 @@ import { sql } from '@/lib/db'
 import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
 import { getCheckoutRates } from '@/lib/checkout-rates'
 import { getAsaasEnv } from '@/lib/payments/config'
-import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
+import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
 import CheckoutWrapper from '@/components/loja/checkout/CheckoutWrapper'
 
 interface Props {
@@ -27,13 +27,16 @@ export default async function CheckoutPage({ params }: Props) {
   const store = rows[0]
   if (!store) notFound()
 
-  if (!isCheckoutLaunchEnabled()) {
-    redirect(`/${slug}`)
-  }
-
   const onboardingStatus = store.asaas_onboarding_status as AsaasOnboardingStatus | null
 
-  if (store.is_demo === true || onboardingStatus !== 'APPROVED' || !store.asaas_wallet_id) {
+  const checkoutEligible = isCheckoutEnabledForStore({
+    plan:                    (store.plan as string) ?? 'free',
+    asaas_onboarding_status: onboardingStatus,
+    asaas_wallet_id:         store.asaas_wallet_id as string | null,
+    is_demo:                 store.is_demo as boolean | null,
+  })
+
+  if (!checkoutEligible) {
     redirect(`/${slug}`)
   }
 

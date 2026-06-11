@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { sql } from '@/lib/db'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
-import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
+import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
 import CheckoutPageLayout from '@/components/loja/checkout/CheckoutPageLayout'
 
 interface Props {
@@ -11,16 +11,12 @@ interface Props {
 
 export default async function CheckoutSuccessPage({ params, searchParams }: Props) {
   const { slug } = params
-
-  if (!isCheckoutLaunchEnabled()) {
-    redirect(`/${slug}`)
-  }
-
   const orderNumber = searchParams.order?.trim()
   const totalParam  = searchParams.total ? Number(searchParams.total) : null
 
   const rows = await sql`
-    SELECT name, whatsapp, logo_url, theme_logo_url
+    SELECT name, whatsapp, logo_url, theme_logo_url, plan,
+      asaas_onboarding_status, asaas_wallet_id, is_demo
     FROM stores
     WHERE slug = ${slug}
     LIMIT 1
@@ -28,6 +24,15 @@ export default async function CheckoutSuccessPage({ params, searchParams }: Prop
 
   const store = rows[0]
   if (!store) notFound()
+
+  if (!isCheckoutEnabledForStore({
+    plan:                    (store.plan as string) ?? 'free',
+    asaas_onboarding_status: store.asaas_onboarding_status as string | null,
+    asaas_wallet_id:         store.asaas_wallet_id as string | null,
+    is_demo:                 store.is_demo as boolean | null,
+  })) {
+    redirect(`/${slug}`)
+  }
 
   const storeName = String(store.name)
   const logo = (store.theme_logo_url ?? store.logo_url) as string | null

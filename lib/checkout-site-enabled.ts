@@ -1,34 +1,47 @@
 import { sql } from '@/lib/db'
-import type { StoreSettings } from '@/types'
-import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
+import type { PlanSlug } from '@/lib/plans'
+import { resolveCheckoutChannelsFromStore } from '@/lib/checkout-availability'
 
-/** Indica se o checkout integrado está disponível na vitrine (sem expor campos Asaas). */
-export async function resolveCheckoutSiteEnabled(
-  slug: string,
-  settings?: StoreSettings,
-): Promise<boolean> {
-  if (!isCheckoutLaunchEnabled()) return false
+export interface CheckoutAvailability {
+  siteEnabled:     boolean
+  whatsappEnabled: boolean
+}
 
+/** Canais de finalização na vitrine (plano + CNPJ + checkout_mode). */
+export async function resolveCheckoutAvailability(slug: string): Promise<CheckoutAvailability> {
   const rows = await sql`
     SELECT
+      plan,
       asaas_onboarding_status,
       asaas_wallet_id,
-      is_demo
+      is_demo,
+      checkout_mode
     FROM stores
     WHERE slug = ${slug}
     LIMIT 1
   `
 
   const row = rows[0] as {
+    plan: string | null
     asaas_onboarding_status: string | null
     asaas_wallet_id: string | null
     is_demo: boolean | null
+    checkout_mode: string | null
   } | undefined
 
-  if (!row || row.is_demo === true) return false
+  if (!row) return { siteEnabled: false, whatsappEnabled: true }
 
-  const siteEnabled = settings?.checkoutChannels?.siteEnabled === true
-  if (!siteEnabled) return false
+  return resolveCheckoutChannelsFromStore({
+    plan:                    (row.plan ?? 'free') as PlanSlug,
+    asaas_onboarding_status: row.asaas_onboarding_status,
+    asaas_wallet_id:         row.asaas_wallet_id,
+    is_demo:                 row.is_demo,
+    checkout_mode:           row.checkout_mode,
+  })
+}
 
-  return row.asaas_onboarding_status === 'APPROVED' && !!row.asaas_wallet_id
+/** @deprecated Use resolveCheckoutAvailability().siteEnabled */
+export async function resolveCheckoutSiteEnabled(_slug: string, _settings?: unknown): Promise<boolean> {
+  const { siteEnabled } = await resolveCheckoutAvailability(_slug)
+  return siteEnabled
 }
