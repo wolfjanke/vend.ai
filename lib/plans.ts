@@ -13,6 +13,8 @@ export type PlanDefinition = {
   viMessagesLimit:      number
   photoAnalysisLimit:   number | null
   overage:              PlanOverage | null
+  /** Checkout integrado disponível neste plano (requer CNPJ aprovado no Asaas). */
+  checkoutEnabled:      boolean
 }
 
 export const PLANS: Record<PlanSlug, PlanDefinition> = {
@@ -23,6 +25,7 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
     viMessagesLimit:    1_000,
     photoAnalysisLimit: 10,
     overage:            null,
+    checkoutEnabled:    false,
   },
   starter: {
     name:               'Starter',
@@ -31,6 +34,7 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
     viMessagesLimit:    5_000,
     photoAnalysisLimit: 50,
     overage:            { per: 1_000, price: 200 },
+    checkoutEnabled:    true,
   },
   pro: {
     name:               'Pro',
@@ -39,6 +43,7 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
     viMessagesLimit:    15_000,
     photoAnalysisLimit: 200,
     overage:            { per: 1_000, price: 150 },
+    checkoutEnabled:    true,
   },
   loja: {
     name:               'Loja',
@@ -47,6 +52,7 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
     viMessagesLimit:    40_000,
     photoAnalysisLimit: null,
     overage:            { per: 1_000, price: 100 },
+    checkoutEnabled:    true,
   },
   enterprise: {
     name:               'Enterprise',
@@ -55,6 +61,7 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
     viMessagesLimit:    60_000,
     photoAnalysisLimit: null,
     overage:            { per: 1_000, price: 80 },
+    checkoutEnabled:    true,
   },
 }
 
@@ -72,6 +79,11 @@ export const PAID_PLAN_SLUGS: PlanSlug[] = ['starter', 'pro', 'loja', 'enterpris
 
 export function isPaidPlan(slug: PlanSlug): boolean {
   return PAID_PLAN_SLUGS.includes(slug)
+}
+
+export function isPlanCheckoutEligible(plan: string): boolean {
+  const slug = (plan in PLANS ? plan : 'free') as PlanSlug
+  return PLANS[slug].checkoutEnabled
 }
 
 export const PLAN_PRODUCT_LIMITS: Record<PlanSlug, number | null> = Object.fromEntries(
