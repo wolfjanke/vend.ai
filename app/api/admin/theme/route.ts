@@ -17,6 +17,7 @@ import { getThemeContrastWarnings, isValidHex, validateThemeColors } from '@/lib
 export { dynamic } from '@/lib/route-dynamic'
 const themeNameSchema = z.enum([
   'default', 'boutique', 'street', 'editorial', 'pop', 'fitness', 'lumiere',
+  'flash', 'casual', 'social',
 ])
 
 const themePutSchema = z.object({

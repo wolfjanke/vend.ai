@@ -1,19 +1,20 @@
 import type { CustomCategory } from '@/types'
-import { getCategoryEmoji } from '@/lib/category-icons'
+import { vitrineText } from '@/lib/strip-emoji'
 
 export type CategoryNavStyle = 'pills' | 'circles'
 
-/** Emoji do chip: custom > mapa automático. */
-export function resolveFilterEmoji(
-  value: string,
-  label: string,
-  customCategories?: CustomCategory[],
-): string {
-  if (value === '') return '✨'
-  if (value === 'sale') return '🔥'
-  const custom = customCategories?.find(c => c.value === value)
-  if (custom?.emoji?.trim()) return custom.emoji.trim()
-  return getCategoryEmoji(value, label)
+/** Rótulo sem emoji, com inicial maiúscula em cada palavra. */
+export function formatCategoryLabel(input: string | null | undefined): string {
+  const cleaned = vitrineText(input)
+  if (!cleaned) return ''
+  return cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => {
+      const lower = word.toLocaleLowerCase('pt-BR')
+      return lower.charAt(0).toLocaleUpperCase('pt-BR') + lower.slice(1)
+    })
+    .join(' ')
 }
 
 export function resolveFilterImageUrl(

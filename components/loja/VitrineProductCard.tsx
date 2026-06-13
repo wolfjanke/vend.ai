@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Heart } from 'lucide-react'
 import type { Product, ProductVariant } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import { getVariantPhotoUrl } from '@/lib/product-media'
@@ -15,6 +16,46 @@ type Props = {
   isLowStock:       boolean
   cardTheme:        StoreThemeConfig
   onOpenDetail:     () => void
+}
+
+function discountPercent(price: number, promoPrice: number | null): number | null {
+  if (promoPrice == null || promoPrice <= price) return null
+  return Math.round(((Number(promoPrice) - price) / Number(promoPrice)) * 100)
+}
+
+function ColorSwatches({ variants }: { variants: ProductVariant[] }) {
+  const colors = variants
+    .map(v => v.colorHex?.trim())
+    .filter((c): c is string => Boolean(c))
+    .filter((c, i, a) => a.indexOf(c) === i)
+    .slice(0, 6)
+
+  if (colors.length === 0) return null
+
+  return (
+    <div className="produto-color-swatches" aria-hidden>
+      {colors.map(hex => (
+        <span
+          key={hex}
+          className="produto-color-swatch"
+          style={{ backgroundColor: hex }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function FavoriteButton() {
+  return (
+    <button
+      type="button"
+      className="produto-card-favorite"
+      aria-label="Favoritar"
+      onClick={e => e.stopPropagation()}
+    >
+      <Heart className="w-4 h-4" strokeWidth={2} />
+    </button>
+  )
 }
 
 function PriceBlock({
@@ -110,6 +151,7 @@ export default function VitrineProductCard({
 }: Props) {
   const photoUrl = getVariantPhotoUrl(variant)
   const radius = cardTheme.borderRadius
+  const isList = cardTheme.catalogLayout === 'list'
   const shadow = cardTheme.shadow
     ? 'shadow-lg hover:shadow-xl'
     : 'hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)]'
@@ -123,6 +165,13 @@ export default function VitrineProductCard({
   const imgClsCover =
     'absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
   const imgClsStatic = 'absolute inset-0 w-full h-full object-cover'
+  const discount = cardTheme.showDiscountBadge
+    ? discountPercent(effectivePrice, product.promo_price)
+    : null
+
+  const overlayStyle = cardTheme.overlayGradient
+    ? { background: cardTheme.overlayGradient }
+    : undefined
 
   const imageBtn = (
     <button
@@ -130,7 +179,7 @@ export default function VitrineProductCard({
       onClick={onOpenDetail}
       title="Ver detalhes do produto"
       className={mediaBtnCls}
-      style={{ borderRadius: radius }}
+      style={{ borderRadius: isList ? undefined : radius }}
     >
       <CardMedia
         photoUrl={photoUrl}
@@ -138,6 +187,10 @@ export default function VitrineProductCard({
         variant={variant}
         imgClassName={imgClsCover}
       />
+      {cardTheme.showFavoriteIcon && <FavoriteButton />}
+      {discount != null && discount > 0 && (
+        <span className="produto-discount-badge">-{discount}%</span>
+      )}
       {isSoldOut && (
         <>
           <div className="absolute inset-0 bg-bg/70" />
@@ -173,7 +226,11 @@ export default function VitrineProductCard({
             variant={variant}
             imgClassName={imgClsStatic}
           />
-          <div className="card-info-overlay absolute inset-0 flex flex-col justify-end min-w-0">
+          {cardTheme.showFavoriteIcon && <FavoriteButton />}
+          <div
+            className="card-info-overlay absolute inset-0 flex flex-col justify-end min-w-0"
+            style={overlayStyle}
+          >
             <span className="produto-nome font-semibold line-clamp-2 break-words mb-1">
               {product.name}
             </span>
@@ -197,7 +254,7 @@ export default function VitrineProductCard({
         data-shimmer={cardTheme.shimmer ? 'true' : 'false'}
       >
         <div className="relative w-full shrink-0 min-w-0">
-          {product.promo_price != null && (
+          {product.promo_price != null && !cardTheme.showDiscountBadge && (
             <span className="absolute top-2 left-2 z-10 px-2 py-1 rounded-full bg-primary text-white produto-badge font-bold text-center">
               Promo
             </span>
@@ -209,7 +266,7 @@ export default function VitrineProductCard({
           onClick={onOpenDetail}
           className={vitrineInfoBtnCls}
         >
-          <span className={vitrineTitleCls}>{product.name}</span>
+          <span className={`${vitrineTitleCls} ${isList ? 'min-h-0' : ''}`}>{product.name}</span>
           <div className="mt-auto pt-0.5">
             <PriceBlock
               effectivePrice={effectivePrice}
@@ -224,24 +281,30 @@ export default function VitrineProductCard({
   }
 
   if (cardTheme.infoPosition === 'sidebar') {
+    const cardLayout = isList
+      ? `${baseCard} flex flex-row items-stretch`
+      : `${baseCard} flex flex-row`
+
     return (
       <div
-        className={`${baseCard} flex flex-row`}
+        className={cardLayout}
         style={{ borderRadius: radius }}
         data-shimmer={cardTheme.shimmer ? 'true' : 'false'}
       >
-        <div
-          className="w-1.5 shrink-0"
-          style={{ background: `linear-gradient(180deg, var(--primary), var(--accent))` }}
-        />
-        <div className="flex flex-col flex-1 min-w-0">
+        {!isList && (
+          <div
+            className="w-1.5 shrink-0"
+            style={{ background: `linear-gradient(180deg, var(--primary), var(--accent))` }}
+          />
+        )}
+        <div className={`flex ${isList ? 'flex-row flex-1 min-w-0' : 'flex-col flex-1 min-w-0'}`}>
           {imageBtn}
           <button
             type="button"
             onClick={onOpenDetail}
-            className={`${vitrineInfoBtnCls} p-2.5`}
+            className={`card-info-sidebar w-full min-w-0 flex-1 flex flex-col text-left p-2.5 sm:p-3 hover:bg-surface2/80 transition-colors`}
           >
-            <span className="produto-nome font-bold uppercase tracking-wide line-clamp-2 break-words block mb-1 min-h-[2.625rem]">
+            <span className={`produto-nome font-bold ${isList ? '' : 'uppercase tracking-wide'} line-clamp-2 break-words block mb-1 ${isList ? 'min-h-0' : 'min-h-[2.625rem]'}`}>
               {product.name}
             </span>
             <div className="mt-auto pt-0.5">
@@ -299,9 +362,13 @@ export default function VitrineProductCard({
         <span className={`${vitrineTitleCls} mb-1.5`}>
           {product.name}
         </span>
-        <span className="produto-variant-color text-muted line-clamp-1 break-words mb-1 min-h-[1.125rem] leading-tight">
-          {variant?.color?.trim() ? variant.color : 'Cor única'}
-        </span>
+        {cardTheme.showColorSwatches ? (
+          <ColorSwatches variants={product.variants_json} />
+        ) : (
+          <span className="produto-variant-color text-muted line-clamp-1 break-words mb-1 min-h-[1.125rem] leading-tight">
+            {variant?.color?.trim() ? variant.color : 'Cor única'}
+          </span>
+        )}
         <div className="mt-auto pt-0.5">
           <PriceBlock
             effectivePrice={effectivePrice}

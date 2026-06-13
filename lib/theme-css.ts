@@ -6,7 +6,7 @@ import {
   type ThemeName,
   type StoreThemeConfig,
 } from '@/lib/themes'
-import { getGoogleFontsUrl } from '@/lib/theme-fonts'
+import { getGoogleFontsUrl, resolveThemeShadow } from '@/lib/theme-fonts'
 import { deriveThemeColors } from '@/lib/theme-derive'
 import { hexWithAlpha } from '@/lib/theme-contrast'
 import { getThemeTypography, themeTypographyCssVars } from '@/lib/theme-typography'
@@ -43,14 +43,14 @@ export function generateThemeCss(
     textMuted: background === 'light' ? theme.defaultColors.textMuted : undefined,
   })
   const typography = themeTypographyCssVars(getThemeTypography(theme.name))
-  const shadow =
-    background === 'dark'
-      ? '0 4px 20px rgba(0,0,0,0.4)'
-      : '0 4px 20px rgba(0,0,0,0.08)'
-  const popShadow =
-    theme.name === 'pop'
-      ? `0 8px 32px ${hexWithAlpha(accent, '44')}`
-      : shadow
+  const themeShadow = resolveThemeShadow(theme.shadowStyle, background, accent)
+  const priceColor = theme.priceColor ?? c.pricePrimary
+  const overlayGradient =
+    theme.card.overlayGradient ??
+    'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)'
+  const accentGradient =
+    theme.accentGradient ??
+    `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`
 
   return `
     --theme-primary: ${c.primary};
@@ -77,6 +77,7 @@ export function generateThemeCss(
 
     --theme-header-bg: ${c.headerBg};
     --theme-header-text: ${c.headerText};
+    --theme-header-letter-spacing: ${theme.headerLetterSpacing ?? 'normal'};
 
     --theme-chip-bg: ${c.chipBg};
     --theme-chip-bg-active: ${c.chipBgActive};
@@ -86,8 +87,9 @@ export function generateThemeCss(
     --theme-btn-bg: ${c.buttonBg};
     --theme-btn-text: ${c.buttonText};
     --theme-btn-hover: ${c.buttonHover};
+    --theme-btn-radius: ${theme.buttonRadius};
 
-    --theme-price: ${c.pricePrimary};
+    --theme-price: ${priceColor};
     --theme-price-old: ${c.priceOld};
 
     --theme-vi-avatar: ${c.viAvatar};
@@ -99,7 +101,17 @@ export function generateThemeCss(
     --theme-font-weight-display: ${theme.fonts.displayWeight};
 
     --theme-shimmer: ${shimmer ? '1' : '0'};
-    --theme-shadow: ${popShadow};
+    --theme-shadow: ${themeShadow};
+    --theme-card-hover: ${theme.cardHover};
+    --theme-overlay-gradient: ${overlayGradient};
+    --theme-accent-gradient: ${accentGradient};
+
+    --theme-card-gap: ${theme.spacing.cardGap};
+    --theme-section-gap: ${theme.spacing.sectionGap};
+    --theme-page-padding: ${theme.spacing.pagePadding};
+    --theme-catalog-cols-mobile: ${theme.catalogColsMobile};
+    --theme-catalog-cols-desktop: ${theme.catalogColsDesktop};
+    --theme-catalog-layout: ${theme.catalogLayout};
 
     --theme-radius: ${theme.card.borderRadius};
     --theme-surface: ${c.surface};

@@ -18,7 +18,7 @@ export default async function AparenciaPage() {
   try {
     const rows = await sql`
       SELECT
-        slug, name, plan, logo_url, tagline, assistant_name,
+        slug, name, plan, logo_url, tagline, assistant_name, settings_json,
         theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
         theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done
       FROM stores
@@ -71,6 +71,7 @@ export default async function AparenciaPage() {
         assistantName={store.assistant_name?.trim() || 'Vi'}
         tagline={store.tagline ?? null}
         categoryNavStyle={store.settings_json?.categoryNavStyle ?? 'pills'}
+        customCategories={store.settings_json?.customCategories ?? []}
         initial={{
           theme_name:            (store.theme_name as string) ?? 'default',
           theme_primary_color:   store.theme_primary_color ?? null,

@@ -116,18 +116,23 @@ export default function ProductStrip({
 
         <div
           ref={scrollRef}
-          className="flex items-stretch gap-2 overflow-x-auto overflow-y-hidden pb-2 px-4 md:px-6 scrollbar-hide snap-x snap-mandatory scroll-pl-4 scroll-pr-4 touch-pan-x"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="flex items-stretch overflow-x-auto overflow-y-hidden pb-2 px-4 md:px-6 scrollbar-hide snap-x snap-mandatory scroll-pl-4 scroll-pr-4 touch-pan-x"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            gap: 'var(--theme-card-gap, 8px)',
+          }}
         >
-          {displayItems.map(({ product, variantIndex }) => (
+          {displayItems.map(({ product, variantIndex }) => {
+            const isTall = cardTheme.aspectRatio === '9/16'
+            return (
             <div
               key={`${product.id}-${variantIndex}`}
               data-strip-card
               className={[
                 'shrink-0 snap-start flex flex-col self-stretch min-h-0',
-                'w-[clamp(148px,calc((100vw-2.5rem)/2.35),200px)]',
-                'sm:w-[clamp(152px,calc((100vw-2.75rem)/2.35),210px)]',
-                'md:w-[clamp(168px,calc((100vw-3.5rem)/2.35),220px)]',
+                isTall
+                  ? 'w-[clamp(112px,calc((100vw-2.5rem)/2.4),148px)] md:w-[clamp(128px,calc((100vw-3.5rem)/3.2),168px)]'
+                  : 'w-[clamp(148px,calc((100vw-2.5rem)/2.35),200px)] sm:w-[clamp(152px,calc((100vw-2.75rem)/2.35),210px)] md:w-[clamp(168px,calc((100vw-3.5rem)/2.35),220px)]',
               ].join(' ')}
             >
               <ProdutoCard
@@ -143,7 +148,8 @@ export default function ProductStrip({
                 customCategories={customCategories}
               />
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 

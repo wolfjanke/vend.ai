@@ -12,7 +12,7 @@ import {
 } from '@/app/admin/actions'
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
 import { stripEmojis } from '@/lib/strip-emoji'
-import { resolveFilterEmoji } from '@/lib/category-nav'
+import { getCategoryEmoji } from '@/lib/category-icons'
 
 interface Props {
   customCategories: CustomCategory[]
@@ -198,7 +198,7 @@ export default function CategoriesManager({
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <span className="text-base shrink-0" aria-hidden>
-                    {resolveFilterEmoji(c.value, c.label)}
+                    {getCategoryEmoji(c.value, c.label)}
                   </span>
                   <span className="text-xs font-medium uppercase tracking-wide text-muted shrink-0">Padrão</span>
                   <span className="text-sm text-foreground break-words min-w-0">{c.label}</span>

@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 
 import type { CartItem, CustomCategory, Product, ProductVariantDisplay, StoreProfile } from '@/types'
-import type { CategoryNavStyle } from '@/lib/category-nav'
+import { formatCategoryLabel } from '@/lib/category-nav'
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_SLUGS,
@@ -11,11 +11,11 @@ import {
   getSearchPlaceholder,
 } from '@/types'
 import { expandProductsByVariant } from '@/lib/catalog-display'
-import { vitrineText } from '@/lib/strip-emoji'
+import type { CategoryNavStyle } from '@/lib/category-nav'
 
 import type { StoreThemeConfig } from '@/lib/themes'
 import CategoryFilterBar from './CategoryFilterBar'
-import ProductStrip from './ProductStrip'
+import ProductSection from './ProductSection'
 
 interface Props {
   products:    Product[]
@@ -62,7 +62,7 @@ function buildCatalogSections(
     if (items.length <= SMALL_CATEGORY_MAX) {
       outros.push(...items)
     } else {
-      sections.push({ key: cat.value, title: vitrineText(cat.label), items })
+      sections.push({ key: cat.value, title: formatCategoryLabel(cat.label), items })
     }
   }
 
@@ -72,7 +72,7 @@ function buildCatalogSections(
     if (items.length <= SMALL_CATEGORY_MAX) {
       outros.push(...items)
     } else {
-      sections.push({ key: cat.value, title: vitrineText(cat.label), items })
+      sections.push({ key: cat.value, title: formatCategoryLabel(cat.label), items })
     }
   }
 
@@ -90,7 +90,7 @@ function buildCatalogSections(
       if (items.length <= SMALL_CATEGORY_MAX) {
         outros.push(...items)
       } else {
-        const label = vitrineText(getCategoryDisplayLabel(slug, customCategories))
+        const label = formatCategoryLabel(getCategoryDisplayLabel(slug, customCategories))
         sections.push({ key: `stray-${slug}`, title: label, items })
       }
     }
@@ -141,8 +141,8 @@ export default function Catalogo({
 
     return [
       { value: '', label: 'Tudo' },
-      ...categoryFilters.map(c => ({ value: c.value, label: vitrineText(c.label) })),
-      ...customFilters.map(c => ({ value: c.value, label: vitrineText(c.label) })),
+      ...categoryFilters.map(c => ({ value: c.value, label: formatCategoryLabel(c.label) })),
+      ...customFilters.map(c => ({ value: c.value, label: formatCategoryLabel(c.label) })),
       ...(hasPromo ? [{ value: 'sale', label: 'Promoções' }] : []),
     ]
   }, [visibleProducts, customCategories])
@@ -186,7 +186,7 @@ export default function Catalogo({
     if (search.trim()) return 'Resultados'
     if (catFilter === 'sale') return 'Promoções'
     if (catFilter) {
-      return vitrineText(getCategoryDisplayLabel(catFilter, customCategories))
+      return formatCategoryLabel(getCategoryDisplayLabel(catFilter, customCategories))
     }
     return 'Produtos'
   }, [catFilter, search, customCategories])
@@ -236,7 +236,7 @@ export default function Catalogo({
         {isFiltered ? (
           <div className="pb-32 pt-6">
             {filtered.length > 0 ? (
-              <ProductStrip
+              <ProductSection
                 sectionId="filtered"
                 title={filteredTitle}
                 countLabel={`${filtered.length} ${filtered.length === 1 ? 'peça' : 'peças'}`}
@@ -259,7 +259,7 @@ export default function Catalogo({
           <div className="pb-32 pt-6">
             {sectionList.length > 0 ? (
               sectionList.map(sec => (
-                <ProductStrip
+                <ProductSection
                   key={sec.key}
                   sectionId={sec.key}
                   title={sec.title}

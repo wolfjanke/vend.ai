@@ -28,6 +28,8 @@ export default async function StoreThemeWrapper({ slug, children }: Props) {
           className="store-theme-root min-h-screen font-dm"
           data-theme={resolved.themeName}
           data-info-position={resolved.cardTheme.infoPosition}
+          data-card-hover={resolved.cardTheme.cardHover}
+          data-catalog-layout={resolved.cardTheme.catalogLayout}
         >
           {children}
         </div>

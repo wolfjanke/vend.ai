@@ -80,9 +80,14 @@ Estilo visual → tema (identifique pelo conjunto da logo, não só pelo segment
 - Fundo escuro + cores quentes (dourado, bronze, cobre, âmbar) = luxo/premium → prefira themeName "lumiere" ou "boutique"; cores derivadas do dourado/bronze da logo
 - Preto + dourado/âmbar = luxo elegante → "lumiere" com primary no tom dourado da logo
 - Branco/claro + tons pastel ou delicados = delicado → "boutique"
-- Cores vibrantes, neon ou muito saturadas = jovem/urbano → "pop" ou "street"
+- Cores vibrantes, neon ou muito saturadas = jovem/urbano → "pop", "street", "flash" ou "social"
+- Grid denso / promoções / fast fashion → "flash"
+- Visual Instagram / influencer → "social"
+- Marketplace / volume / funcional → "fitness"
+- Casual democrático / cores no card → "casual"
+- Editorial minimalista preto e branco → "editorial"
 - NUNCA sugira verde neon (#00FF87, #39FF14, etc.) nem amarelo vibrante/neon (#FFE500, #FFFF00) para logos com estilo premium, luxo, elegante ou sóbrio (preto + dourado/bronze)
-- Para logos premium/luxo, evite themeName "fitness" e "pop" a menos que a logo tenha cores esportivas/neon
+- Para logos premium/luxo, evite themeName "fitness", "flash" e "pop" a menos que a logo tenha cores esportivas/neon/promocionais
 
 Sem markdown.`
 }

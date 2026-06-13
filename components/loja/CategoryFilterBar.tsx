@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import type { CustomCategory } from '@/types'
 import {
-  resolveFilterEmoji,
   resolveFilterImageUrl,
+  formatCategoryLabel,
   type CategoryNavStyle,
 } from '@/lib/category-nav'
 import CategoryNavIcon from './CategoryNavIcon'
@@ -18,6 +18,8 @@ interface Props {
   onSelect:          (value: string) => void
   customCategories?: CustomCategory[]
   categoryNavStyle?: CategoryNavStyle
+  /** Preview admin: só texto, sem ícones/emojis */
+  textOnly?:          boolean
   /** Quando definido, chips viram links compartilháveis. */
   storeSlug?:        string
 }
@@ -33,6 +35,7 @@ export default function CategoryFilterBar({
   onSelect,
   customCategories = [],
   categoryNavStyle = 'pills',
+  textOnly = false,
   storeSlug,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -60,7 +63,7 @@ export default function CategoryFilterBar({
   if (filters.length === 0) return null
 
   const useLinks = Boolean(storeSlug)
-  const isCircles = categoryNavStyle === 'circles'
+  const isCircles = !textOnly && categoryNavStyle === 'circles'
 
   const scrollWrap = isCircles ? 'category-nav-circles-scroll' : 'category-nav-pills-scroll'
 
@@ -77,7 +80,7 @@ export default function CategoryFilterBar({
       >
         {filters.map(filter => {
           const isActive = filter.value === activeValue
-          const emoji = resolveFilterEmoji(filter.value, filter.label, customCategories)
+          const displayLabel = formatCategoryLabel(filter.label)
           const imageUrl = resolveFilterImageUrl(filter.value, customCategories)
 
           if (isCircles) {
@@ -88,16 +91,15 @@ export default function CategoryFilterBar({
                 >
                   <CategoryNavIcon
                     value={filter.value}
-                    emoji={emoji}
                     imageUrl={imageUrl}
                     size="circle"
                   />
                 </div>
                 <span
                   className={`category-nav-circle-label ${isActive ? 'active' : ''}`}
-                  title={filter.label}
+                  title={displayLabel}
                 >
-                  {filter.label}
+                  {displayLabel}
                 </span>
               </>
             )
@@ -136,20 +138,12 @@ export default function CategoryFilterBar({
           }
 
           const pillInner = (
-            <>
-              <CategoryNavIcon
-                value={filter.value}
-                emoji={emoji}
-                imageUrl={imageUrl}
-                size="pill"
-              />
-              <span className="truncate max-w-[9rem] sm:max-w-[12rem]" title={filter.label}>
-                {filter.label}
-              </span>
-            </>
+            <span className="truncate max-w-[9rem] sm:max-w-[12rem]" title={displayLabel}>
+              {displayLabel}
+            </span>
           )
 
-          const pillClass = `filter-chip shrink-0 inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-2 font-medium transition-all touch-manipulation ${
+          const pillClass = `filter-chip shrink-0 inline-flex items-center min-h-[44px] px-3.5 py-2 font-medium transition-all touch-manipulation ${
             isActive ? 'active' : ''
           }`
 

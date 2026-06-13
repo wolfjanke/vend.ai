@@ -32,12 +32,22 @@ describe('theme-derive', () => {
     expect(c.pricePrimary).not.toBe('#FFB703')
   })
 
-  it('uses theme text colors on light background', () => {
+  it('uses theme text colors on light background when they contrast', () => {
     const c = deriveThemeColors('#E94B88', '#FFB703', 'light', '#FAF8FC', {
       text:      '#2D1B69',
       textMuted: '#6B5589',
     })
     expect(c.textPrimary).toBe('#2D1B69')
     expect(contrastRatio(c.textMuted, c.pageBg)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('ignores theme text meant for dark backgrounds on light cards (Lumière)', () => {
+    const c = deriveThemeColors('#C9A84C', '#E8D5A3', 'light', '#FAF8F5', {
+      text:      '#F5EDD8',
+      textMuted: '#9B8B6A',
+    })
+    expect(c.textPrimary).not.toBe('#F5EDD8')
+    expect(contrastRatio(c.textPrimary, c.cardBg)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(c.pricePrimary, c.cardBg)).toBeGreaterThanOrEqual(3)
   })
 })

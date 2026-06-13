@@ -214,7 +214,7 @@ export default function ViChat({
         onClick={onToggle}
         title={`Conversar com ${assistantName}`}
         aria-label={`Abrir chat com ${assistantName}`}
-        className="fixed z-[150] w-14 h-14 min-h-[44px] min-w-[44px] bg-grad rounded-full border-none flex items-center justify-center shadow-[0_4px_20px_var(--primary-glow)] hover:scale-110 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all right-4 sm:right-7 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))]"
+        className="vi-chat-fab fixed z-[150] w-14 h-14 min-h-[44px] min-w-[44px] bg-grad rounded-full border-none flex items-center justify-center shadow-[0_4px_20px_var(--primary-glow)] hover:scale-110 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all right-4 sm:right-7 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))]"
         style={{ animation: 'floatIn 0.6s 0.5s both' }}
       >
         <div className="absolute inset-[-4px] rounded-full border-2 border-primary animate-pulse2 opacity-0" />

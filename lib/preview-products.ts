@@ -1,4 +1,6 @@
-import type { Product } from '@/types'
+import type { Product, CustomCategory } from '@/types'
+import { getCategoryDisplayLabel } from '@/types'
+import { formatCategoryLabel } from '@/lib/category-nav'
 
 export type StorePreviewProduct = {
   name:     string
@@ -29,18 +31,31 @@ export function toStorePreviewProducts(products: Product[], limit = 4): StorePre
   return mapped.slice(0, limit)
 }
 
-export function previewChipFilters(products: StorePreviewProduct[]): PreviewFilter[] {
+function previewCategoryLabel(slug: string, customCategories?: CustomCategory[]): string {
+  return formatCategoryLabel(getCategoryDisplayLabel(slug, customCategories))
+}
+
+export function previewChipFilters(
+  products: StorePreviewProduct[],
+  customCategories?: CustomCategory[],
+): PreviewFilter[] {
   const cats = [...new Set(products.map(p => p.category).filter(Boolean))]
   if (cats.length >= 2) {
     return [
       { value: '', label: 'Tudo' },
-      ...cats.slice(0, 3).map(c => ({ value: c, label: c })),
+      ...cats.slice(0, 3).map(c => ({
+        value: c,
+        label: previewCategoryLabel(c, customCategories),
+      })),
     ]
   }
   if (cats.length === 1) {
     return [
       { value: '', label: 'Tudo' },
-      { value: cats[0], label: cats[0] },
+      {
+        value: cats[0],
+        label: previewCategoryLabel(cats[0], customCategories),
+      },
       { value: 'novidades', label: 'Novidades' },
     ]
   }

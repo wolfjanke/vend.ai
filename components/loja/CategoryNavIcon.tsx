@@ -35,12 +35,11 @@ function getCategoryIcon(slug: string): LucideIcon {
 
 interface Props {
   value:    string
-  emoji:    string
   imageUrl: string | null
   size:     'pill' | 'circle'
 }
 
-export default function CategoryNavIcon({ value, emoji, imageUrl, size }: Props) {
+export default function CategoryNavIcon({ value, imageUrl, size }: Props) {
   const dim = size === 'circle' ? 64 : 20
 
   if (imageUrl) {
@@ -57,17 +56,6 @@ export default function CategoryNavIcon({ value, emoji, imageUrl, size }: Props)
         }
         unoptimized
       />
-    )
-  }
-
-  if (emoji) {
-    return (
-      <span
-        className={size === 'circle' ? 'text-2xl leading-none' : 'text-base leading-none shrink-0'}
-        aria-hidden
-      >
-        {emoji}
-      </span>
     )
   }
 

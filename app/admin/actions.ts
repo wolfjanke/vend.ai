@@ -3,7 +3,7 @@
 import { sql }           from '@/lib/db'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getSession } from '@/lib/auth'
-import type { OrderStatus, StoreSettings, CustomCategory } from '@/types'
+import type { OrderStatus, Product, StoreSettings, CustomCategory } from '@/types'
 import {
   canRestoreStockOnCancel,
   isQuoteOrder,
@@ -208,6 +208,19 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 
   revalidatePath('/admin/pedidos')
   revalidatePath('/admin/dashboard')
+}
+
+/** Catálogo ativo para montar/editar orçamentos (busca no admin). */
+export async function getActiveProductsCatalog(): Promise<Product[]> {
+  const session = await getSession()
+  if (!session?.storeId) throw new Error('Não autorizado')
+
+  const rows = await sql`
+    SELECT * FROM products
+    WHERE store_id = ${session.storeId} AND active = true
+    ORDER BY name ASC
+  `
+  return rows as Product[]
 }
 
 export async function toggleProductActive(productId: string, active: boolean) {

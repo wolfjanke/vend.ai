@@ -35,6 +35,7 @@ function noEmojiNullable(max: number) {
 
 const themeNameRegister = z.enum([
   'default', 'boutique', 'street', 'editorial', 'pop', 'fitness', 'lumiere',
+  'flash', 'casual', 'social',
 ]).optional()
 
 export const registerSchema = z.object({
@@ -309,16 +310,18 @@ export const orderCreateSchema = z.object({
   }),
 })
 
+const quoteUpdateItemSchema = z.object({
+  product_id: z.string().min(1),
+  variant_id: z.string().min(1),
+  name:       z.string().min(1),
+  size:       z.string().min(1),
+  color:      z.string().optional().default(''),
+  qty:        z.coerce.number().int().positive(),
+  price:      z.coerce.number().nonnegative(),
+  photo:      z.string().optional(),
+})
+
 export const quoteUpdateSchema = z.object({
-  items: z.array(z.object({
-    product_id: z.string().uuid(),
-    variant_id: z.string().min(1),
-    name:       z.string().min(1),
-    size:       z.string().min(1),
-    color:      z.string(),
-    qty:        z.number().int().positive(),
-    price:      z.number().nonnegative(),
-    photo:      z.string().optional(),
-  })).min(1),
+  items: z.array(quoteUpdateItemSchema).min(1),
   notes: z.string().max(5000).optional(),
 })

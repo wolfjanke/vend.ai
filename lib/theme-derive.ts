@@ -203,16 +203,31 @@ export function deriveThemeColors(
   const border = isDark ? alpha(p, 0.15) : alpha(p, 0.2)
   const faint = isDark ? '#33334A' : '#C8C0B8'
 
+  const textSecondary = isDark ? '#AAAACC' : '#4A4A6A'
+
+  const lightTextCandidates: string[] = []
+  const themeTextColor = themeText?.text?.trim()
+  if (themeTextColor && meetsContrast(themeTextColor, cardBg, 4.5)) {
+    lightTextCandidates.push(themeTextColor)
+  }
+  lightTextCandidates.push('#1A1A2E', '#2C1810', '#0D0D14')
+
   const textPrimary = isDark
     ? '#F0F0FF'
-    : (themeText?.text?.trim() || '#1A1A2E')
-  const textSecondary = isDark ? '#AAAACC' : '#4A4A6A'
-  const textMutedBase = isDark
-    ? '#666688'
-    : (themeText?.textMuted?.trim() || '#8888AA')
+    : pickReadableColor(lightTextCandidates, cardBg, 4.5)
+
+  const themeMutedColor = themeText?.textMuted?.trim()
+  const lightMutedCandidates: string[] = []
+  if (themeMutedColor && meetsContrast(themeMutedColor, pageBg, 4.5)) {
+    lightMutedCandidates.push(themeMutedColor)
+  }
+  lightMutedCandidates.push('#5A5A7A', '#666688', darken(textPrimary, 8))
+
   const textMuted = isDark
-    ? textMutedBase
-    : pickReadableColor([textMutedBase, darken(textMutedBase, 12), textSecondary], pageBg, 4.5)
+    ? (themeMutedColor && meetsContrast(themeMutedColor, pageBg, 3)
+        ? themeMutedColor
+        : '#666688')
+    : pickReadableColor(lightMutedCandidates, pageBg, 4.5)
 
   const pricePrimary = isDark
     ? pickReadableColor([a, lighten(a, 10), p, '#F0F0FF'], cardBg, 3)

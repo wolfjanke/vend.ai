@@ -30,11 +30,10 @@ export default function LojaHeader({
   logoUrl,
   logoSize = 'md',
   tagline,
-  themeName,
+  themeName: _themeName,
   cartQty,
   onOpenCart,
 }: Props) {
-  const letterSpacing = themeName === 'street' ? '2px' : '-0.3px'
   const displayName = vitrineText(storeName)
   const displayTagline = tagline?.trim() ? vitrineText(tagline) : null
   const size = normalizeLogoSize(logoSize)
@@ -61,7 +60,6 @@ export default function LojaHeader({
           <div className="min-w-0">
             <span
               className="loja-brand-name block text-lg sm:text-xl truncate"
-              style={{ letterSpacing }}
             >
               {displayName}
             </span>
