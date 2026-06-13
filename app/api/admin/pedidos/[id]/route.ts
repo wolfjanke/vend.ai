@@ -5,8 +5,9 @@ import { logServerError } from '@/lib/logger'
 import { quoteUpdateSchema } from '@/lib/validations'
 import { validationErrorResponse } from '@/lib/api-errors'
 import {
-  calcOrderTotalFromItems,
+  calcQuoteTotalAfterEdit,
   isQuoteOrder,
+  normalizeOrderItems,
   orderItemsToCartItems,
 } from '@/lib/orders'
 import {
@@ -53,10 +54,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Só é possível editar orçamentos em aberto.' }, { status: 400 })
     }
 
-    const items = parsed.data.items as OrderItem[]
-    const subtotal = calcOrderTotalFromItems(items)
-    const discountTotal = Number(order.discount_total ?? 0)
-    const totalFinal = Math.max(0, Number((subtotal - discountTotal).toFixed(2)))
+    const items = normalizeOrderItems(parsed.data.items as OrderItem[])
+    const { subtotal, total: totalFinal } = calcQuoteTotalAfterEdit(order, items)
 
     await sql`
       UPDATE orders SET

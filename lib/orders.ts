@@ -17,8 +17,27 @@ export function quoteStatusLabel(
   return isQuoteOrder(order) ? 'Orçamento' : fallback
 }
 
+/** Normaliza item vindo do JSON do pedido (qty/price podem vir como string). */
+export function normalizeOrderItem(raw: OrderItem): OrderItem {
+  return {
+    ...raw,
+    product_id: String(raw.product_id ?? ''),
+    variant_id: raw.variant_id != null ? String(raw.variant_id) : undefined,
+    name:       String(raw.name ?? ''),
+    size:       String(raw.size ?? ''),
+    color:      String(raw.color ?? ''),
+    qty:        Math.max(1, Math.floor(Number(raw.qty) || 1)),
+    price:      Math.max(0, Number(raw.price) || 0),
+    photo:      raw.photo,
+  }
+}
+
+export function normalizeOrderItems(items: OrderItem[]): OrderItem[] {
+  return items.map(normalizeOrderItem)
+}
+
 export function orderItemsToCartItems(items: OrderItem[]): CartItem[] {
-  return items
+  return normalizeOrderItems(items)
     .filter(i => i.product_id && i.variant_id)
     .map(i => ({
       product_id: i.product_id,
@@ -33,8 +52,22 @@ export function orderItemsToCartItems(items: OrderItem[]): CartItem[] {
 }
 
 export function calcOrderTotalFromItems(items: OrderItem[]): number {
-  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0)
+  const subtotal = normalizeOrderItems(items).reduce((s, i) => s + i.price * i.qty, 0)
   return Math.max(0, Number(subtotal.toFixed(2)))
+}
+
+/** Recalcula total do orçamento mantendo frete/descontos já gravados no pedido. */
+export function calcQuoteTotalAfterEdit(
+  order: Pick<Order, 'subtotal' | 'discount_total' | 'total' | 'total_final' | 'items_json'>,
+  nextItems: OrderItem[],
+): { subtotal: number; total: number } {
+  const discountTotal = Number(order.discount_total ?? 0)
+  const oldSubtotal = Number(order.subtotal ?? calcOrderTotalFromItems(order.items_json ?? []))
+  const oldTotal = Number(order.total_final ?? order.total ?? 0)
+  const extras = Math.max(0, Number((oldTotal - (oldSubtotal - discountTotal)).toFixed(2)))
+  const subtotal = calcOrderTotalFromItems(nextItems)
+  const total = Math.max(0, Number((subtotal - discountTotal + extras).toFixed(2)))
+  return { subtotal, total }
 }
 
 export function canRestoreStockOnCancel(

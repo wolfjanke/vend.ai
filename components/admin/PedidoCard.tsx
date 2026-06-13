@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import type { DeliveryAddress, Order, OrderItem, OrderStatus } from '@/types'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types'
 import { updateOrderStatus } from '@/app/admin/actions'
-import { isQuoteOrder, quoteStatusLabel } from '@/lib/orders'
+import { isQuoteOrder, normalizeOrderItems, quoteStatusLabel } from '@/lib/orders'
 import PedidoQuoteEditor from '@/components/admin/PedidoQuoteEditor'
 
 interface Props {
@@ -47,13 +48,14 @@ function parseDelivery(raw: Order['delivery_address']): DeliveryAddress | null {
   }
 }
 
-function fmtMoney(v: number) {
-  return `R$${v.toFixed(2).replace('.', ',')}`
+function fmtMoney(v: number | string) {
+  return `R$${Number(v).toFixed(2).replace('.', ',')}`
 }
 
 export default function PedidoCard({ order }: Props) {
+  const router = useRouter()
   const [status, setStatus] = useState<OrderStatus>(order.status)
-  const [items, setItems] = useState<OrderItem[]>(order.items_json ?? [])
+  const [items, setItems] = useState<OrderItem[]>(() => normalizeOrderItems(order.items_json ?? []))
   const [notes, setNotes] = useState(order.notes ?? '')
   const [total, setTotal] = useState(Number(order.total_final ?? order.total))
   const [subtotal, setSubtotal] = useState(Number(order.subtotal ?? order.total))
@@ -106,6 +108,7 @@ export default function PedidoCard({ order }: Props) {
         return
       }
       setStatus('CONFIRMADO')
+      router.refresh()
     } catch {
       setActionError('Erro de conexão.')
     } finally {
@@ -164,7 +167,7 @@ export default function PedidoCard({ order }: Props) {
             setItems(nextItems)
             setNotes(nextNotes)
             setTotal(nextTotal)
-            setSubtotal(nextTotal)
+            setSubtotal(nextItems.reduce((s, i) => s + i.price * i.qty, 0))
             setEditing(false)
           }}
           onCancel={() => setEditing(false)}
