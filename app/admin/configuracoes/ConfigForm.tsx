@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect, type ReactNode } from 'react'
-import { signOut } from 'next-auth/react'
 import { Info, Loader2 } from 'lucide-react'
 import type { Store, AgeGroup, GenderFocus, DeliveryZone } from '@/types'
 import { canUseAssistantFeature, type PlanSlug } from '@/lib/plans'
@@ -16,8 +15,8 @@ import { stripEmojis } from '@/lib/strip-emoji'
 import SectionHeader from '@/components/admin/SectionHeader'
 import AdminPrivacySection from '@/components/admin/AdminPrivacySection'
 import CheckoutModeSection from '@/components/admin/CheckoutModeSection'
-import ConfigSectionNav from '@/components/admin/ConfigSectionNav'
-import { adminCard, configSectionAnchor } from '@/lib/admin-ui'
+import ConfigSectionNav, { type ConfigSectionId } from '@/components/admin/ConfigSectionNav'
+import { adminCard } from '@/lib/admin-ui'
 import { normalizeCheckoutMode } from '@/lib/checkout-availability'
 import type { CheckoutMode } from '@/types'
 import {
@@ -34,21 +33,17 @@ import {
   welcomePreviewPlain,
   type AssistantGender,
 } from '@/lib/assistant-gender'
-import type { ConfigSectionId } from '@/components/admin/ConfigSectionNav'
-
 function ConfigCard({
-  id,
   title,
   subtitle,
   children,
 }: {
-  id:       ConfigSectionId
   title:    string
   subtitle?: string
   children: ReactNode
 }) {
   return (
-    <section id={id} className={`${adminCard} ${configSectionAnchor} space-y-5`}>
+    <section className={`${adminCard} space-y-5`}>
       <div>
         <h2 className="font-syne font-bold text-base sm:text-lg text-foreground">{title}</h2>
         {subtitle ? <p className="text-xs text-muted mt-1 break-words">{subtitle}</p> : null}
@@ -359,17 +354,187 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
   }
 
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL : ''
+  const [activeSection, setActiveSection] = useState<ConfigSectionId>('config-loja')
+
+  function renderViPanel() {
+    return (
+      <div className={`${adminCard} space-y-4 lg:sticky lg:top-24`}>
+        <div>
+          <h2 className="font-syne font-bold text-base sm:text-lg text-foreground">Assistente IA</h2>
+          <p className="text-xs text-muted mt-1 break-words">Consumo, limites e personalidade na vitrine.</p>
+        </div>
+        {viStats && (
+          <div className="rounded-xl border border-border bg-surface2/60 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2 min-w-0">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">Uso este mês</p>
+                <p className="font-syne font-bold text-lg mt-1 tabular-nums break-words">
+                  {viStats.used.toLocaleString('pt-BR')} / {viStats.limit.toLocaleString('pt-BR')} msgs
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-muted tabular-nums shrink-0">
+                {Math.min(100, viStats.limit > 0 ? Math.round((viStats.used / viStats.limit) * 100) : 0)}%
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-surface overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${viBarColor(viStats.limit > 0 ? (viStats.used / viStats.limit) * 100 : 0)}`}
+                style={{
+                  width: `${Math.min(100, viStats.limit > 0 ? (viStats.used / viStats.limit) * 100 : 0)}%`,
+                }}
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+              <p>
+                Excedente:{' '}
+                <strong className="text-foreground tabular-nums">{viStats.overage.toLocaleString('pt-BR')}</strong>
+              </p>
+              <p>
+                Reset em: <strong className="text-foreground">{viStats.daysReset}</strong> dias
+              </p>
+            </div>
+          </div>
+        )}
+
+        <SectionHeader title="Limite diário (opcional)" />
+        <label className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+          <input
+            type="radio"
+            name="viDaily"
+            checked={!viDailyEnabled}
+            onChange={() => setViDailyEnabled(false)}
+            className="shrink-0"
+          />
+          Sem limite diário (padrão)
+        </label>
+        <label className="flex flex-wrap items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+          <input
+            type="radio"
+            name="viDaily"
+            checked={viDailyEnabled}
+            onChange={() => setViDailyEnabled(true)}
+            className="shrink-0"
+          />
+          Definir limite:
+          <input
+            type="number"
+            min={1}
+            disabled={!viDailyEnabled}
+            value={viDailyLimitStr}
+            onChange={e => setViDailyLimitStr(e.target.value)}
+            className="w-24 min-h-[44px] px-2 py-2 bg-surface2 border border-border rounded-lg text-sm disabled:opacity-50"
+          />
+          <span>mensagens/dia</span>
+        </label>
+        <p className="text-[11px] text-muted -mt-2">
+          Útil para controlar consumo em dias de alto tráfego. Quando atingido, o assistente direciona para o WhatsApp.
+        </p>
+
+        <SectionHeader title="Apresentação" />
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Gênero gramatical</p>
+          <div className="flex flex-wrap gap-2">
+            {ASSISTANT_GENDER_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                title={opt.hint}
+                onClick={() => setAssistantGender(opt.value)}
+                className={`min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors ${
+                  assistantGender === opt.value
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted break-words">
+            Feminino: &quot;Sou a Vi&quot; · Masculino: &quot;Sou o Leo&quot; · Neutro: &quot;Sou Vi&quot; (sem a/o).
+          </p>
+        </div>
+
+        <div className="space-y-3 pt-2 border-t border-border">
+          <p className="text-sm font-medium">{assistantNameFieldLabel(assistantGender)}</p>
+          {!canName && (
+            <p className="text-xs text-muted flex items-center gap-1.5 break-words">
+              <Lock size={14} className="shrink-0" aria-hidden />
+              Personalize o nome a partir do plano Starter.{' '}
+              <Link href="/#planos" className="text-primary underline">Fazer upgrade</Link>
+            </p>
+          )}
+          <input
+            type="text"
+            maxLength={20}
+            disabled={!canName}
+            value={assistantName}
+            onChange={e => setAssistantName(e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, ''))}
+            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm disabled:opacity-50"
+            placeholder="Vi"
+          />
+          <p className="text-[11px] text-muted break-words">
+            Prévia: {welcomePreviewPlain(assistantName || 'Vi', name.trim() || store.name, assistantTone, assistantGender)}
+          </p>
+        </div>
+
+        {canWelcome && (
+          <div className="space-y-2 pt-2 border-t border-border">
+            <p className="text-sm font-medium">Mensagem de boas-vindas personalizada</p>
+            <textarea
+              value={assistantWelcome}
+              onChange={e => setAssistantWelcome(stripEmojis(e.target.value))}
+              rows={3}
+              maxLength={500}
+              placeholder="Olá! Posso te ajudar a encontrar algo especial hoje?"
+              className="w-full px-4 py-3 bg-surface2 border border-border rounded-xl text-sm resize-y min-h-[88px]"
+            />
+            <p className="text-[11px] text-muted">Deixe vazio para usar a mensagem padrão.</p>
+          </div>
+        )}
+
+        {canTone && (
+          <div className="space-y-2 pt-2 border-t border-border">
+            <p className="text-sm font-medium">{assistantToneFieldLabel(assistantGender)}</p>
+            {[
+              { value: 'friendly', label: 'Simpático e próximo (padrão)' },
+              { value: 'formal', label: 'Formal e profissional' },
+              { value: 'playful', label: 'Divertido e jovial' },
+              { value: 'professional', label: 'Técnico e informativo' },
+            ].map(opt => (
+              <label key={opt.value} className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+                <input
+                  type="radio"
+                  name="assistantTone"
+                  checked={assistantTone === opt.value}
+                  onChange={() => setAssistantTone(opt.value as typeof assistantTone)}
+                  className="shrink-0"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <>
-      <ConfigSectionNav />
+      <ConfigSectionNav
+        active={activeSection}
+        onChange={setActiveSection}
+        hideViOnDesktop
+      />
 
-      <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-8 flex flex-col gap-6 min-w-0">
+        {activeSection === 'config-loja' && (
         <ConfigCard
-          id="config-loja"
-          title="Loja"
-          subtitle="Nome, identidade visual e perfil do catálogo para a vitrine e a IA."
+          title="Informações da loja"
+          subtitle="Dados da vitrine, identidade visual, WhatsApp e endereço."
         >
+          <SectionHeader title="Informações básicas" />
           <div className="space-y-4">
             <div>
               <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Nome da loja</label>
@@ -394,8 +559,8 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
             </div>
           </div>
 
+          <SectionHeader title="Logo da loja" />
           <div>
-            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Logo da loja</label>
             <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
               const f = e.target.files?.[0]
               if (f) void uploadLogoFile(f)
@@ -505,15 +670,9 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
               </select>
             </div>
           </div>
-        </ConfigCard>
 
-        <ConfigCard
-          id="config-contato"
-          title="Contato"
-          subtitle="WhatsApp da loja e endereço opcional para referência."
-        >
+          <SectionHeader title="WhatsApp" />
           <div>
-            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">WhatsApp</label>
             <MaskedInput
               mask="phone"
               className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
@@ -522,6 +681,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
               onChange={setWpp}
               autoComplete="tel"
             />
+            <p className="text-xs text-muted mt-1.5">Número usado na vitrine e para receber pedidos.</p>
           </div>
 
           <SectionHeader title="Endereço da loja (opcional)" />
@@ -582,9 +742,10 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
             </div>
           </div>
         </ConfigCard>
+        )}
 
+        {activeSection === 'config-venda' && (
         <ConfigCard
-          id="config-venda"
           title="Venda"
           subtitle="Frete, pagamento e como o cliente finaliza o pedido na vitrine."
         >
@@ -720,168 +881,15 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
             checkoutEligible={checkoutEligible}
           />
         </ConfigCard>
+        )}
 
+        {activeSection === 'config-vi' && (
+          <div className="lg:hidden">{renderViPanel()}</div>
+        )}
+
+        {activeSection === 'config-conta' && (
+        <>
         <ConfigCard
-          id="config-vi"
-          title="Assistente IA"
-          subtitle="Consumo, limites e personalidade do assistente na vitrine."
-        >
-          {viStats && (
-            <div className="rounded-xl border border-border bg-surface2/60 p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2 min-w-0">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Uso este mês</p>
-                  <p className="font-syne font-bold text-lg mt-1 tabular-nums break-words">
-                    {viStats.used.toLocaleString('pt-BR')} / {viStats.limit.toLocaleString('pt-BR')} msgs
-                  </p>
-                </div>
-                <span className="text-sm font-semibold text-muted tabular-nums shrink-0">
-                  {Math.min(100, viStats.limit > 0 ? Math.round((viStats.used / viStats.limit) * 100) : 0)}%
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-surface overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${viBarColor(viStats.limit > 0 ? (viStats.used / viStats.limit) * 100 : 0)}`}
-                  style={{
-                    width: `${Math.min(100, viStats.limit > 0 ? (viStats.used / viStats.limit) * 100 : 0)}%`,
-                  }}
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-                <p>
-                  Excedente:{' '}
-                  <strong className="text-foreground tabular-nums">{viStats.overage.toLocaleString('pt-BR')}</strong>
-                </p>
-                <p>
-                  Reset em: <strong className="text-foreground">{viStats.daysReset}</strong> dias
-                </p>
-              </div>
-            </div>
-          )}
-
-          <SectionHeader title="Limite diário (opcional)" />
-          <label className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
-            <input
-              type="radio"
-              name="viDaily"
-              checked={!viDailyEnabled}
-              onChange={() => setViDailyEnabled(false)}
-              className="shrink-0"
-            />
-            Sem limite diário (padrão)
-          </label>
-          <label className="flex flex-wrap items-center gap-2 text-sm min-h-[44px] cursor-pointer">
-            <input
-              type="radio"
-              name="viDaily"
-              checked={viDailyEnabled}
-              onChange={() => setViDailyEnabled(true)}
-              className="shrink-0"
-            />
-            Definir limite:
-            <input
-              type="number"
-              min={1}
-              disabled={!viDailyEnabled}
-              value={viDailyLimitStr}
-              onChange={e => setViDailyLimitStr(e.target.value)}
-              className="w-24 min-h-[44px] px-2 py-2 bg-surface2 border border-border rounded-lg text-sm disabled:opacity-50"
-            />
-            <span>mensagens/dia</span>
-          </label>
-          <p className="text-[11px] text-muted -mt-2">
-            Útil para controlar consumo em dias de alto tráfego. Quando atingido, o assistente direciona para o WhatsApp.
-          </p>
-
-          <SectionHeader title="Apresentação" />
-          <div className="space-y-3">
-            <p className="text-sm font-medium">Gênero gramatical</p>
-            <div className="flex flex-wrap gap-2">
-              {ASSISTANT_GENDER_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  title={opt.hint}
-                  onClick={() => setAssistantGender(opt.value)}
-                  className={`min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors ${
-                    assistantGender === opt.value
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-surface2 text-muted hover:border-primary/40'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-muted break-words">
-              Feminino: &quot;Sou a Vi&quot; · Masculino: &quot;Sou o Leo&quot; · Neutro: &quot;Sou Vi&quot; (sem a/o).
-            </p>
-          </div>
-
-          <div className="space-y-3 pt-2 border-t border-border">
-            <p className="text-sm font-medium">{assistantNameFieldLabel(assistantGender)}</p>
-            {!canName && (
-              <p className="text-xs text-muted flex items-center gap-1.5 break-words">
-                <Lock size={14} className="shrink-0" aria-hidden />
-                Personalize o nome a partir do plano Starter.{' '}
-                <Link href="/#planos" className="text-primary underline">Fazer upgrade</Link>
-              </p>
-            )}
-            <input
-              type="text"
-              maxLength={20}
-              disabled={!canName}
-              value={assistantName}
-              onChange={e => setAssistantName(e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, ''))}
-              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm disabled:opacity-50"
-              placeholder="Vi"
-            />
-            <p className="text-[11px] text-muted break-words">
-              Prévia: {welcomePreviewPlain(assistantName || 'Vi', name.trim() || store.name, assistantTone, assistantGender)}
-            </p>
-          </div>
-
-          {canWelcome && (
-            <div className="space-y-2 pt-2 border-t border-border">
-              <p className="text-sm font-medium">Mensagem de boas-vindas personalizada</p>
-              <textarea
-                value={assistantWelcome}
-                onChange={e => setAssistantWelcome(stripEmojis(e.target.value))}
-                rows={3}
-                maxLength={500}
-                placeholder="Olá! Posso te ajudar a encontrar algo especial hoje?"
-                className="w-full px-4 py-3 bg-surface2 border border-border rounded-xl text-sm resize-y min-h-[88px]"
-              />
-              <p className="text-[11px] text-muted">Deixe vazio para usar a mensagem padrão.</p>
-            </div>
-          )}
-
-          {canTone && (
-            <div className="space-y-2 pt-2 border-t border-border">
-              <p className="text-sm font-medium">{assistantToneFieldLabel(assistantGender)}</p>
-              {[
-                { value: 'friendly', label: 'Simpático e próximo (padrão)' },
-                { value: 'formal', label: 'Formal e profissional' },
-                { value: 'playful', label: 'Divertido e jovial' },
-                { value: 'professional', label: 'Técnico e informativo' },
-              ].map(opt => (
-                <label key={opt.value} className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
-                  <input
-                    type="radio"
-                    name="assistantTone"
-                    checked={assistantTone === opt.value}
-                    onChange={() => setAssistantTone(opt.value as typeof assistantTone)}
-                    className="shrink-0"
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          )}
-        </ConfigCard>
-
-        <ConfigCard
-          id="config-conta"
           title="Conta"
           subtitle="Link público da loja, senha e salvamento das alterações."
         >
@@ -924,22 +932,13 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
           </button>
         </ConfigCard>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AdminPrivacySection />
+        <AdminPrivacySection />
+        </>
+        )}
+        </div>
 
-          <div className={`${adminCard} border-warm/20 flex flex-col`}>
-            <h3 className="font-syne font-bold text-sm text-warm mb-2">Zona de risco</h3>
-            <p className="text-xs text-muted mb-4 break-words flex-1">
-              Para sair da sessão atual neste dispositivo.
-            </p>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: '/admin' })}
-              className="px-4 py-2.5 border border-warm/30 text-warm text-sm rounded-xl hover:bg-warm/10 transition-all min-h-[44px] w-full sm:w-auto self-start"
-            >
-              Sair da conta
-            </button>
-          </div>
+        <div className="hidden lg:block lg:col-span-4 min-w-0">
+          {renderViPanel()}
         </div>
       </div>
 

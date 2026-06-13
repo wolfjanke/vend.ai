@@ -1,44 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
 export const CONFIG_SECTIONS = [
-  { id: 'config-loja',    label: 'Loja' },
-  { id: 'config-contato', label: 'Contato' },
-  { id: 'config-venda',   label: 'Venda' },
-  { id: 'config-vi',      label: 'Assistente IA' },
-  { id: 'config-conta',   label: 'Conta' },
+  { id: 'config-loja',  label: 'Informações da loja' },
+  { id: 'config-venda', label: 'Venda' },
+  { id: 'config-vi',    label: 'Assistente IA' },
+  { id: 'config-conta', label: 'Conta' },
 ] as const
 
 export type ConfigSectionId = (typeof CONFIG_SECTIONS)[number]['id']
 
-export default function ConfigSectionNav() {
-  const [active, setActive] = useState<ConfigSectionId>(CONFIG_SECTIONS[0].id)
+interface Props {
+  active:           ConfigSectionId
+  onChange:         (id: ConfigSectionId) => void
+  /** Desktop: Vi fica no painel lateral — oculta a aba */
+  hideViOnDesktop?: boolean
+}
 
-  useEffect(() => {
-    const elements = CONFIG_SECTIONS.map(s => document.getElementById(s.id)).filter(Boolean) as HTMLElement[]
-    if (!elements.length) return
-
-    const observer = new IntersectionObserver(
-      entries => {
-        const visible = entries
-          .filter(e => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-        const id = visible[0]?.target.id as ConfigSectionId | undefined
-        if (id && CONFIG_SECTIONS.some(s => s.id === id)) setActive(id)
-      },
-      { rootMargin: '-32% 0px -52% 0px', threshold: [0, 0.12, 0.3] },
-    )
-
-    elements.forEach(el => observer.observe(el))
-    return () => observer.disconnect()
-  }, [])
-
-  function scrollToSection(id: ConfigSectionId) {
-    setActive(id)
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
+export default function ConfigSectionNav({ active, onChange, hideViOnDesktop = false }: Props) {
   return (
     <nav
       aria-label="Seções de configurações"
@@ -47,13 +25,16 @@ export default function ConfigSectionNav() {
       <div className="flex gap-2 overflow-x-auto pb-0.5 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CONFIG_SECTIONS.map(section => {
           const isActive = active === section.id
+          const hideOnDesktop = hideViOnDesktop && section.id === 'config-vi'
           return (
             <button
               key={section.id}
               type="button"
-              onClick={() => scrollToSection(section.id)}
+              onClick={() => onChange(section.id)}
               aria-current={isActive ? 'true' : undefined}
               className={`shrink-0 min-h-[44px] px-4 rounded-full border text-sm font-semibold transition-colors ${
+                hideOnDesktop ? 'lg:hidden' : ''
+              } ${
                 isActive
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border bg-surface2 text-muted hover:border-primary/40 hover:text-foreground'
