@@ -4,8 +4,9 @@ import { useEffect, useRef } from 'react'
 import { generateThemeCss } from '@/lib/theme-css'
 import { getGoogleFontsUrl } from '@/lib/theme-fonts'
 import { getStoreInitials } from '@/lib/store-brand'
-import { previewChipLabels, type StorePreviewProduct } from '@/lib/preview-products'
+import { previewChipFilters, type StorePreviewProduct } from '@/lib/preview-products'
 import { getTheme, themeToCardConfig, type ThemeBackground, type ThemeName } from '@/lib/themes'
+import CategoryFilterBar from '@/components/loja/CategoryFilterBar'
 
 type Props = {
   themeName:     ThemeName
@@ -18,6 +19,7 @@ type Props = {
   products:      StorePreviewProduct[]
   assistantName: string
   tagline?:      string | null
+  categoryNavStyle?: 'pills' | 'circles'
 }
 
 function formatPrice(value: number): string {
@@ -35,11 +37,12 @@ export default function StoreThemePreview({
   products,
   assistantName,
   tagline,
+  categoryNavStyle = 'pills',
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const theme = getTheme(themeName)
   const card = themeToCardConfig(theme, shimmer)
-  const chips = previewChipLabels(products)
+  const chipFilters = previewChipFilters(products)
   const displayProducts = products.length > 0 ? products.slice(0, 4) : []
   const placeholders = displayProducts.length === 0 ? 2 : 0
 
@@ -108,15 +111,13 @@ export default function StoreThemePreview({
         </div>
       </header>
 
-      <div className="px-3 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
-        {chips.map((label, i) => (
-          <span
-            key={label}
-            className={`filter-chip shrink-0 px-2.5 py-1 text-[10px] ${i === 0 ? 'active' : ''}`}
-          >
-            {label}
-          </span>
-        ))}
+      <div className="px-3 py-2 min-w-0">
+        <CategoryFilterBar
+          filters={chipFilters}
+          activeValue=""
+          onSelect={() => {}}
+          categoryNavStyle={categoryNavStyle}
+        />
       </div>
 
       {displayProducts.length === 0 ? (

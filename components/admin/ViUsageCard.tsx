@@ -19,7 +19,7 @@ export default function ViUsageCard({ used, limit, percent }: Props) {
     <div id="vi" className="bg-surface border border-border rounded-2xl p-5 min-w-0 scroll-mt-24">
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Vi este mês</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">Assistente IA este mês</p>
           <p className="font-syne font-bold text-lg mt-1 tabular-nums break-words">
             {used.toLocaleString('pt-BR')} / {limit.toLocaleString('pt-BR')} msgs
           </p>

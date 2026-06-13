@@ -5,6 +5,8 @@ import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import type { PlanSlug } from '@/lib/plans'
 import { canUseAssistantFeature } from '@/lib/plans'
+import { normalizeLogoSize } from '@/lib/store-logo'
+import { normalizeAssistantGender } from '@/lib/assistant-gender'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -59,10 +61,12 @@ export async function PATCH(req: NextRequest) {
       assistant_name,
       assistant_welcome_message,
       assistant_tone,
+      assistant_gender,
+      logoSize,
     } = parsed.data
 
     const storeRows = await sql`
-      SELECT settings_json, plan, tagline, assistant_name, assistant_welcome_message, assistant_tone
+      SELECT settings_json, plan, tagline, assistant_name, assistant_welcome_message, assistant_tone, assistant_gender, logo_url, theme_logo_url
       FROM stores WHERE id = ${session.storeId} LIMIT 1
     `
     const plan = (storeRows[0]?.plan ?? 'free') as PlanSlug
@@ -98,6 +102,10 @@ export async function PATCH(req: NextRequest) {
       assistant_tone !== undefined
         ? assistant_tone
         : (storeRows[0]?.assistant_tone as string) ?? 'friendly'
+    const assistantGenderVal =
+      assistant_gender !== undefined
+        ? normalizeAssistantGender(assistant_gender)
+        : normalizeAssistantGender(storeRows[0]?.assistant_gender)
     const current = (storeRows[0]?.settings_json as Record<string, unknown>) ?? {}
     const merged = {
       ...current,
@@ -117,9 +125,20 @@ export async function PATCH(req: NextRequest) {
       ...(deliveryZones !== undefined && { deliveryZones }),
       ...(freeShippingMin !== undefined && { freeShippingMin }),
       ...(installmentsMaxNoInterest !== undefined && { installmentsMaxNoInterest }),
+      ...(logoSize !== undefined && { logoSize: normalizeLogoSize(logoSize) }),
     }
 
-    const logo = logo_url === '' || logo_url == null ? null : logo_url
+    const existingLogo = (storeRows[0]?.logo_url as string | null) ?? null
+    const logo =
+      logo_url === undefined
+        ? existingLogo
+        : logo_url === '' || logo_url == null
+          ? null
+          : logo_url
+    const themeLogo =
+      logo_url !== undefined
+        ? logo
+        : ((storeRows[0]?.theme_logo_url as string | null) ?? null)
     const taglineSaved =
       tagline !== undefined
         ? (tagline?.trim() ? tagline.trim().slice(0, 60) : null)
@@ -132,6 +151,7 @@ export async function PATCH(req: NextRequest) {
           tagline = ${taglineSaved},
           whatsapp = ${whatsapp},
           logo_url = ${logo},
+          theme_logo_url = ${themeLogo},
           cep = ${emptyToNull(cep)},
           logradouro = ${emptyToNull(logradouro)},
           numero = ${emptyToNull(numero)},
@@ -143,7 +163,8 @@ export async function PATCH(req: NextRequest) {
           vi_daily_limit = ${viDailyLimit},
           assistant_name = ${assistantName},
           assistant_welcome_message = ${assistantWelcome},
-          assistant_tone = ${assistantToneVal}
+          assistant_tone = ${assistantToneVal},
+          assistant_gender = ${assistantGenderVal}
         WHERE id = ${session.storeId}
       `
     } else {
@@ -153,6 +174,7 @@ export async function PATCH(req: NextRequest) {
           tagline = ${taglineSaved},
           whatsapp = ${whatsapp},
           logo_url = ${logo},
+          theme_logo_url = ${themeLogo},
           cep = ${emptyToNull(cep)},
           logradouro = ${emptyToNull(logradouro)},
           numero = ${emptyToNull(numero)},
@@ -163,7 +185,8 @@ export async function PATCH(req: NextRequest) {
           settings_json = ${JSON.stringify(merged)}::jsonb,
           assistant_name = ${assistantName},
           assistant_welcome_message = ${assistantWelcome},
-          assistant_tone = ${assistantToneVal}
+          assistant_tone = ${assistantToneVal},
+          assistant_gender = ${assistantGenderVal}
         WHERE id = ${session.storeId}
       `
     }

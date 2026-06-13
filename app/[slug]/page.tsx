@@ -52,6 +52,7 @@ export default async function StorePage({ params }: Props) {
     assistant_name:          (storeRow.assistant_name as string) ?? 'Vi',
     assistant_welcome_message: (storeRow.assistant_welcome_message as string | null) ?? null,
     assistant_tone:          (storeRow.assistant_tone as Store['assistant_tone']) ?? 'friendly',
+    assistant_gender:        (storeRow.assistant_gender as Store['assistant_gender']) ?? 'feminine',
     checkoutSiteEnabled:     checkoutAvailability.siteEnabled,
     checkoutWhatsappEnabled: checkoutAvailability.whatsappEnabled,
   }
@@ -61,7 +62,8 @@ export default async function StorePage({ params }: Props) {
     products = await getCachedActiveProducts(storeId, slug)
   } catch (e) {
     console.error('[store/page] products', params.slug, e)
-    notFound()
+    // Erro de schema/consulta — error.tsx (não notFound, que gera 404 enganoso)
+    throw e
   }
 
   return (

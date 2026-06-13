@@ -16,6 +16,7 @@ interface CheckoutPayload {
   items:            CartItem[]
   name:             string
   phone:            string
+  cpf?:             string
   notes?:           string
   orderNum:         string
   deliveryAddress?: DeliveryAddress
@@ -26,7 +27,7 @@ interface CheckoutPayload {
 
 // ─── Formata a mensagem de pedido para WhatsApp ───────────────────────────────
 export function formatOrderMessage(payload: CheckoutPayload): string {
-  const { store, items, name, phone, notes, orderNum, deliveryAddress, pricing, checkoutChannel, paymentMethod } = payload
+  const { store, items, name, phone, cpf, notes, orderNum, deliveryAddress, pricing, checkoutChannel, paymentMethod } = payload
 
   const total = items.reduce((sum, item) => sum + item.price * item.qty, 0)
   const now   = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
@@ -39,16 +40,21 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
     .join('\n')
 
   const lines: string[] = [
-    `🛍️ *Novo Pedido #${orderNum} — vend.ai*`,
+    `🛍️ *Orçamento #${orderNum} — vend.ai*`,
+    `_Intenção de compra — confirme valores e estoque com o cliente antes de fechar._`,
     ``,
-    `👤 *Cliente:* ${name}`,
-    `📱 *WhatsApp:* ${phone}`,
-    ``,
+    `*Cliente:* ${name}`,
+    `*WhatsApp:* ${phone}`,
   ]
+  if (cpf) {
+    const masked = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    lines.push(`*CPF:* ${masked}`)
+  }
+  lines.push(``)
 
   if (deliveryAddress) {
     lines.push(
-      `📍 *Entrega:*`,
+      `*Entrega:*`,
       `${deliveryAddress.logradouro}, ${deliveryAddress.numero}${deliveryAddress.complemento ? ` — ${deliveryAddress.complemento}` : ''}`,
       `${deliveryAddress.bairro} — ${deliveryAddress.cidade}/${deliveryAddress.uf}`,
       `CEP: ${deliveryAddress.cep}`,
@@ -62,26 +68,26 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
 
   lines.push(
     `━━━━━━━━━━━━━━━`,
-    `🧾 *Itens do Pedido:*`,
+    `*Itens do Pedido:*`,
     itemLines,
     `━━━━━━━━━━━━━━━`,
-    `💰 *Subtotal: R$\u00a0${(pricing?.subtotal ?? total).toFixed(2).replace('.', ',')}*`,
-    `🎟️ Desconto cupom: R$\u00a0${(pricing?.discountCoupon ?? 0).toFixed(2).replace('.', ',')}`,
-    `⚡ Desconto PIX: R$\u00a0${(pricing?.discountPix ?? 0).toFixed(2).replace('.', ',')}`,
-    `📦 Frete: R$\u00a0${deliveryFee.toFixed(2).replace('.', ',')}`,
-    `💵 *Total (produtos + frete): R$\u00a0${grand.toFixed(2).replace('.', ',')}*`,
-    `💳 Pagamento: ${paymentMethodLabel(paymentMethod ?? (pricing?.paymentMethod === 'PIX' ? 'PIX' : 'OUTRO'))}`,
-    `🏷️ Cupom aplicado: ${pricing?.couponCodeApplied ?? 'nenhum'}`
+    `*Subtotal: R$\u00a0${(pricing?.subtotal ?? total).toFixed(2).replace('.', ',')}*`,
+    `Desconto cupom: R$\u00a0${(pricing?.discountCoupon ?? 0).toFixed(2).replace('.', ',')}`,
+    `Desconto PIX: R$\u00a0${(pricing?.discountPix ?? 0).toFixed(2).replace('.', ',')}`,
+    `Frete: R$\u00a0${deliveryFee.toFixed(2).replace('.', ',')}`,
+    `*Total (produtos + frete): R$\u00a0${grand.toFixed(2).replace('.', ',')}*`,
+    `Pagamento: ${paymentMethodLabel(paymentMethod ?? (pricing?.paymentMethod === 'PIX' ? 'PIX' : 'OUTRO'))}`,
+    `Cupom aplicado: ${pricing?.couponCodeApplied ?? 'nenhum'}`
   )
 
   if (checkoutChannel === 'site') {
-    lines.push(`🌐 *Canal:* Site (combinar pagamento com a loja)`)
+    lines.push(`*Canal:* Site (combinar pagamento com a loja)`)
   } else if (checkoutChannel === 'whatsapp') {
-    lines.push(`💬 *Canal:* WhatsApp`)
+    lines.push(`*Canal:* WhatsApp`)
   }
 
-  if (notes?.trim()) lines.push('', `📝 *Obs:* ${notes.trim()}`)
-  lines.push(``, `⏰ ${now}`, ``, `Pedido feito via vend.ai/\u200b${store.slug}`)
+  if (notes?.trim()) lines.push('', `*Obs:* ${notes.trim()}`)
+  lines.push(``, now, ``, `Pedido feito via vend.ai/\u200b${store.slug}`)
 
   return lines.join('\n')
 }

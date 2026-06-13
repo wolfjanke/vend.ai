@@ -1,4 +1,7 @@
-import type { Product } from '@/types'
+import type { AssistantTone } from '@/lib/vi-prompt'
+
+export { defaultWelcomeMessage } from '@/lib/assistant-gender'
+export type { AssistantGender } from '@/lib/assistant-gender'
 
 export type ViTriggerProduct = {
   name:      string
@@ -8,21 +11,32 @@ export type ViTriggerProduct = {
   productUrl: string
 }
 
-export function defaultWelcomeMessage(assistantName: string, storeName: string): string {
-  return `Olá! 👋 Sou a **${assistantName}**, assistente da ${storeName}. Me conta o que você está procurando hoje? Posso buscar por estilo, ocasião, cor ou tamanho!`
+export function allowsViEmoji(tone: AssistantTone): boolean {
+  return tone === 'friendly' || tone === 'playful'
 }
 
-export function browseIdleMessage(assistantName: string): string {
-  return `Precisa de ajuda para achar algo? 😊 Me diz o estilo ou ocasião que te ajudo!`
+function linkLead(tone: AssistantTone): string {
+  return allowsViEmoji(tone) ? '👉 ' : ''
 }
 
-export function productFocusMessage(p: ViTriggerProduct): string {
+export function browseIdleMessage(_assistantName: string, tone: AssistantTone = 'friendly'): string {
+  if (tone === 'playful') {
+    return 'Precisa de ajuda para achar algo? 😊 Me diz o estilo ou ocasião que te ajudo!'
+  }
+  return 'Precisa de ajuda para achar algo? Me diz o estilo ou ocasião que te ajudo!'
+}
+
+export function productFocusMessage(p: ViTriggerProduct, tone: AssistantTone = 'friendly'): string {
   const sizes = p.sizes.length ? p.sizes.join(', ') : 'consulte a página'
-  return `Gostando do **${p.name}**? Temos nos tamanhos ${sizes}. Quer saber mais? 👉 [Ver produto](${p.productUrl})`
+  const lead = linkLead(tone)
+  return `Gostando do **${p.name}**? Temos nos tamanhos ${sizes}. Quer saber mais? ${lead}[Ver produto](${p.productUrl})`
 }
 
-export function cartAbandonedMessage(): string {
-  return `Seu carrinho está te esperando! 🛍️ Tem alguma dúvida sobre tamanho ou entrega antes de finalizar?`
+export function cartAbandonedMessage(tone: AssistantTone = 'friendly'): string {
+  if (tone === 'playful') {
+    return 'Seu carrinho está te esperando! 🛍️ Tem alguma dúvida sobre tamanho ou entrega antes de finalizar?'
+  }
+  return 'Seu carrinho está te esperando! Tem alguma dúvida sobre tamanho ou entrega antes de finalizar?'
 }
 
 export function inactivityChatMessage(assistantName: string, whatsappUrl: string): string {
@@ -32,15 +46,18 @@ export function inactivityChatMessage(assistantName: string, whatsappUrl: string
 export function soldOutMessage(
   productName: string,
   alternative: ViTriggerProduct | null,
+  tone: AssistantTone = 'friendly',
 ): string {
+  const suffix = tone === 'playful' ? ' 😕' : ''
+  const lead = linkLead(tone)
   if (!alternative) {
-    return `Esse **${productName}** está esgotado no momento 😕 Quer que eu sugira outra opção do catálogo?`
+    return `Esse **${productName}** está esgotado no momento${suffix} Quer que eu sugira outra opção do catálogo?`
   }
-  return `Esse **${productName}** está esgotado no momento 😕 Mas temos **${alternative.name}** disponível! 👉 [Ver aqui](${alternative.productUrl})`
+  return `Esse **${productName}** está esgotado no momento${suffix} Mas temos **${alternative.name}** disponível! ${lead}[Ver aqui](${alternative.productUrl})`
 }
 
 export function findSimilarInStock(
-  products: Product[],
+  products: import('@/types').Product[],
   category: string,
   excludeId: string,
   baseUrl: string,
@@ -68,7 +85,7 @@ export function findSimilarInStock(
 }
 
 export function productToTrigger(
-  p: Product,
+  p: import('@/types').Product,
   baseUrl: string,
   storeSlug: string,
 ): ViTriggerProduct {

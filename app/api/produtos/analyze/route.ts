@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { analyzeProductPhoto, buildProductAnalysisPrompt, GEMINI_MODELS } from '@/lib/gemini'
 import { parseProductAnalysisRaw, type ProductAnalysisItem } from '@/lib/product-analysis'
+import { mapAnalysisToVariantDraft } from '@/lib/product-analysis-map'
+import { inferCatalogMode, type CatalogMode } from '@/lib/product-catalog'
 import type { StoreSettings, ProductAnalysisHints } from '@/types'
 import { getStoreProfile, normalizeProductCategory } from '@/types'
 import { logServerError } from '@/lib/logger'
@@ -19,6 +21,23 @@ function normalizeItem(
   return {
     ...item,
     categoria: normalizeProductCategory(String(item.categoria ?? 'outro'), customSlugs),
+  }
+}
+
+function enrichAnalysisItem(
+  item: ProductAnalysisItem,
+  customSlugs: string[],
+  catalogMode: CatalogMode,
+  hints?: ProductAnalysisHints | null,
+  imageCount = 1,
+) {
+  const normalized = normalizeItem(item, customSlugs)
+  const mapped = mapAnalysisToVariantDraft(normalized, catalogMode, hints, imageCount)
+  return {
+    ...normalized,
+    catalogAxes: mapped.catalogAxes,
+    aiMeta:      mapped.aiMeta,
+    variantDrafts: mapped.variants,
   }
 }
 
@@ -62,19 +81,22 @@ export async function POST(req: NextRequest) {
     }
 
     const mode = hints?.mode ?? 'single'
+    const catalogMode = inferCatalogMode(hints, customCats)
     const productPrompt = buildProductAnalysisPrompt(profile, customCats, hints, images.length)
 
     const raw = await analyzeProductPhoto(images, productPrompt)
-    const parsed = parseProductAnalysisRaw(raw)
+    const parsed = parseProductAnalysisRaw(raw, hints?.audience ?? null)
 
     await incrementPhotoAnalysis(session.storeId)
 
     if (parsed.mode === 'batch') {
-      const produtos = parsed.products.map(p => normalizeItem(p, customSlugs))
+      const produtos = parsed.products.map((p, i) =>
+        enrichAnalysisItem(p, customSlugs, catalogMode, hints, 1),
+      )
       return NextResponse.json({ batch: true, produtos })
     }
 
-    const product = normalizeItem(parsed.product, customSlugs)
+    const product = enrichAnalysisItem(parsed.product, customSlugs, catalogMode, hints, images.length)
     return NextResponse.json(product)
   } catch (error) {
     logServerError('[/api/produtos/analyze]', error)

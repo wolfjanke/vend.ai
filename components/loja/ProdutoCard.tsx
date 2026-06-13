@@ -7,6 +7,9 @@ import { getCategoryDisplayLabel } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import { getTheme, themeToCardConfig } from '@/lib/themes'
 import { getVariantPhotoUrl } from '@/lib/product-media'
+import { vitrineText } from '@/lib/strip-emoji'
+import { getCatalogAxes, getAxisLabels, shouldShowPrimarySelector, shouldShowSecondarySelector, secondarySelectMessage, primarySelectMessage } from '@/lib/catalog-axes'
+import { resolveSkuUnitPrice, resolveProductDisplayPriceRange } from '@/lib/product-pricing'
 import ProductPlaceholder from './ProductPlaceholder'
 import ProductPhotoLightbox from './ProductPhotoLightbox'
 import VitrineProductCard from './VitrineProductCard'
@@ -140,13 +143,19 @@ export default function ProdutoCard({
   const isSoldOut =
     !variant || Object.values(variant.stock).every(q => Number(q) === 0)
   const isLowStock = variantTotalStock > 0 && variantTotalStock <= 3
-  const cat = getCategoryDisplayLabel(product.category, customCategories)
+  const cat = vitrineText(getCategoryDisplayLabel(product.category, customCategories))
+  const displayName = vitrineText(product.name)
 
   // O botão fica habilitado somente quando cor e tamanho estão escolhidos.
   // Se só há uma cor, ela já está auto-selecionada via selectedVariantIdx.
   // Se só há um tamanho, ele é considerado implicitamente selecionado.
   const effectiveSize = selectedSize ?? (allSizes.length === 1 ? allSizes[0] : null)
   const canAdd = !isSoldOut && !!variant && !!effectiveSize
+  const catalogAxes = getCatalogAxes(product)
+  const axisLabels = getAxisLabels(catalogAxes)
+  const showPrimary = shouldShowPrimarySelector(product)
+  const showSecondary = shouldShowSecondarySelector(product) && allSizes.length > 0
+  const priceRange = resolveProductDisplayPriceRange(product)
 
   function handleAdd(closeDetail?: boolean) {
     const size = effectiveSize
@@ -156,11 +165,11 @@ export default function ProdutoCard({
     onAddToCart({
       product_id: product.id,
       variant_id: variant.id,
-      name:       product.name,
+      name:       displayName,
       size,
       color:      variant.color,
       qty:        1,
-      price:      Number(product.promo_price ?? product.price),
+      price:      resolveSkuUnitPrice(product, variant, size),
       photo:      variantPhotoUrl ?? undefined,
       description: product.description?.trim() || undefined,
     })
@@ -177,7 +186,9 @@ export default function ProdutoCard({
 
   const descTrimmed = product.description?.trim() ?? ''
 
-  const effectivePrice = Number(product.promo_price ?? product.price)
+  const effectivePrice = effectiveSize && variant
+    ? resolveSkuUnitPrice(product, variant, effectiveSize)
+    : priceRange.min
   const installmentText =
     installmentsMaxNoInterest != null &&
     installmentsMaxNoInterest >= 1 &&
@@ -224,7 +235,7 @@ export default function ProdutoCard({
                 color:      'var(--theme-text)',
               }}
             >
-              {product.name}
+              {displayName}
             </h2>
             <button
               type="button"
@@ -277,9 +288,11 @@ export default function ProdutoCard({
             <p className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--theme-text-muted)' }}>{cat}</p>
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="font-bold text-lg" style={{ color: 'var(--theme-price)' }}>
-                R${Number(product.promo_price ?? product.price).toFixed(2).replace('.', ',')}
+                {priceRange.hasSkuPrices && priceRange.min !== priceRange.max
+                  ? `De R$${priceRange.min.toFixed(2).replace('.', ',')}`
+                  : `R$${effectivePrice.toFixed(2).replace('.', ',')}`}
               </span>
-              {product.promo_price != null && (
+              {product.promo_price != null && !priceRange.hasSkuPrices && (
                 <span className="text-sm line-through" style={{ color: 'var(--theme-price-old)' }}>
                   R${Number(product.price).toFixed(2).replace('.', ',')}
                 </span>
@@ -328,10 +341,10 @@ export default function ProdutoCard({
               </button>
             )}
 
-            {!isSoldOut && (
+            {!isSoldOut && showPrimary && (
               <>
                 <div className="mb-4">
-                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Cor</p>
+                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>{axisLabels.primary}</p>
                   {product.variants_json.length > 1 ? (
                     <div className="flex flex-wrap gap-2">
                       {product.variants_json.map((v, i) => (
@@ -364,8 +377,9 @@ export default function ProdutoCard({
                     </div>
                   ) : null}
                 </div>
+                {showSecondary && (
                 <div className="mb-2">
-                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Tamanho</p>
+                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>{axisLabels.secondary}</p>
                   <div className="flex flex-wrap gap-2">
                     {allSizes.length > 0 ? (
                       allSizes.map(s => (
@@ -392,10 +406,13 @@ export default function ProdutoCard({
                         </button>
                       ))
                     ) : (
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Sem tamanhos disponíveis nesta cor</span>
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                        Sem {axisLabels.secondary.toLowerCase()} disponível
+                      </span>
                     )}
                   </div>
                 </div>
+                )}
               </>
             )}
           </div>
@@ -407,11 +424,11 @@ export default function ProdutoCard({
                 background:   'var(--theme-card-bg)',
               }}
             >
-              {!canAdd && !added && (
+                  {!canAdd && !added && (
                 <p className="text-center text-xs mb-2" style={{ color: 'var(--theme-text-muted)' }}>
                   {!variant
-                    ? 'Escolha uma cor para continuar'
-                    : 'Escolha um tamanho para continuar'}
+                    ? primarySelectMessage(catalogAxes)
+                    : secondarySelectMessage(catalogAxes)}
                 </p>
               )}
               <button
@@ -442,7 +459,7 @@ export default function ProdutoCard({
           <ProductPhotoLightbox
             photos={variantPhotos}
             initialIndex={lightboxIndex}
-            productName={product.name}
+            productName={displayName}
             onClose={() => setLightboxOpen(false)}
           />
         )}
@@ -452,7 +469,7 @@ export default function ProdutoCard({
 
   if (layout === 'vitrine') {
     return (
-      <div ref={cardRef} className="h-full min-w-0">
+      <div ref={cardRef} className="h-full min-w-0 flex flex-col flex-1">
         <VitrineProductCard
           product={product}
           variant={variant}
@@ -481,7 +498,7 @@ export default function ProdutoCard({
         {variantPhotoUrl ? (
           <img
             src={variantPhotoUrl}
-            alt={product.name}
+            alt={displayName}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -525,7 +542,7 @@ export default function ProdutoCard({
             onClick={openDetail}
             className="font-syne font-semibold text-sm text-left w-full truncate mb-1.5 hover:text-primary transition-colors"
           >
-            {product.name}
+            {displayName}
           </button>
 
           <p className="text-[10px] text-muted uppercase tracking-wide mb-1.5 truncate" title={cat}>
@@ -544,17 +561,20 @@ export default function ProdutoCard({
 
           <div className="flex items-center gap-2 mb-3">
             <span className="text-accent font-bold text-base">
-              R${Number(product.promo_price ?? product.price).toFixed(2).replace('.', ',')}
+              {priceRange.hasSkuPrices && priceRange.min !== priceRange.max
+                ? `De R$${priceRange.min.toFixed(2).replace('.', ',')}`
+                : `R$${effectivePrice.toFixed(2).replace('.', ',')}`}
             </span>
-            {product.promo_price && (
+            {product.promo_price && !priceRange.hasSkuPrices && (
               <span className="text-muted text-xs line-through">
                 R${Number(product.price).toFixed(2).replace('.', ',')}
               </span>
             )}
           </div>
 
+          {showPrimary && (
           <div className="mb-2.5">
-            <p className="text-[10px] text-muted uppercase tracking-wide mb-1.5">Cor</p>
+            <p className="text-[10px] text-muted uppercase tracking-wide mb-1.5">{axisLabels.primary}</p>
             {product.variants_json.length > 1 ? (
               <div className="flex flex-wrap gap-2 items-center">
                 {product.variants_json.map((v, i) => (
@@ -579,10 +599,11 @@ export default function ProdutoCard({
               </div>
             ) : null}
           </div>
+          )}
 
-          {!isSoldOut && (
+          {!isSoldOut && showSecondary && (
             <div className="mb-3">
-              <p className="text-[10px] text-muted uppercase tracking-wide mb-1.5">Tamanho</p>
+              <p className="text-[10px] text-muted uppercase tracking-wide mb-1.5">{axisLabels.secondary}</p>
               <div className="flex gap-1.5 flex-wrap">
                 {allSizes.length > 0 ? allSizes.map(s => (
                     <button

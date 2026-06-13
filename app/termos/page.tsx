@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import WolfHubFooter from '@/components/WolfHubFooter'
 import { COMPANY } from '@/lib/company'
 
 export const metadata = {
@@ -18,7 +19,8 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 export default function TermosPage() {
   return (
-    <main className="relative z-10 min-h-screen px-6 md:px-16 py-12 max-w-3xl mx-auto">
+    <div className="relative z-10 min-h-screen flex flex-col">
+    <main className="flex-1 px-4 sm:px-6 md:px-16 py-12 max-w-3xl mx-auto w-full">
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-10"
@@ -209,5 +211,7 @@ export default function TermosPage() {
         </Link>
       </div>
     </main>
+    <WolfHubFooter />
+    </div>
   )
 }

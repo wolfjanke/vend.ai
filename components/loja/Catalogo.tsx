@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 import type { CartItem, CustomCategory, Product, ProductVariantDisplay, StoreProfile } from '@/types'
+import type { CategoryNavStyle } from '@/lib/category-nav'
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_SLUGS,
@@ -10,8 +11,10 @@ import {
   getSearchPlaceholder,
 } from '@/types'
 import { expandProductsByVariant } from '@/lib/catalog-display'
+import { vitrineText } from '@/lib/strip-emoji'
 
 import type { StoreThemeConfig } from '@/lib/themes'
+import CategoryFilterBar from './CategoryFilterBar'
 import ProductStrip from './ProductStrip'
 
 interface Props {
@@ -24,6 +27,11 @@ interface Props {
   onInteract?: () => void
   onProductFocus?: (product: import('@/types').Product) => void
   installmentsMaxNoInterest?: number | null
+  /** Filtro inicial (rota /categoria/[slug]). */
+  initialCategory?: string
+  categoryNavStyle?: CategoryNavStyle
+  storeSlug?: string
+  useCategoryLinks?: boolean
 }
 
 const SMALL_CATEGORY_MAX = 2
@@ -54,7 +62,7 @@ function buildCatalogSections(
     if (items.length <= SMALL_CATEGORY_MAX) {
       outros.push(...items)
     } else {
-      sections.push({ key: cat.value, title: cat.label, items })
+      sections.push({ key: cat.value, title: vitrineText(cat.label), items })
     }
   }
 
@@ -64,7 +72,7 @@ function buildCatalogSections(
     if (items.length <= SMALL_CATEGORY_MAX) {
       outros.push(...items)
     } else {
-      sections.push({ key: cat.value, title: cat.label, items })
+      sections.push({ key: cat.value, title: vitrineText(cat.label), items })
     }
   }
 
@@ -82,7 +90,7 @@ function buildCatalogSections(
       if (items.length <= SMALL_CATEGORY_MAX) {
         outros.push(...items)
       } else {
-        const label = getCategoryDisplayLabel(slug, customCategories)
+        const label = vitrineText(getCategoryDisplayLabel(slug, customCategories))
         sections.push({ key: `stray-${slug}`, title: label, items })
       }
     }
@@ -108,9 +116,17 @@ export default function Catalogo({
   onInteract,
   onProductFocus,
   installmentsMaxNoInterest = null,
+  initialCategory = '',
+  categoryNavStyle = 'pills',
+  storeSlug,
+  useCategoryLinks = false,
 }: Props) {
   const [search, setSearch] = useState('')
-  const [catFilter, setCatFilter] = useState('')
+  const [catFilter, setCatFilter] = useState(initialCategory)
+
+  useEffect(() => {
+    setCatFilter(initialCategory)
+  }, [initialCategory])
 
   const visibleProducts = useMemo(() => products.filter(p => p.active !== false), [products])
 
@@ -125,8 +141,8 @@ export default function Catalogo({
 
     return [
       { value: '', label: 'Tudo' },
-      ...categoryFilters,
-      ...customFilters,
+      ...categoryFilters.map(c => ({ value: c.value, label: vitrineText(c.label) })),
+      ...customFilters.map(c => ({ value: c.value, label: vitrineText(c.label) })),
       ...(hasPromo ? [{ value: 'sale', label: 'Promoções' }] : []),
     ]
   }, [visibleProducts, customCategories])
@@ -170,7 +186,7 @@ export default function Catalogo({
     if (search.trim()) return 'Resultados'
     if (catFilter === 'sale') return 'Promoções'
     if (catFilter) {
-      return getCategoryDisplayLabel(catFilter, customCategories)
+      return vitrineText(getCategoryDisplayLabel(catFilter, customCategories))
     }
     return 'Produtos'
   }, [catFilter, search, customCategories])
@@ -204,23 +220,17 @@ export default function Catalogo({
         </div>
 
         <div className="relative z-10 px-4 md:px-6 pt-5 pb-0" style={{ animationDelay: '0.2s' }}>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {availableFilters.map(f => (
-              <button
-                key={f.value === '' ? 'all' : f.value}
-                type="button"
-                onClick={() => {
-                  setCatFilter(f.value)
-                  onInteract?.()
-                }}
-                className={`filter-chip flex-shrink-0 px-4 py-1.5 min-h-[44px] font-medium transition-all ${
-                  catFilter === f.value ? 'active' : ''
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+          <CategoryFilterBar
+            filters={availableFilters}
+            activeValue={catFilter}
+            customCategories={customCategories}
+            categoryNavStyle={categoryNavStyle}
+            storeSlug={useCategoryLinks ? storeSlug : undefined}
+            onSelect={value => {
+              setCatFilter(value)
+              onInteract?.()
+            }}
+          />
         </div>
 
         {isFiltered ? (

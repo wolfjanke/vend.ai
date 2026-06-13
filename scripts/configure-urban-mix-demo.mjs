@@ -58,9 +58,9 @@ async function main() {
   await sql`
     UPDATE stores SET
       theme_name = 'pop',
-      theme_primary_color = '#FF6B9D',
-      theme_secondary_color = '#C77DFF',
-      theme_accent_color = '#FFD60A',
+      theme_primary_color = '#E94B88',
+      theme_secondary_color = '#9B5DE5',
+      theme_accent_color = '#FFB703',
       theme_background = 'light',
       theme_shimmer = false,
       theme_onboarding_done = true,

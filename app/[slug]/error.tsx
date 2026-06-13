@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { AlertTriangle } from 'lucide-react'
 
 export default function StoreError({
   reset,
@@ -10,9 +11,7 @@ export default function StoreError({
 }) {
   return (
     <div className="min-h-[50vh] flex flex-col items-center justify-center px-6 py-16 text-center">
-      <p className="text-4xl mb-4" aria-hidden>
-        ⚠️
-      </p>
+      <AlertTriangle size={40} className="text-warm mb-4" aria-hidden />
       <h1 className="font-syne font-bold text-xl sm:text-2xl text-foreground mb-2">
         Não foi possível carregar esta loja
       </h1>

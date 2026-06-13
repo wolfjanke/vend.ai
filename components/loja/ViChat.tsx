@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import type { ViMessage, StoreContext } from '@/types'
+import { defaultWelcomeMessage } from '@/lib/assistant-gender'
+import { normalizeAssistantGender } from '@/lib/assistant-gender'
 
 function buildViSuggestions(ctx: StoreContext): Array<{ label: string; text: string }> {
   const gf = ctx.genderFocus ?? 'feminine'
@@ -77,7 +79,12 @@ export default function ViChat({
         role:    'assistant',
         content:
           storeContext.welcomeMessage?.trim() ||
-          `Olá! Sou a **${assistantName}**, assistente da ${storeContext.name}. Me conta o que você está procurando hoje? Posso buscar por estilo, ocasião, cor ou tamanho!`,
+          defaultWelcomeMessage(
+            assistantName,
+            storeContext.name,
+            'friendly',
+            normalizeAssistantGender(storeContext.assistantGender),
+          ),
       }
       setTimeout(() => setMessages([welcome]), 400)
     }
@@ -167,7 +174,7 @@ export default function ViChat({
       const detail = err instanceof Error ? err.message : ''
       const friendly = detail && !['Erro na API', 'Resposta inválida', 'Resposta vazia'].includes(detail)
         ? detail
-        : 'Desculpe, tive um problema. Tente novamente ou fale com nossa vendedora no WhatsApp! 😊'
+        : 'Desculpe, tive um problema. Tente novamente ou fale com nossa vendedora no WhatsApp!'
       setMessages([...displayNext, {
         role:    'assistant',
         content: friendly,
@@ -192,8 +199,9 @@ export default function ViChat({
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(
         /\[([^\]]+)\]\(([^)]+)\)/g,
-        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-semibold">$1</a>',
+        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-semibold break-all">$1</a>',
       )
+      .replace(/\n/g, '<br />')
   }
 
   const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -237,7 +245,7 @@ export default function ViChat({
           {messages.map((msg, i) => (
             <div key={i} className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
               <div
-                className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${
+                className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed break-words min-w-0 ${
                   msg.role === 'user'
                     ? 'bg-primary/20 border border-primary/30 rounded-br-[4px]'
                     : 'bg-surface2 border border-border rounded-bl-[4px]'

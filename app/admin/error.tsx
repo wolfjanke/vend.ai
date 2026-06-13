@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertTriangle } from 'lucide-react'
+
 export default function AdminError({
   reset,
 }: {
@@ -8,9 +10,7 @@ export default function AdminError({
 }) {
   return (
     <div className="min-h-[40vh] flex flex-col items-center justify-center px-4 py-12 text-center max-w-lg mx-auto">
-      <p className="text-4xl mb-4" aria-hidden>
-        ⚠️
-      </p>
+      <AlertTriangle size={40} className="text-warm mb-4" aria-hidden />
       <h1 className="font-syne font-bold text-xl sm:text-2xl text-foreground mb-2">
         Erro ao carregar esta página
       </h1>

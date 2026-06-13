@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import WolfHubFooter from '@/components/WolfHubFooter'
 import { COMPANY } from '@/lib/company'
 
 export const metadata = {
@@ -18,7 +19,8 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 export default function PrivacidadePage() {
   return (
-    <main className="relative z-10 min-h-screen px-6 md:px-16 py-12 max-w-3xl mx-auto">
+    <div className="relative z-10 min-h-screen flex flex-col">
+    <main className="flex-1 px-4 sm:px-6 md:px-16 py-12 max-w-3xl mx-auto w-full">
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors mb-10"
@@ -84,7 +86,7 @@ export default function PrivacidadePage() {
           </table>
         </div>
         <p>
-          <strong className="text-foreground">Dados de clientes da sua loja:</strong> quando um cliente navega na sua loja e faz um pedido, os dados fornecidos (nome, endereço, preferências) são transmitidos diretamente para o seu WhatsApp. O vend.ai não armazena dados pessoais dos consumidores finais de forma permanente.
+          <strong className="text-foreground">Dados de clientes da sua loja:</strong> quando um consumidor finaliza um pedido na vitrine, coletamos e armazenamos os dados necessários ao pedido (nome, WhatsApp, endereço de entrega quando aplicável) para que o lojista gerencie vendas na plataforma. O lojista é o controlador desses dados; o vend.ai atua como operador. Pedidos via WhatsApp também são registrados na plataforma com os dados informados no checkout.
         </p>
       </Section>
 
@@ -137,7 +139,7 @@ export default function PrivacidadePage() {
       </Section>
 
       <Section title="6. Seus direitos como titular dos dados">
-        <p>A LGPD garante os seguintes direitos, que você pode exercer a qualquer momento pelo e-mail <a href="mailto:privacidade@vend.ai" className="text-primary hover:underline">privacidade@vend.ai</a>:</p>
+        <p>A LGPD garante os seguintes direitos, que você pode exercer a qualquer momento pelo e-mail <a href="mailto:privacidade@vend.ai" className="text-primary hover:underline">privacidade@vend.ai</a> ou pelas ferramentas self-service na plataforma (exportação de dados e exclusão de conta em Configurações → Privacidade e LGPD):</p>
         <ul className="list-disc list-inside space-y-1.5 pl-1">
           <li><strong className="text-foreground">Acesso</strong> — confirmar se tratamos seus dados e obter uma cópia.</li>
           <li><strong className="text-foreground">Correção</strong> — corrigir dados incompletos, inexatos ou desatualizados.</li>
@@ -202,7 +204,7 @@ export default function PrivacidadePage() {
           <strong className="text-foreground">Retenção:</strong> pedidos e dados de entrega são mantidos por até <strong className="text-foreground">24 meses</strong> após a última interação, salvo obrigação legal de guarda mais longa (fiscal/contábil). Após esse prazo, dados podem ser anonimizados automaticamente.
         </p>
         <p>
-          <strong className="text-foreground">Exclusão (Art. 18):</strong> o titular pode solicitar anonimização dos pedidos vinculados ao seu WhatsApp enviando a solicitação pela loja ou pelo canal indicado na vitrine. Lojistas autenticados podem anonimizar pedidos de um cliente em Configurações → Privacidade (API administrativa).
+          <strong className="text-foreground">Exclusão (Art. 18):</strong> o titular pode solicitar anonimização dos pedidos vinculados ao seu WhatsApp pelo link &quot;Exercer seus direitos (LGPD)&quot; no rodapé da vitrine da loja. Lojistas autenticados podem anonimizar pedidos de um cliente em Configurações → Privacidade e LGPD.
         </p>
       </Section>
 
@@ -238,5 +240,7 @@ export default function PrivacidadePage() {
         </Link>
       </div>
     </main>
+    <WolfHubFooter />
+    </div>
   )
 }

@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { Lock } from 'lucide-react'
 
 interface Props {
   storeName: string
@@ -33,7 +34,7 @@ export default function CheckoutPageLayout({ storeName, storeLogo, storeSlug, ch
           </a>
           <span className="text-xs text-muted shrink-0 flex items-center gap-1">
             Checkout seguro
-            <span aria-hidden>🔒</span>
+            <Lock size={12} aria-hidden />
           </span>
         </div>
       </header>

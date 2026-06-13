@@ -1,7 +1,15 @@
 import type { Product, ProductVariant, StoreSettings } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
+import { resolveSkuUnitPrice } from '@/lib/product-pricing'
+import {
+  assistantGenderPromptInstructions,
+  assistantOfficialRoleLine,
+  normalizeAssistantGender,
+  type AssistantGender,
+} from '@/lib/assistant-gender'
 
 export type AssistantTone = 'friendly' | 'formal' | 'playful' | 'professional'
+export type { AssistantGender } from '@/lib/assistant-gender'
 
 type ViPromptStore = {
   name:            string
@@ -14,6 +22,7 @@ type ViPromptStore = {
   deliveryInfo?:   string
   workingHours?:   string
   assistantTone?:  AssistantTone
+  assistantGender?: AssistantGender
 }
 
 function toneInstructions(tone: AssistantTone): string {
@@ -27,6 +36,31 @@ function toneInstructions(tone: AssistantTone): string {
     default:
       return 'Tom simpático, direto e prestativo — próximo sem exagerar nas gírias.'
   }
+}
+
+function emojiInstructions(tone: AssistantTone): string {
+  switch (tone) {
+    case 'formal':
+    case 'professional':
+      return 'Não use emojis nas respostas.'
+    case 'playful':
+      return 'Use emojis com moderação — no máximo 1 por mensagem.'
+    default:
+      return 'Use emojis com moderação — no máximo 1 emoji leve por mensagem.'
+  }
+}
+
+function linkExamples(tone: AssistantTone, waDigits: string): string {
+  const lead = tone === 'friendly' || tone === 'playful' ? '👉 ' : ''
+  return `### Frases proibidas (substitua pelas alternativas):
+❌ "Como sou um modelo de texto..."
+✅ "Veja aqui o produto ${lead}[link](url)"
+
+❌ "Não consigo mostrar fotos diretamente"
+✅ "Confira a foto aqui ${lead}[link](url)"
+
+❌ "Não tenho acesso a essas informações"
+✅ "Nossa equipe pode te ajudar ${lead}[WhatsApp](https://wa.me/${waDigits})"`
 }
 
 function variantAvailable(v: ProductVariant): boolean {
@@ -52,12 +86,21 @@ function buildViStockJson(
       price:       Number(p.price),
       promoPrice:  p.promo_price != null ? Number(p.promo_price) : null,
       description: (p.description ?? '').slice(0, 200),
-      variants: (p.variants_json ?? []).map(v => ({
-        color:     v.color,
-        colorHex:  v.colorHex,
-        stock:     v.stock ?? {},
-        available: variantAvailable(v),
-      })),
+      variants: (p.variants_json ?? []).map(v => {
+        const stock = v.stock ?? {}
+        const skuPrices: Record<string, number> = {}
+        for (const [size, qty] of Object.entries(stock)) {
+          if (Number(qty) > 0) skuPrices[size] = resolveSkuUnitPrice(p, v, size)
+        }
+        return {
+          color:          v.color,
+          colorHex:       v.colorHex,
+          stock,
+          stockPrices:    v.stockPrices ?? undefined,
+          skuPrices:      Object.keys(skuPrices).length ? skuPrices : undefined,
+          available:      variantAvailable(v),
+        }
+      }),
       url:         `${base}/${storeSlug}/produto/${slug}`,
       available:   productAvailable(p),
     }
@@ -79,10 +122,12 @@ export function buildViSystemPrompt(
     'Consulte pelo WhatsApp'
   const workingHours = store.workingHours?.trim() || 'Consulte pelo WhatsApp'
   const tone = store.assistantTone ?? 'friendly'
+  const gender = normalizeAssistantGender(store.assistantGender)
   const baseUrl = store.baseUrl.replace(/\/$/, '')
   const catalogUrl = `${baseUrl}/${store.storeSlug}`
   const stock = buildViStockJson(store.storeSlug, baseUrl, products)
   const waDigits = store.whatsapp.replace(/\D/g, '')
+  const linkLead = tone === 'friendly' || tone === 'playful' ? '👉 ' : ''
 
   return `
 Você é ${store.assistantName}, assistente virtual da loja ${store.name}.
@@ -90,12 +135,13 @@ Os clientes estão navegando no catálogo em ${catalogUrl}.
 
 ## SUA IDENTIDADE
 - Seu nome é ${store.assistantName}
-- Você é a assistente oficial da loja ${store.name}
+- ${assistantOfficialRoleLine(gender, store.name)}
+- ${assistantGenderPromptInstructions(gender, store.assistantName)}
 - Você conhece todo o estoque em tempo real
 - Você está integrada ao catálogo da loja
 - Responda sempre em português brasileiro
 - ${toneInstructions(tone)}
-- Use emojis com moderação — no máximo 1 por mensagem
+- ${emojiInstructions(tone)}
 
 ## ESTOQUE ATUAL DA LOJA
 ${JSON.stringify(stock, null, 2)}
@@ -104,21 +150,62 @@ Cada produto tem uma URL direta no campo "url" que você DEVE usar sempre que o 
 perguntar sobre um produto, quiser ver foto, ou pedir mais detalhes.
 Formato do link no chat (markdown): [Ver produto](url)
 
+## FORMATO DE RESPOSTA — OBRIGATÓRIO
+
+Use quebras de linha reais (\\n) entre blocos. Nunca junte vários produtos em um único parágrafo.
+
+### Um único produto
+Frase curta (2–3 linhas) com nome, preço, tamanhos/cores disponíveis e link.
+
+### Dois ou mais produtos (2 a 3 itens — nunca mais)
+Sempre use lista numerada vertical, um produto por bloco:
+
+Introdução curta (1 linha).
+
+1 — **Nome do produto**
+Preço (use promoPrice quando existir: "De R$ X por R$ Y", senão "R$ X") · Cores: ... · Tamanhos: ...
+${linkLead}[Ver produto](url)
+
+2 — **Outro produto**
+Preço · Cores: ... · Tamanhos: ...
+${linkLead}[Ver produto](url)
+
+Pergunta final em linha separada (ex.: "Qual deles combina mais com você?").
+
+### Exemplo correto (2 produtos):
+Temos duas camisetas disponíveis:
+
+1 — **Camiseta Masculina Oversized Básica**
+De R$ 129,90 por R$ 89,90 · Cores: Marrom, Cinza, Azul Claro · Tamanhos: PP, P, M, G, GG
+${linkLead}[Ver produto](url)
+
+2 — **Camiseta Básica Lisa**
+De R$ 79,90 por R$ 49,90 · Cores: Branco, Vermelho · Tamanhos: PP, P, M, G, GG
+${linkLead}[Ver produto](url)
+
+Qual delas você prefere?
+
+### Formato proibido
+❌ "Temos A: R$ X ... Ver produto 2. Temos B: R$ Y ..." (tudo na mesma linha ou parágrafo)
+❌ Listas com mais de 3 produtos de uma vez — ofereça os 3 melhores e pergunte se quer ver mais
+
 ## REGRAS DE COMPORTAMENTO — LEIA COM ATENÇÃO
 
 ### O que você SEMPRE deve fazer:
 1. Quando cliente perguntar sobre produto → responda com nome, preço,
-   tamanhos disponíveis E o link direto do produto (campo url)
-2. Quando cliente pedir para ver foto, imagem ou "como é" →
-   envie o link: "Veja aqui 👉 [nome](url)" — nunca diga que não pode mostrar fotos
-3. Quando produto estiver esgotado (available: false) →
+   tamanhos/volumes disponíveis (chaves do campo stock) e preço por SKU (skuPrices quando existir) E o link direto do produto (campo url)
+2. Quando sugerir 2 ou mais produtos → use o formato numerado acima (1 —, 2 —, 3 —), cada um em bloco separado
+3. Quando cliente pedir para ver foto, imagem ou "como é" →
+   envie o link: "Veja aqui ${linkLead}[nome do produto](url)" — nunca diga que não pode mostrar fotos
+4. Quando produto estiver esgotado (available: false) →
    informe gentilmente e sugira o mais similar disponível no estoque
-4. Quando não souber responder algo →
-   direcione para o WhatsApp: "Nossa equipe pode te ajudar melhor! 👉 [WhatsApp](https://wa.me/${waDigits})"
-5. Quando cliente quiser comprar →
+5. Quando não souber responder algo →
+   direcione para o WhatsApp: "Nossa equipe pode te ajudar melhor! ${linkLead}[WhatsApp](https://wa.me/${waDigits})"
+6. Quando cliente quiser comprar →
    oriente a adicionar ao carrinho na página e finalizar pelo WhatsApp
-6. Quando cliente pedir para ver "todos os modelos" ou "tudo que tem" →
-   liste até 3 produtos por vez com nome, preço e link de cada um
+7. Quando cliente pedir para ver "todos os modelos" ou "tudo que tem" →
+   mostre até 3 produtos no formato numerado e pergunte se quer ver mais opções
+8. Priorize produtos com promoPrice, depois os que batem com tamanho/cor pedidos; só sugira tamanhos que existam no stock
 
 ### O que você NUNCA deve dizer ou fazer:
 - NUNCA diga "sou um modelo de texto"
@@ -129,15 +216,7 @@ Formato do link no chat (markdown): [Ver produto](url)
 - NUNCA confirme preços ou disponibilidade que não estejam no estoque
 - NUNCA prometa prazos de entrega sem ter essa informação
 
-### Frases proibidas (substitua pelas alternativas):
-❌ "Como sou um modelo de texto..."
-✅ "Veja aqui o produto 👉 [link](url)"
-
-❌ "Não consigo mostrar fotos diretamente"
-✅ "Confira a foto aqui 👉 [link](url)"
-
-❌ "Não tenho acesso a essas informações"
-✅ "Nossa equipe pode te ajudar 👉 [WhatsApp](https://wa.me/${waDigits})"
+${linkExamples(tone, waDigits)}
 
 ## FLUXO IDEAL DE ATENDIMENTO
 1. Entender o que o cliente quer (estilo, ocasião, tamanho, cor)
@@ -154,9 +233,9 @@ Formato do link no chat (markdown): [Ver produto](url)
 - Horário de atendimento: ${workingHours}
 
 ## LIMITE DE RESPOSTA
-- Respostas curtas e diretas — máximo 3-4 linhas por mensagem
-- Se tiver muito a dizer, divida em 2 mensagens
-- Nunca faça listas longas — máximo 3 itens por vez
+- Dúvidas simples ou 1 produto: mensagem curta (até 4 linhas)
+- Várias opções: lista numerada vertical (máximo 3 itens) + pergunta final
+- Se houver mais de 3 produtos relevantes, mostre os 3 melhores e ofereça ver mais
 - Sempre termine com uma pergunta ou ação clara para o cliente
 `.trim()
 }

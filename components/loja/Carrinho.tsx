@@ -14,6 +14,8 @@ import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
 import { calculateCheckoutPricing } from '@/lib/pricing'
 import { quoteDelivery } from '@/lib/delivery'
+import { isDeliveryAddressEmpty } from '@/lib/validations'
+import { digitsOnly, isValidCpf } from '@/lib/masks'
 
 type Step = 'cart' | 'delivery' | 'channel' | 'payment'
 
@@ -27,10 +29,10 @@ interface Props {
     name: string,
     phone: string,
     notes: string,
-    delivery: DeliveryAddress,
+    delivery: DeliveryAddress | null,
     paymentMethod: CheckoutPaymentMethod,
     couponCode: string | undefined,
-    meta: { deliveryFee: number; checkoutChannel: CheckoutChannel }
+    meta: { deliveryFee: number; checkoutChannel: CheckoutChannel; customerCpf?: string }
   ) => Promise<void>
   pixDiscountPercent?: number
   couponRules?: CouponRule[]
@@ -61,6 +63,7 @@ export default function Carrinho({
 
   const [name,    setName]    = useState('')
   const [phone,   setPhone]   = useState('')
+  const [cpf,     setCpf]     = useState('')
   const [notes,   setNotes]   = useState('')
   const [cep, setCep] = useState('')
   const [logradouro, setLogradouro] = useState('')
@@ -163,14 +166,20 @@ export default function Carrinho({
   }, [step, siteCheckoutActive, whatsappEnabled])
 
   function validateAddress(): boolean {
+    const addr = { cep, logradouro, numero, bairro, cidade, uf }
+    if (isDeliveryAddressEmpty(addr)) {
+      setErrors({})
+      return true
+    }
+
     const e: Record<string, string> = {}
+    const cepD = cep.replace(/\D/g, '')
+    if (cepD.length !== 8) e.cep = 'CEP inválido'
     if (!logradouro.trim()) e.logradouro = 'Informe o endereço'
     if (!numero.trim()) e.numero = 'Informe o número'
     if (!bairro.trim()) e.bairro = 'Informe o bairro'
     if (!cidade.trim()) e.cidade = 'Informe a cidade'
     if (!uf.trim() || uf.length !== 2) e.uf = 'UF inválida'
-    const cepD = cep.replace(/\D/g, '')
-    if (cepD.length !== 8) e.cep = 'CEP inválido'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -184,13 +193,16 @@ export default function Carrinho({
       if (d.length < 10 || d.length > 11) e.phone = 'WhatsApp inválido'
     }
     if (!privacyAccepted) e.privacy = 'Aceite a política de privacidade para continuar'
+    const cpfDigits = digitsOnly(cpf)
+    if (cpfDigits.length > 0 && !isValidCpf(cpfDigits)) e.cpf = 'CPF inválido'
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
   function continueFromDelivery() {
     if (!validateAddress()) return
-    if (deliveryQuote.outOfZone) {
+    const hasAddress = !isDeliveryAddressEmpty({ cep, logradouro, numero, bairro, cidade, uf })
+    if (hasAddress && deliveryQuote.outOfZone) {
       alert('No momento não entregamos nesta cidade. Entre em contato com a loja.')
       return
     }
@@ -215,22 +227,26 @@ export default function Carrinho({
 
   async function handleCheckout() {
     if (!validateAddress() || !validatePayment()) return
-    if (deliveryQuote.outOfZone) {
+    const hasAddress = !isDeliveryAddressEmpty({ cep, logradouro, numero, bairro, cidade, uf })
+    if (hasAddress && deliveryQuote.outOfZone) {
       alert('Endereço fora da área de entrega.')
       return
     }
 
     setLoading(true)
     try {
-      const delivery: DeliveryAddress = {
-        cep:         cep.includes('-') ? cep : `${cep.slice(0, 5)}-${cep.slice(5)}`,
-        logradouro:  logradouro.trim(),
-        numero:      numero.trim(),
-        complemento: complemento.trim() || undefined,
-        bairro:      bairro.trim(),
-        cidade:      cidade.trim(),
-        uf:          uf.trim().toUpperCase(),
-      }
+      const delivery: DeliveryAddress | null = hasAddress
+        ? {
+            cep:         cep.includes('-') ? cep : `${cep.slice(0, 5)}-${cep.slice(5)}`,
+            logradouro:  logradouro.trim(),
+            numero:      numero.trim(),
+            complemento: complemento.trim() || undefined,
+            bairro:      bairro.trim(),
+            cidade:      cidade.trim(),
+            uf:          uf.trim().toUpperCase(),
+          }
+        : null
+      const cpfDigits = digitsOnly(cpf)
       await onCheckout(
         name.trim(),
         phone.trim(),
@@ -238,9 +254,13 @@ export default function Carrinho({
         delivery,
         paymentMethod,
         couponCode.trim() || undefined,
-        { deliveryFee, checkoutChannel }
+        {
+          deliveryFee,
+          checkoutChannel,
+          customerCpf: cpfDigits.length > 0 ? cpfDigits : undefined,
+        }
       )
-      setName(''); setPhone(''); setNotes('')
+      setName(''); setPhone(''); setCpf(''); setNotes('')
       setCep(''); setLogradouro(''); setNumero(''); setComplemento('')
       setBairro(''); setCidade(''); setUf('')
       setPaymentMethod('OUTRO'); setCouponCode('')
@@ -325,7 +345,12 @@ export default function Carrinho({
             </div>
           ) : step === 'delivery' ? (
             <div className="flex flex-col gap-2.5 pb-2">
-              <p className="text-xs font-bold text-muted uppercase tracking-wider">Endereço de entrega</p>
+              <div>
+                <p className="text-xs font-bold text-muted uppercase tracking-wider">Endereço de entrega (opcional)</p>
+                <p className="text-[11px] text-muted leading-relaxed mt-1">
+                  Preencha só se quiser combinar entrega. Você pode continuar sem informar o endereço.
+                </p>
+              </div>
               <div>
                 <label className="text-[11px] text-muted block mb-1">CEP</label>
                 <CepInput
@@ -472,6 +497,23 @@ export default function Carrinho({
                   autoComplete="tel"
                 />
                 {errors.phone && <p className="text-xs text-warm mt-1">{errors.phone}</p>}
+              </div>
+              <div>
+                <label className="text-[11px] text-muted block mb-1">CPF (opcional)</label>
+                <MaskedInput
+                  mask="cpf"
+                  className={`w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border rounded-xl text-foreground text-sm outline-none transition-all placeholder:text-muted ${errors.cpf ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
+                  placeholder="000.000.000-00"
+                  value={cpf}
+                  onChange={v => { setCpf(v); setErrors(p => { const n = { ...p }; delete n.cpf; return n }) }}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+                {errors.cpf ? (
+                  <p className="text-xs text-warm mt-1">{errors.cpf}</p>
+                ) : (
+                  <p className="text-[10px] text-muted mt-1">Ajuda a loja a identificar você em compras futuras.</p>
+                )}
               </div>
               <input
                 className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"

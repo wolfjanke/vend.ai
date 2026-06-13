@@ -9,8 +9,10 @@ import { getStoreProfile, getSegmentLabel } from '@/types'
 import Carrinho from '@/components/loja/Carrinho'
 import LojaHeader from '@/components/loja/LojaHeader'
 import ViChat from '@/components/loja/ViChat'
+import LojaPrivacyFooter from '@/components/loja/LojaPrivacyFooter'
 import { LojaProvider, type LojaContextValue } from '@/components/loja/LojaContext'
 import { buildWhatsAppUrl, formatOrderMessage, generateOrderNumber } from '@/lib/whatsapp'
+import { vitrineText } from '@/lib/strip-emoji'
 import {
   browseIdleMessage,
   cartAbandonedMessage,
@@ -19,6 +21,8 @@ import {
   productFocusMessage,
   productToTrigger,
 } from '@/lib/vi-triggers'
+import { normalizeLogoSize, resolveStoreLogoUrl } from '@/lib/store-logo'
+import { normalizeAssistantGender } from '@/lib/assistant-gender'
 
 const BANNER_ROTATE_MS = 6000
 
@@ -91,9 +95,12 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
     ).replace(/\/$/, '') || (typeof window !== 'undefined' ? window.location.origin : 'https://vendai.club')
 
   const assistantName = (store.assistant_name?.trim() || 'Vi')
+  const assistantTone = store.assistant_tone ?? 'friendly'
+  const assistantGender = normalizeAssistantGender(store.assistant_gender)
   const welcomeMessage =
-    store.assistant_welcome_message?.trim() ||
-    defaultWelcomeMessage(assistantName, store.name)
+    store.assistant_welcome_message?.trim()
+      ? vitrineText(store.assistant_welcome_message)
+      : defaultWelcomeMessage(assistantName, store.name, assistantTone, assistantGender)
 
   const paidVi = isPaidViPlan(plan)
 
@@ -103,6 +110,7 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
     name:           store.name,
     assistantName,
     welcomeMessage,
+    assistantGender,
     plan,
     freteInfo:      settings.freteInfo,
     pagamentoInfo:  settings.pagamentoInfo,
@@ -128,7 +136,7 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
         productUrl: `${baseUrl}/${store.slug}/produto/${slug}`,
       }
     }),
-  }), [store, products, settings, storeProfile, assistantName, welcomeMessage, plan, baseUrl])
+  }), [store, products, settings, storeProfile, assistantName, welcomeMessage, assistantGender, plan, baseUrl])
 
   const openViWithMessage = useCallback((content: string) => {
     setPendingViMessage(content)
@@ -194,10 +202,10 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
     browseTimerRef.current = setTimeout(() => {
       if (viOpen) return
       markTriggered(store.slug, 'browse60')
-      openViWithMessage(browseIdleMessage(assistantName))
+      openViWithMessage(browseIdleMessage(assistantName, assistantTone))
     }, 60_000)
     return () => clearTimeout(browseTimerRef.current)
-  }, [paidVi, store.slug, viOpen, assistantName, openViWithMessage])
+  }, [paidVi, store.slug, viOpen, assistantName, assistantTone, openViWithMessage])
 
   // Gatilho: carrinho abandonado 3min
   useEffect(() => {
@@ -207,10 +215,10 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
     cartTimerRef.current = setTimeout(() => {
       if (cart.length === 0) return
       markTriggered(store.slug, 'cart3m')
-      openViWithMessage(cartAbandonedMessage())
+      openViWithMessage(cartAbandonedMessage(assistantTone))
     }, 180_000)
     return () => clearTimeout(cartTimerRef.current)
-  }, [paidVi, cart.length, store.slug, openViWithMessage])
+  }, [paidVi, cart.length, store.slug, assistantTone, openViWithMessage])
 
   const onProductFocus = useCallback((product: Product) => {
     focusedProductRef.current = product
@@ -221,9 +229,9 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
       markTriggered(store.slug, `product:${product.id}`)
       const trigger = productToTrigger(product, baseUrl, store.slug)
       if (!trigger.inStock) return
-      openViWithMessage(productFocusMessage(trigger))
+      openViWithMessage(productFocusMessage(trigger, assistantTone))
     }, 35_000)
-  }, [paidVi, store.slug, baseUrl, openViWithMessage])
+  }, [paidVi, store.slug, baseUrl, assistantTone, openViWithMessage])
 
   const addToCart = useCallback((item: CartItem) => {
     setCart(prev => {
@@ -256,10 +264,10 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
     name: string,
     phone: string,
     notes: string,
-    delivery: DeliveryAddress,
+    delivery: DeliveryAddress | null,
     paymentMethod: CheckoutPaymentMethod,
     couponCode: string | undefined,
-    meta: { deliveryFee: number; checkoutChannel: CheckoutChannel },
+    meta: { deliveryFee: number; checkoutChannel: CheckoutChannel; customerCpf?: string },
   ) => {
     try {
       const res = await fetch('/api/pedidos', {
@@ -270,10 +278,13 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
           items:            cart,
           customerName:     name,
           customerWhatsapp: phone,
+          customerCpf:      meta.customerCpf,
           notes,
           paymentMethod,
           couponCode,
-          deliveryAddress:  delivery,
+          deliveryAddress:  delivery ?? {
+            cep: '', logradouro: '', numero: '', bairro: '', cidade: '', uf: '',
+          },
           deliveryFee:      meta.deliveryFee,
           checkoutChannel:  meta.checkoutChannel,
           privacyConsent:   true,
@@ -291,9 +302,10 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
         items: cart,
         name,
         phone,
+        cpf: meta.customerCpf,
         notes,
         orderNum,
-        deliveryAddress: delivery,
+        deliveryAddress: delivery ?? undefined,
         pricing: data.pricing,
         checkoutChannel: meta.checkoutChannel,
         paymentMethod,
@@ -333,7 +345,8 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
           slug={store.slug}
           storeName={store.name}
           whatsapp={store.whatsapp}
-          logoUrl={store.theme_logo_url?.trim() || store.logo_url?.trim() || null}
+          logoUrl={resolveStoreLogoUrl(store.logo_url, store.theme_logo_url)}
+          logoSize={normalizeLogoSize(settings.logoSize)}
           tagline={store.tagline}
           themeName={store.theme_name as import('@/lib/themes').ThemeName}
           cartQty={totalQty}
@@ -350,13 +363,15 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
           >
             <div className="mx-auto w-full max-w-5xl">
               <p className="text-sm text-foreground text-center break-words">
-                {activeBanners[bannerIndex]?.text}
+                {vitrineText(activeBanners[bannerIndex]?.text ?? '')}
               </p>
             </div>
           </div>
         )}
 
         {children}
+
+        <LojaPrivacyFooter storeSlug={store.slug} />
 
         <Carrinho
           isOpen={cartOpen}

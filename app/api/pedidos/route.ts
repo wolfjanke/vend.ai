@@ -6,7 +6,8 @@ import { calculateCheckoutPricing } from '@/lib/pricing'
 import { quoteDelivery } from '@/lib/delivery'
 import type { StoreSettings } from '@/types'
 import { logServerError } from '@/lib/logger'
-import { resolveOrderLines, amountsMatch, OrderValidationError, decrementStockForOrder } from '@/lib/order-pricing'
+import { encryptCpf } from '@/lib/crypto/pii'
+import { resolveOrderLines, amountsMatch, OrderValidationError } from '@/lib/order-pricing'
 import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
@@ -45,12 +46,14 @@ export async function POST(req: NextRequest) {
       items: clientItems,
       customerName,
       customerWhatsapp,
+      customerCpf,
       notes,
       deliveryAddress,
       paymentMethod,
       couponCode,
       deliveryFee: clientDeliveryFee,
       checkoutChannel,
+      payment_source: paymentSource,
     } = parsed.data
 
     if (!checkRateLimit(`pedidos:store:${storeId}`, PEDIDOS_STORE_LIMIT, PEDIDOS_STORE_WINDOW)) {
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     let items
     try {
-      items = await resolveOrderLines(storeId, clientItems)
+      items = await resolveOrderLines(storeId, clientItems, { checkStock: false })
     } catch (e) {
       if (e instanceof OrderValidationError) return orderReject422()
       throw e
@@ -79,19 +82,22 @@ export async function POST(req: NextRequest) {
       settings,
     })
     const subtotalAfterCoupon = Math.max(0, Number((pricing.subtotal - pricing.discountCoupon).toFixed(2)))
-    const quote = quoteDelivery({
-      settings,
-      cidade: deliveryAddress.cidade,
-      uf: deliveryAddress.uf,
-      subtotalAfterCoupon,
-    })
-    if (quote.outOfZone) {
-      return NextResponse.json(
-        { error: 'Entrega não disponível para o endereço informado.' },
-        { status: 400 },
-      )
+    let fee = 0
+    if (deliveryAddress) {
+      const quote = quoteDelivery({
+        settings,
+        cidade: deliveryAddress.cidade,
+        uf: deliveryAddress.uf,
+        subtotalAfterCoupon,
+      })
+      if (quote.outOfZone) {
+        return NextResponse.json(
+          { error: 'Entrega não disponível para o endereço informado.' },
+          { status: 400 },
+        )
+      }
+      fee = Number(quote.fee.toFixed(2))
     }
-    const fee = Number(quote.fee.toFixed(2))
     if (!amountsMatch(fee, clientDeliveryFee, 0.02)) {
       return orderReject422()
     }
@@ -102,17 +108,11 @@ export async function POST(req: NextRequest) {
       return orderReject422()
     }
 
-    try {
-      await decrementStockForOrder(storeId, items)
-    } catch (e) {
-      if (e instanceof OrderValidationError) return orderReject422()
-      throw e
-    }
-
     const orderNum = generateOrderNumber()
 
     const itemsJson = JSON.stringify(items.map(i => ({
       product_id: i.product_id,
+      variant_id: i.variant_id,
       name:       i.name,
       size:       i.size,
       color:      i.color,
@@ -121,21 +121,36 @@ export async function POST(req: NextRequest) {
       photo:      i.photo,
     })))
 
-    const deliveryJson = JSON.stringify(deliveryAddress)
+    const deliveryJson = deliveryAddress ? JSON.stringify(deliveryAddress) : null
+    const resolvedPaymentSource = paymentSource ?? (checkoutChannel === 'whatsapp' ? 'WHATSAPP' : 'WHATSAPP')
+
+    let customerCpfEnc: string | null = null
+    if (customerCpf) {
+      try {
+        customerCpfEnc = await encryptCpf(customerCpf)
+      } catch (error) {
+        logServerError('[/api/pedidos] encryptCpf', error)
+        return NextResponse.json({ error: 'CPF inválido' }, { status: 400 })
+      }
+    }
 
     let order
     try {
       ;[order] = await sql`
         INSERT INTO orders (
-          store_id, order_number, customer_name, customer_whatsapp, items_json,
+          store_id, order_number, customer_name, customer_whatsapp, customer_cpf_enc, items_json,
           total, notes, status, delivery_address,
-          subtotal, discount_pix, discount_coupon, discount_total, total_final, payment_method, coupon_code_applied
+          subtotal, discount_pix, discount_coupon, discount_total, total_final, payment_method, coupon_code_applied,
+          payment_source, payment_status,
+          privacy_consent_at
         )
         VALUES (
-          ${storeId}, ${orderNum}, ${customerName}, ${customerWhatsapp},
+          ${storeId}, ${orderNum}, ${customerName}, ${customerWhatsapp}, ${customerCpfEnc},
           ${itemsJson}::jsonb, ${grandTotal}, ${notes ?? ''}, 'NOVO',
           ${deliveryJson}::jsonb, ${pricing.subtotal}, ${pricing.discountPix}, ${pricing.discountCoupon},
-          ${pricing.discountTotal}, ${grandTotal}, ${paymentMethod}, ${pricing.couponCodeApplied}
+          ${pricing.discountTotal}, ${grandTotal}, ${paymentMethod}, ${pricing.couponCodeApplied},
+          ${resolvedPaymentSource}, 'PENDING',
+          NOW()
         )
         RETURNING id
       `
@@ -153,12 +168,17 @@ export async function POST(req: NextRequest) {
         checkoutChannel,
       })}`
       ;[order] = await sql`
-        INSERT INTO orders (store_id, order_number, customer_name, customer_whatsapp, items_json, total, notes, status, delivery_address)
+        INSERT INTO orders (
+          store_id, order_number, customer_name, customer_whatsapp, customer_cpf_enc, items_json, total, notes, status,
+          delivery_address, payment_source, payment_status, privacy_consent_at
+        )
         VALUES (
           ${storeId}, ${orderNum}, ${customerName},
-          ${customerWhatsapp},
+          ${customerWhatsapp}, ${customerCpfEnc},
           ${itemsJson}::jsonb, ${grandTotal}, ${`${notes ?? ''}${pricingNote}`}, 'NOVO',
-          ${deliveryJson}::jsonb
+          ${deliveryJson}::jsonb,
+          ${resolvedPaymentSource}, 'PENDING',
+          NOW()
         )
         RETURNING id
       `

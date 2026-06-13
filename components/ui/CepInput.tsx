@@ -4,13 +4,12 @@ import { useCallback, useState } from 'react'
 import { digitsOnly } from '@/lib/masks'
 import MaskedInput from '@/components/ui/MaskedInput'
 
-export interface ViaCepResponse {
-  cep:         string
-  logradouro:  string
-  bairro:      string
-  localidade:  string
-  uf:          string
-  erro?:       boolean
+interface CepLookupResponse {
+  logradouro: string
+  bairro:     string
+  cidade:     string
+  uf:         string
+  error?:     string
 }
 
 interface Props {
@@ -31,18 +30,18 @@ export default function CepInput({ value, onChange, onFilled, className, disable
       setStatus('loading')
       setMsg('')
       try {
-        const res = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`)
-        const data: ViaCepResponse = await res.json()
-        if (!res.ok || data.erro) {
+        const res = await fetch(`/api/cep/${cepDigits}`)
+        const data: CepLookupResponse = await res.json()
+        if (!res.ok) {
           setStatus('error')
-          setMsg('CEP não encontrado')
+          setMsg(data.error ?? (res.status === 404 ? 'CEP não encontrado' : 'Erro ao buscar CEP'))
           return
         }
         setStatus('idle')
         onFilled({
           logradouro: data.logradouro ?? '',
           bairro:     data.bairro ?? '',
-          cidade:     data.localidade ?? '',
+          cidade:     data.cidade ?? '',
           uf:         (data.uf ?? '').toUpperCase(),
         })
       } catch {

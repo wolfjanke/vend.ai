@@ -67,7 +67,7 @@ export async function sendUpgradeEmail(params: {
 
   return sendEmail({
     to: params.ownerEmail,
-    subject: `Seu plano foi atualizado para ${PLAN_LABELS[params.newPlan] ?? params.newPlan}! 🚀`,
+    subject: `Seu plano foi atualizado para ${PLAN_LABELS[params.newPlan] ?? params.newPlan}!`,
     html,
   })
 }

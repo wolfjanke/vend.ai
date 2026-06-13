@@ -193,14 +193,14 @@ export default function PlanoClient() {
             </span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-muted">Mensagens Vi (mês)</span>
+            <span className="text-muted">Mensagens Assistente IA (mês)</span>
             <span className="tabular-nums shrink-0">
               {data.usage.viMessagesUsed.toLocaleString('pt-BR')} / {data.usage.viMessagesLimit.toLocaleString('pt-BR')}
             </span>
           </div>
           {data.usage.viOverageMessages > 0 && (
             <div className="flex justify-between gap-2 text-yellow-400">
-              <span>Excedente Vi</span>
+              <span>Excedente Assistente IA</span>
               <span className="tabular-nums">{data.usage.viOverageMessages.toLocaleString('pt-BR')}</span>
             </div>
           )}

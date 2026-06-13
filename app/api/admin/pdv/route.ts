@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getSessionSafe } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
+import { decrementStockForOrder, OrderValidationError } from '@/lib/order-pricing'
+import type { CartItem } from '@/types'
 import { canUsePdv } from '@/lib/pdv-access'
 import type { PlanSlug } from '@/types'
 export { dynamic } from '@/lib/route-dynamic'
@@ -71,6 +73,31 @@ export async function POST(req: NextRequest) {
 
   if (!total || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: 'total e items são obrigatórios' }, { status: 422 })
+  }
+
+  const paymentStatus = String(payment_status)
+  const cartItems: CartItem[] = (items as Array<Record<string, unknown>>)
+    .filter(i => i.product_id && i.variant_id)
+    .map(i => ({
+      product_id: String(i.product_id),
+      variant_id: String(i.variant_id),
+      name:       String(i.name ?? ''),
+      size:       String(i.size ?? ''),
+      color:      String(i.color ?? ''),
+      qty:        Number(i.qty),
+      price:      Number(i.price),
+      photo:      i.photo ? String(i.photo) : undefined,
+    }))
+
+  if (paymentStatus === 'CONFIRMED' && cartItems.length > 0) {
+    try {
+      await decrementStockForOrder(session.storeId, cartItems)
+    } catch (e) {
+      if (e instanceof OrderValidationError) {
+        return NextResponse.json({ error: 'Estoque insuficiente para concluir a venda.' }, { status: 422 })
+      }
+      throw e
+    }
   }
 
   try {

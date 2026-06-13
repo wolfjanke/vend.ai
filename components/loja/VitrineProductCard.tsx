@@ -23,16 +23,19 @@ function PriceBlock({
   installmentText,
   className = '',
   inverted = false,
+  reserveParcelaSpace = false,
 }: {
   effectivePrice:  number
   promoPrice:      number | null
   installmentText: string | null
   className?:      string
   inverted?:       boolean
+  reserveParcelaSpace?: boolean
 }) {
   const priceCls = inverted ? 'text-white' : 'produto-preco font-bold tabular-nums shrink-0'
   const mutedCls = inverted ? 'text-white/70' : 'produto-preco-old tabular-nums'
   const parcelaCls = inverted ? 'text-white/70 produto-parcela' : 'produto-parcela text-muted'
+  const showParcela = Boolean(installmentText) || reserveParcelaSpace
   return (
     <div className={`flex flex-col gap-0.5 min-w-0 ${className}`}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
@@ -45,8 +48,10 @@ function PriceBlock({
           </span>
         )}
       </div>
-      {installmentText && (
-        <p className={`break-words ${parcelaCls}`}>{installmentText}</p>
+      {showParcela && (
+        <p className={`break-words min-h-[1.125rem] leading-[var(--theme-lh-parcela)] ${parcelaCls}`}>
+          {installmentText ?? '\u00A0'}
+        </p>
       )}
     </div>
   )
@@ -108,7 +113,11 @@ export default function VitrineProductCard({
   const shadow = cardTheme.shadow
     ? 'shadow-lg hover:shadow-xl'
     : 'hover:shadow-[0_8px_40px_var(--primary-glow),0_0_0_1px_var(--primary-dim)]'
-  const baseCard = `produto-card group overflow-hidden h-full flex min-h-0 ${shadow}`
+  const baseCard = `produto-card group overflow-hidden h-full flex flex-col min-h-0 ${shadow}`
+  const vitrineTitleCls =
+    'produto-nome font-semibold line-clamp-2 break-words block mb-1 min-h-[2.625rem]'
+  const vitrineInfoBtnCls =
+    'card-info-below w-full min-w-0 flex-1 flex flex-col text-left border-t border-border/60 hover:bg-surface2/80 transition-colors'
   const mediaBtnCls =
     'produto-card-media relative w-full shrink-0 overflow-hidden bg-surface2 text-left border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset'
   const imgClsCover =
@@ -183,7 +192,7 @@ export default function VitrineProductCard({
   if (cardTheme.infoPosition === 'badge') {
     return (
       <div
-        className={`${baseCard} flex flex-col`}
+        className={baseCard}
         style={{ borderRadius: radius }}
         data-shimmer={cardTheme.shimmer ? 'true' : 'false'}
       >
@@ -198,10 +207,17 @@ export default function VitrineProductCard({
         <button
           type="button"
           onClick={onOpenDetail}
-          className="card-info-below w-full min-w-0 shrink-0 text-left border-t border-border/60 hover:bg-surface2/80 transition-colors"
+          className={vitrineInfoBtnCls}
         >
-          <span className="produto-nome font-semibold line-clamp-2 break-words block mb-1">{product.name}</span>
-          <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
+          <span className={vitrineTitleCls}>{product.name}</span>
+          <div className="mt-auto pt-0.5">
+            <PriceBlock
+              effectivePrice={effectivePrice}
+              promoPrice={product.promo_price}
+              installmentText={installmentText}
+              reserveParcelaSpace
+            />
+          </div>
         </button>
       </div>
     )
@@ -223,10 +239,19 @@ export default function VitrineProductCard({
           <button
             type="button"
             onClick={onOpenDetail}
-            className="card-info-sidebar w-full min-w-0 p-2.5 text-left border-t border-border/60"
+            className={`${vitrineInfoBtnCls} p-2.5`}
           >
-            <span className="produto-nome font-bold uppercase tracking-wide line-clamp-1 break-words">{product.name}</span>
-            <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
+            <span className="produto-nome font-bold uppercase tracking-wide line-clamp-2 break-words block mb-1 min-h-[2.625rem]">
+              {product.name}
+            </span>
+            <div className="mt-auto pt-0.5">
+              <PriceBlock
+                effectivePrice={effectivePrice}
+                promoPrice={product.promo_price}
+                installmentText={installmentText}
+                reserveParcelaSpace
+              />
+            </div>
           </button>
         </div>
       </div>
@@ -261,7 +286,7 @@ export default function VitrineProductCard({
   // below (default)
   return (
     <div
-      className={`${baseCard} flex flex-col`}
+      className={baseCard}
       style={{ borderRadius: radius }}
       data-shimmer={cardTheme.shimmer ? 'true' : 'false'}
     >
@@ -269,16 +294,21 @@ export default function VitrineProductCard({
       <button
         type="button"
         onClick={onOpenDetail}
-        className="card-info-below w-full min-w-0 flex-1 flex flex-col min-h-0 text-left p-2.5 sm:p-3 border-t border-border/60 hover:bg-surface2/80 transition-colors"
+        className={`${vitrineInfoBtnCls} p-2.5 sm:p-3`}
       >
-        <span className="produto-nome font-semibold line-clamp-2 break-words mb-1.5 block min-h-[2.625rem]">
+        <span className={`${vitrineTitleCls} mb-1.5`}>
           {product.name}
         </span>
         <span className="produto-variant-color text-muted line-clamp-1 break-words mb-1 min-h-[1.125rem] leading-tight">
           {variant?.color?.trim() ? variant.color : 'Cor única'}
         </span>
         <div className="mt-auto pt-0.5">
-          <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
+          <PriceBlock
+            effectivePrice={effectivePrice}
+            promoPrice={product.promo_price}
+            installmentText={installmentText}
+            reserveParcelaSpace
+          />
         </div>
       </button>
     </div>

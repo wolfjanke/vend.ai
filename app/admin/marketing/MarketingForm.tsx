@@ -7,6 +7,7 @@ import { getStoreProfile } from '@/types'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import SectionHeader from '@/components/admin/SectionHeader'
 import { adminCard } from '@/lib/admin-ui'
+import { stripEmojis } from '@/lib/strip-emoji'
 
 interface Props {
   store: Store
@@ -46,7 +47,8 @@ export default function MarketingForm({ store }: Props) {
   }
 
   function updateBanner(id: string, field: keyof BannerMessage, value: string) {
-    setBannerMessages(prev => prev.map(m => (m.id === id ? { ...m, [field]: value } : m)))
+    const cleaned = field === 'title' || field === 'text' ? stripEmojis(value) : value
+    setBannerMessages(prev => prev.map(m => (m.id === id ? { ...m, [field]: cleaned } : m)))
   }
 
   function addCoupon() {
@@ -71,7 +73,8 @@ export default function MarketingForm({ store }: Props) {
   }
 
   function updateCoupon(id: string, patch: Partial<CouponRule>) {
-    setCouponRules(prev => prev.map(c => (c.id === id ? { ...c, ...patch } : c)))
+    const next = patch.code != null ? { ...patch, code: stripEmojis(patch.code).toUpperCase() } : patch
+    setCouponRules(prev => prev.map(c => (c.id === id ? { ...c, ...next } : c)))
   }
 
   async function handleSave() {

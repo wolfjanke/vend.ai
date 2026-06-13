@@ -8,6 +8,11 @@ import {
   getCategoryDisplayLabel,
   getSegmentLabel,
 } from '@/types'
+import {
+  inferCatalogMode,
+  buildCatalogPromptBlocks,
+  type CatalogMode,
+} from '@/lib/product-catalog'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
@@ -20,16 +25,36 @@ export const GEMINI_MODELS = {
   stockSearch:   'gemini-2.5-flash-lite',
 } as const
 
-function segmentInstructions(profile: StoreProfile): string {
+function segmentInstructions(profile: StoreProfile, catalogMode: CatalogMode): string {
   const { genderFocus, ageGroup } = profile
   const lines: string[] = []
+
+  if (catalogMode === 'beauty') {
+    if (ageGroup === 'kids') {
+      lines.push('Foco infantil: colônias e produtos para criança/bebê quando aplicável.')
+    } else if (ageGroup === 'all') {
+      lines.push('A loja atende várias idades: diferencie fragrâncias adultas e infantis.')
+    }
+    if (genderFocus === 'masculine') {
+      lines.push('Loja masculina: priorize fragrâncias masculinas quando a embalagem for ambígua.')
+    } else if (genderFocus === 'feminine') {
+      lines.push('Loja feminina: priorize fragrâncias femininas quando a embalagem for ambígua.')
+    } else if (genderFocus === 'unisex') {
+      lines.push('Loja unissex: fragrâncias neutras são comuns — não force feminino/masculino sem sinal no rótulo.')
+    } else {
+      lines.push('Loja mista: identifique masculino/feminino/unissex pelo rótulo e visual da embalagem.')
+    }
+    return lines.join('\n')
+  }
+
   if (ageGroup === 'kids') {
     lines.push('Público infantil: use vocabulário adequado (criança, bebê, tamanho infantil quando fizer sentido).')
   } else if (ageGroup === 'all') {
     lines.push('A loja atende várias idades: pode haver peças adultas e infantis; descreva claramente para quem é cada item.')
-  } else {
+  } else if (catalogMode === 'fashion') {
     lines.push('Foco em vestuário adulto.')
   }
+
   if (genderFocus === 'masculine') {
     lines.push('Público masculino: priorize categorias como camiseta, bermuda, calça, shorts, moletom, casaco; evite assumir que a peça é feminina.')
   } else if (genderFocus === 'feminine') {
@@ -39,8 +64,30 @@ function segmentInstructions(profile: StoreProfile): string {
   } else {
     lines.push('Loja mista: pode haver peças femininas e masculinas; identifique pelo corte e estilo na imagem.')
   }
+
+  if (catalogMode === 'mixed') {
+    lines.push('Esta loja também vende perfumaria/cosméticos: ao ver frasco ou embalagem de beleza, use regras de fragrância (rótulo, volume, cor do frasco) — não regras de corte de roupa.')
+  }
+
   return lines.join('\n')
 }
+
+const AUDIENCE_CONFIDENCE_SUFFIX = '- audienceConfidence: alta | media | baixa (quão certo você está do público)'
+
+const JSON_VARIANT_BLOCK = `  "variationKind": "color | volume | bottle | single | concentration",
+  "attributes": {
+    "brand": "marca se legível ou omitir",
+    "line": "linha se legível ou omitir",
+    "concentration": "EDT | EDP | Parfum | Colônia se visível ou omitir",
+    "volumeMl": número em ml se legível ou null
+  },
+  "variantes": [
+    {
+      "label": "cor, volume (50ml) ou frasco",
+      "kind": "color | volume | bottle | model",
+      "corHex": "#RRGGBB"
+    }
+  ]`
 
 const AUDIENCE_HINT_LABELS: Record<string, string> = {
   feminine:  'feminino',
@@ -63,15 +110,15 @@ function formatProductHintsBlock(
   if (mode === 'multi') {
     lines.push(`- Quantidade informada: ${count} produto(s) diferentes`)
     lines.push(`- Fotos enviadas: ${imageCount} (1 foto por produto, mesma ordem)`)
-    lines.push('- Não agrupe fotos diferentes como variações de cor do mesmo item')
+    lines.push('- Não agrupe fotos diferentes como variações do mesmo item')
   } else {
-    lines.push('- Quantidade: 1 produto (fotos extras = variações de cor)')
+    lines.push('- Quantidade: 1 produto (fotos extras = variações de cor ou volume/tamanho)')
   }
 
   const piece = hints.pieceType?.trim()
   if (piece) {
     const label = getCategoryDisplayLabel(piece, customCategories)
-    lines.push(`- Tipo de peça informado pelo lojista: ${piece} (${label})`)
+    lines.push(`- Tipo de produto informado pelo lojista: ${piece} (${label})`)
   }
   const aud = hints.audience?.trim()
   if (aud && AUDIENCE_HINT_LABELS[aud]) {
@@ -79,6 +126,15 @@ function formatProductHintsBlock(
   }
   const colors = hints.colorsNote?.trim()
   if (colors) lines.push(`- Cores informadas pelo lojista: ${colors}`)
+  const photoVar = hints.photoVariation
+  if (photoVar && photoVar !== 'unspecified') {
+    const labels: Record<string, string> = {
+      colors:         'cores diferentes do mesmo produto',
+      volumes:        'volumes/tamanhos de frasco diferentes (ex.: 50ml e 100ml)',
+      concentrations: 'concentrações diferentes (ex.: EDT vs EDP)',
+    }
+    lines.push(`- O que muda entre as fotos: ${labels[photoVar] ?? photoVar}`)
+  }
   const note = hints.freeText?.trim()
   if (note) lines.push(`- Observação do lojista: ${note}`)
   if (!lines.length) return ''
@@ -86,6 +142,14 @@ function formatProductHintsBlock(
 
 Dados informados pelo lojista (priorize sobre a imagem se houver conflito claro):
 ${lines.join('\n')}`
+}
+
+function buildAnalysisRulesBlock(blocks: ReturnType<typeof buildCatalogPromptBlocks>): string {
+  return `${blocks.namingRules}
+${blocks.descriptionRules}
+${blocks.variantRules}
+${blocks.audienceRules}
+${AUDIENCE_CONFIDENCE_SUFFIX}`
 }
 
 export function buildProductAnalysisPrompt(
@@ -102,10 +166,14 @@ export function buildProductAnalysisPrompt(
   const cats = allSlugs.join(' | ')
   const mode = hints?.mode ?? 'single'
   const hintsBlock = formatProductHintsBlock(hints, customCategories, imageCount)
+  const catalogMode = inferCatalogMode(hints, customCategories)
+  const blocks = buildCatalogPromptBlocks(catalogMode, imageCount, mode === 'multi')
+  const rulesBlock = buildAnalysisRulesBlock(blocks)
+  const segmentBlock = segmentInstructions(profile, catalogMode)
 
   if (mode === 'multi') {
     const n = hints?.productCount ?? imageCount
-    return `Você é um especialista em moda e vestuário. Analise as ${imageCount} imagem(ns) enviadas — cada uma é um PRODUTO DIFERENTE.
+    return `${blocks.expertIntro}
 Retorne JSON com exatamente ${n} item(ns) em "produtos" (ordem = ordem das imagens):
 
 {
@@ -115,51 +183,50 @@ Retorne JSON com exatamente ${n} item(ns) em "produtos" (ordem = ordem das image
       "nome": "nome comercial",
       "descricao": "2-3 frases",
       "categoria": "slug: ${cats}",
-      "variantes": [{ "cor": "nome da cor", "corHex": "#RRGGBB" }]
+      "audience": "feminine | masculine | unisex | kids",
+      "audienceConfidence": "alta | media | baixa",
+${JSON_VARIANT_BLOCK}
     }
   ]
 }
 
 Regras:
 - fotoIndice começa em 0 e segue a ordem das imagens (0, 1, 2…)
-- Cada produto tem UMA variante de cor (a cor principal daquela foto)
-- Não misture peças de fotos diferentes no mesmo produto
-- categoria: um slug da lista (${cats})
-- nome: curto e comercial (até ~6 palavras), extraído da foto — ex.: "Regata Preta Brasil", "Camiseta Oversized Estampada", "Camiseta Feminina Amarela". O lojista NÃO descreveu cada peça; você identifica modelo, cor e estilo pela imagem
-- descricao: 2 frases objetivas (tecido, corte, uso)
+- Cada produto tem UMA variante principal naquela foto
+- Não misture fotos diferentes no mesmo produto
+- categoria: um slug da lista (${cats}); use categoria customizada da loja para perfumes/beleza quando aplicável; "outro" só se nada encaixar
+${rulesBlock}
 
 Contexto da loja:
 ${getSegmentLabel(profile)}
 
 Instruções por segmento:
-${segmentInstructions(profile)}${hintsBlock}
+${segmentBlock}${hintsBlock}
 
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`
   }
 
-  return `Você é um especialista em moda e vestuário (loja de roupas em geral). Analise as imagens de produtos enviadas e retorne um JSON com:
+  return `${blocks.expertIntro}
+Retorne um JSON com:
 
 {
   "nome": "nome comercial do produto",
-  "descricao": "descrição de 2-3 frases sobre o produto (tecido, estilo, ocasião ou uso)",
+  "descricao": "descrição de 2-3 frases",
   "categoria": "exatamente um destes valores: ${cats}",
-  "variantes": [
-    {
-      "cor": "nome da cor em português",
-      "corHex": "#RRGGBB (cor aproximada)"
-    }
-  ]
+  "audience": "feminine | masculine | unisex | kids",
+  "audienceConfidence": "alta | media | baixa",
+${JSON_VARIANT_BLOCK}
 }
+
+O campo "categoria" deve ser um slug da lista acima (categorias extras da loja incluem perfumes etc.).
+Se houver múltiplas fotos do mesmo item (cores ou volumes diferentes), liste cada foto como variante com label e kind adequados; use variationKind coerente.
+${rulesBlock}
 
 Contexto da loja:
 ${getSegmentLabel(profile)}
 
 Instruções por segmento:
-${segmentInstructions(profile)}
-
-Se houver múltiplas fotos com cores diferentes, liste cada cor como uma variante separada.
-O campo "categoria" deve ser obrigatoriamente um dos slugs listados acima (use "outro" se nenhum encaixar bem). Os slugs extras após os padrões são categorias da própria loja — prefira o mais adequado à imagem.
-O campo "nome" deve ser comercial e curto, inferido da foto (modelo + cor + detalhe marcante quando houver).${hintsBlock}
+${segmentBlock}${hintsBlock}
 
 Retorne APENAS o JSON, sem markdown, sem explicação extra.`
 }

@@ -40,8 +40,8 @@ function formatCurrency(v: number) {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  CHECKOUT: '🌐 Site',
-  PDV:      '🛒 PDV',
+  CHECKOUT: 'Site',
+  PDV:      'PDV',
 }
 
 const SPLIT_LABELS: Record<string, { label: string; cls: string }> = {

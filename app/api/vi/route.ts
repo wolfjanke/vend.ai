@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const storeRows = await sql`
       SELECT
         id, plan, whatsapp, name, slug, settings_json,
-        assistant_name, assistant_welcome_message, assistant_tone
+        assistant_name, assistant_welcome_message, assistant_tone, assistant_gender
       FROM stores
       WHERE slug = ${slug}
       LIMIT 1
@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
         paymentMethods:  settings.pagamentoInfo,
         deliveryInfo:    settings.freteInfo,
         assistantTone:   (store.assistant_tone as AssistantTone) ?? 'friendly',
+        assistantGender: (store.assistant_gender as import('@/lib/assistant-gender').AssistantGender) ?? 'feminine',
       },
       dbProducts,
       settings,

@@ -4,7 +4,15 @@ import { sql }           from '@/lib/db'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getSession } from '@/lib/auth'
 import type { OrderStatus, StoreSettings, CustomCategory } from '@/types'
+import {
+  canRestoreStockOnCancel,
+  isQuoteOrder,
+  orderItemsToCartItems,
+} from '@/lib/orders'
+import { incrementStockForOrder } from '@/lib/order-pricing'
 import { PRODUCT_CATEGORY_SLUGS } from '@/types'
+import { stripEmojis } from '@/lib/strip-emoji'
+import { normalizeCategoryEmoji } from '@/lib/category-nav'
 
 function slugifyLabel(label: string): string {
   const base = label
@@ -36,13 +44,14 @@ async function revalidateStorePaths(storeId: string) {
     revalidateTag(`store-${slug}`)
     revalidatePath(`/${slug}`)
     revalidatePath(`/${slug}`, 'layout')
+    revalidatePath(`/${slug}/categoria`, 'layout')
   }
 }
 
-export async function addCustomCategory(label: string): Promise<CustomCategory> {
+export async function addCustomCategory(label: string, emoji?: string): Promise<CustomCategory> {
   const session = await getSession()
   if (!session?.storeId) throw new Error('Não autorizado')
-  const trimmed = String(label ?? '').trim()
+  const trimmed = stripEmojis(String(label ?? '')).trim()
   if (!trimmed) throw new Error('Digite o nome da categoria')
   if (trimmed.length > 80) throw new Error('Nome muito longo (máx. 80 caracteres)')
 
@@ -62,7 +71,11 @@ export async function addCustomCategory(label: string): Promise<CustomCategory> 
   const taken = new Set<string>([...PRODUCT_CATEGORY_SLUGS, ...list.map(c => c.value)])
   const value = uniqueSlug(base, taken)
 
-  const added: CustomCategory = { value, label: trimmed }
+  const added: CustomCategory = {
+    value,
+    label: trimmed,
+    ...(normalizeCategoryEmoji(emoji ?? '') ? { emoji: normalizeCategoryEmoji(emoji ?? '') } : {}),
+  }
   list.push(added)
   const merged: StoreSettings = { ...current, customCategories: list }
 
@@ -95,9 +108,96 @@ export async function removeCustomCategory(value: string) {
   await revalidateStorePaths(session.storeId)
 }
 
+export async function updateCustomCategory(
+  value: string,
+  patch: { emoji?: string | null; imageUrl?: string | null },
+): Promise<CustomCategory> {
+  const session = await getSession()
+  if (!session?.storeId) throw new Error('Não autorizado')
+  const v = String(value ?? '').trim()
+  if (!v) throw new Error('Categoria inválida')
+
+  const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
+  const current = (storeRows[0]?.settings_json as StoreSettings | null) ?? {}
+  const list: CustomCategory[] = Array.isArray(current.customCategories) ? [...current.customCategories] : []
+  const idx = list.findIndex(c => c.value === v)
+  if (idx < 0) throw new Error('Categoria não encontrada')
+
+  const prev = list[idx]
+  const next: CustomCategory = { ...prev }
+
+  if ('emoji' in patch) {
+    const normalized = patch.emoji ? normalizeCategoryEmoji(patch.emoji) : undefined
+    if (patch.emoji && !normalized) throw new Error('Use um único emoji válido.')
+    if (normalized) next.emoji = normalized
+    else delete next.emoji
+  }
+
+  if ('imageUrl' in patch) {
+    const url = patch.imageUrl?.trim()
+    if (url) next.imageUrl = url
+    else delete next.imageUrl
+  }
+
+  list[idx] = next
+  const merged: StoreSettings = { ...current, customCategories: list }
+
+  await sql`
+    UPDATE stores SET settings_json = ${JSON.stringify(merged)}::jsonb
+    WHERE id = ${session.storeId}
+  `
+  await revalidateStorePaths(session.storeId)
+  return next
+}
+
+export async function updateCategoryNavStyle(style: 'pills' | 'circles'): Promise<void> {
+  const session = await getSession()
+  if (!session?.storeId) throw new Error('Não autorizado')
+  if (style !== 'pills' && style !== 'circles') throw new Error('Estilo inválido')
+
+  const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
+  const current = (storeRows[0]?.settings_json as StoreSettings | null) ?? {}
+  const merged: StoreSettings = { ...current, categoryNavStyle: style }
+
+  await sql`
+    UPDATE stores SET settings_json = ${JSON.stringify(merged)}::jsonb
+    WHERE id = ${session.storeId}
+  `
+  await revalidateStorePaths(session.storeId)
+}
+
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   const session = await getSession()
   if (!session?.storeId) throw new Error('Não autorizado')
+
+  const existing = await sql`
+    SELECT status, payment_status, payment_source, items_json
+    FROM orders
+    WHERE id = ${orderId} AND store_id = ${session.storeId}
+    LIMIT 1
+  `
+  const order = existing[0] as {
+    status: OrderStatus
+    payment_status: string | null
+    payment_source: string | null
+    items_json: unknown
+  } | undefined
+  if (!order) throw new Error('Pedido não encontrado')
+
+  if (status === 'CONFIRMADO' && isQuoteOrder({
+    status: order.status,
+    payment_status: order.payment_status as never,
+    payment_source: order.payment_source as never,
+  })) {
+    throw new Error('Use "Pagamento confirmado" para fechar orçamentos do WhatsApp.')
+  }
+
+  if (status === 'CANCELADO' && canRestoreStockOnCancel(order.status, order.payment_status as never)) {
+    const items = orderItemsToCartItems((order.items_json ?? []) as never)
+    if (items.length > 0) {
+      await incrementStockForOrder(session.storeId, items)
+    }
+  }
 
   const rows = await sql`
     UPDATE orders SET status = ${status}::order_status

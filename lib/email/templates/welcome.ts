@@ -26,7 +26,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#1A1A1A;">
-      Bem-vindo ao vend.ai, ${ownerName}! 🎉
+      Bem-vindo ao vend.ai, ${ownerName}!
     </h1>
     <p style="margin:0 0 24px;font-size:15px;color:#666666;">
       Sua loja <strong>${storeName}</strong> está no ar e pronta para vender.
@@ -72,7 +72,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
       <tr>
         <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;">
-          <span style="font-size:18px;">📸</span>
+          <span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#7B6EFF;color:#FFFFFF;font-size:12px;font-weight:700;text-align:center;line-height:22px;">1</span>
           <span style="font-size:13px;color:#333333;margin-left:8px;">
             Cadastre seus produtos — a IA preenche nome e descrição pela foto
           </span>
@@ -80,7 +80,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
       </tr>
       <tr>
         <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;">
-          <span style="font-size:18px;">🔗</span>
+          <span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#7B6EFF;color:#FFFFFF;font-size:12px;font-weight:700;text-align:center;line-height:22px;">2</span>
           <span style="font-size:13px;color:#333333;margin-left:8px;">
             Compartilhe o link da sua loja no Instagram e WhatsApp
           </span>
@@ -88,7 +88,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
       </tr>
       <tr>
         <td style="padding:8px 0;">
-          <span style="font-size:18px;">💬</span>
+          <span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#7B6EFF;color:#FFFFFF;font-size:12px;font-weight:700;text-align:center;line-height:22px;">3</span>
           <span style="font-size:13px;color:#333333;margin-left:8px;">
             Receba pedidos organizados direto no seu WhatsApp
           </span>
@@ -98,7 +98,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
 
     <div style="background:#FFF8E1;border-left:4px solid #FFB800;border-radius:0 8px 8px 0;padding:16px;margin-bottom:24px;">
       <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#7A5900;">
-        ⚠️ Importante — Nota Fiscal
+        Importante — Nota Fiscal
       </p>
       <p style="margin:0;font-size:12px;color:#7A5900;line-height:1.6;">
         O vend.ai não emite notas fiscais das suas vendas. Essa responsabilidade

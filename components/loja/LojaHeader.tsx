@@ -2,12 +2,21 @@
 
 import type { ThemeName } from '@/lib/themes'
 import { getStoreInitials } from '@/lib/store-brand'
+import { vitrineText } from '@/lib/strip-emoji'
+import {
+  logoFallbackClassName,
+  logoHeaderClassName,
+  logoHeaderShellClassName,
+  normalizeLogoSize,
+  type LogoSize,
+} from '@/lib/store-logo'
 
 type Props = {
   slug:        string
   storeName:   string
   whatsapp:    string
   logoUrl:     string | null
+  logoSize?:   LogoSize
   tagline?:    string | null
   themeName:   ThemeName
   cartQty:     number
@@ -19,26 +28,30 @@ export default function LojaHeader({
   storeName,
   whatsapp,
   logoUrl,
+  logoSize = 'md',
   tagline,
   themeName,
   cartQty,
   onOpenCart,
 }: Props) {
   const letterSpacing = themeName === 'street' ? '2px' : '-0.3px'
+  const displayName = vitrineText(storeName)
+  const displayTagline = tagline?.trim() ? vitrineText(tagline) : null
+  const size = normalizeLogoSize(logoSize)
 
   return (
-    <header className="loja-header sticky top-0 z-50 h-16 px-4 md:px-6 animate-slide-down">
+    <header className={`loja-header sticky top-0 z-50 px-4 md:px-6 animate-slide-down ${logoHeaderShellClassName(size)}`}>
       <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-3 min-w-0">
         <a href={`/${slug}`} className="flex items-center gap-3 min-w-0 min-h-[44px]">
           {logoUrl ? (
             <img
               src={logoUrl}
               alt={storeName}
-              className="h-11 w-auto max-w-[120px] shrink-0 rounded-lg object-contain"
+              className={logoHeaderClassName(size)}
             />
           ) : (
             <div
-              className="w-11 h-11 shrink-0 rounded-[10px] flex items-center justify-center text-sm font-bold text-white"
+              className={logoFallbackClassName(size)}
               style={{ background: 'var(--theme-vi-avatar)' }}
               aria-hidden
             >
@@ -50,11 +63,11 @@ export default function LojaHeader({
               className="loja-brand-name block text-lg sm:text-xl truncate"
               style={{ letterSpacing }}
             >
-              {storeName}
+              {displayName}
             </span>
-            {tagline?.trim() && (
+            {displayTagline && (
               <span className="block text-[11px] text-muted truncate max-w-[200px] sm:max-w-none">
-                {tagline.trim()}
+                {displayTagline}
               </span>
             )}
           </div>

@@ -35,7 +35,7 @@ export const getStorePublicRow = cache(async (slug: string): Promise<StorePublic
       cep, logradouro, numero, complemento, bairro, cidade, uf,
       theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
       theme_background, theme_shimmer, theme_logo_url,
-      plan, assistant_name, assistant_welcome_message, assistant_tone
+      plan, assistant_name, assistant_welcome_message, assistant_tone, assistant_gender
     FROM stores
     WHERE slug = ${slug}
     LIMIT 1
@@ -52,12 +52,14 @@ export const getStoreNameBySlug = cache(async (slug: string): Promise<string | n
 
 function slimVariantForVi(v: ProductVariant): ProductVariant {
   return {
-    id:          v.id,
-    color:       v.color,
-    colorHex:    v.colorHex,
-    variantType: v.variantType,
-    stock:       v.stock ?? {},
-    photos:      [],
+    id:               v.id,
+    color:            v.color,
+    colorHex:         v.colorHex,
+    variantType:      v.variantType,
+    stock:            v.stock ?? {},
+    stockPrices:      v.stockPrices,
+    stockPromoPrices: v.stockPromoPrices,
+    photos:           [],
   }
 }
 
@@ -74,8 +76,8 @@ function fetchActiveProducts(storeId: string): Promise<Product[]> {
   return withQueryTimeout(
     sql`
     SELECT
-      id, store_id, name, slug, description, category, price, promo_price,
-      variants_json, active, created_at
+      id, store_id, name, slug, description, category, audience, price, promo_price,
+      variants_json, catalog_axes, active, created_at
     FROM products
     WHERE store_id = ${storeId} AND active = true
     ORDER BY created_at DESC

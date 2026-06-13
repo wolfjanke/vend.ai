@@ -39,9 +39,11 @@ create table if not exists products (
   name          text not null,
   description   text not null default '',
   category      text not null default 'outro',
+  audience      text check (audience is null or audience in ('feminine', 'masculine', 'unisex', 'kids')),
   price         numeric(10, 2) not null check (price >= 0),
   promo_price   numeric(10, 2) check (promo_price is null or promo_price >= 0),
   variants_json jsonb not null default '[]'::jsonb,
+  catalog_axes  jsonb,
   active        boolean not null default true,
   created_at    timestamptz not null default now()
 );
@@ -49,6 +51,7 @@ create table if not exists products (
 create index if not exists products_store_id_idx  on products(store_id);
 create index if not exists products_active_idx    on products(store_id, active);
 create index if not exists products_category_idx  on products(store_id, category);
+create index if not exists products_audience_idx  on products(store_id, audience);
 
 -- ─── Tabela: orders ───────────────────────────────────────────────────────────
 create table if not exists orders (

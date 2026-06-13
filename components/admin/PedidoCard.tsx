@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { Loader2 } from 'lucide-react'
-import type { DeliveryAddress, Order, OrderStatus } from '@/types'
+import type { DeliveryAddress, Order, OrderItem, OrderStatus } from '@/types'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types'
 import { updateOrderStatus } from '@/app/admin/actions'
+import { isQuoteOrder, quoteStatusLabel } from '@/lib/orders'
+import PedidoQuoteEditor from '@/components/admin/PedidoQuoteEditor'
 
 interface Props {
   order: Order
@@ -45,12 +47,28 @@ function parseDelivery(raw: Order['delivery_address']): DeliveryAddress | null {
   }
 }
 
+function fmtMoney(v: number) {
+  return `R$${v.toFixed(2).replace('.', ',')}`
+}
+
 export default function PedidoCard({ order }: Props) {
   const [status, setStatus] = useState<OrderStatus>(order.status)
+  const [items, setItems] = useState<OrderItem[]>(order.items_json ?? [])
+  const [notes, setNotes] = useState(order.notes ?? '')
+  const [total, setTotal] = useState(Number(order.total_final ?? order.total))
+  const [subtotal, setSubtotal] = useState(Number(order.subtotal ?? order.total))
   const [pending, startTransition] = useTransition()
   const [pendingKey, setPendingKey] = useState<string | null>(null)
   const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const delivery = parseDelivery(order.delivery_address)
+
+  const quote = isQuoteOrder({ ...order, status })
+  const statusLabel = quoteStatusLabel({ ...order, status }, ORDER_STATUS_LABELS[status])
+  const statusColor = quote
+    ? 'text-warm bg-warm/10 border-warm/30'
+    : ORDER_STATUS_COLORS[status]
 
   const dc = Number(order.discount_coupon ?? 0)
   const dp = Number(order.discount_pix ?? 0)
@@ -60,23 +78,61 @@ export default function PedidoCard({ order }: Props) {
   function handleAction(nextStatus: OrderStatus, key: string) {
     startTransition(async () => {
       setPendingKey(key)
-      await updateOrderStatus(order.id, nextStatus)
-      setStatus(nextStatus)
-      setPendingKey(null)
-      setCancelConfirm(false)
+      setActionError(null)
+      try {
+        await updateOrderStatus(order.id, nextStatus)
+        setStatus(nextStatus)
+        setCancelConfirm(false)
+      } catch (e) {
+        setActionError(e instanceof Error ? e.message : 'Não foi possível atualizar o pedido.')
+      } finally {
+        setPendingKey(null)
+      }
     })
   }
 
-  const actions = NEXT_ACTIONS[status]
+  async function confirmQuotePayment() {
+    setPendingKey('confirm_payment')
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/admin/pedidos/${order.id}`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'confirm_payment' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setActionError(data.error ?? 'Não foi possível confirmar o pagamento.')
+        return
+      }
+      setStatus('CONFIRMADO')
+    } catch {
+      setActionError('Erro de conexão.')
+    } finally {
+      setPendingKey(null)
+    }
+  }
+
+  const actions = quote
+    ? [
+        { key: 'confirm_payment', label: 'Pagamento confirmado', cls: 'text-accent border-accent/40 hover:bg-accent/10' },
+        { key: 'edit', label: 'Editar orçamento', cls: 'text-primary border-primary/40 hover:bg-primary/20' },
+        { key: 'cancel', label: 'Descartar', cls: 'text-warm border-warm/40 hover:bg-warm/10', destructive: true },
+      ]
+    : NEXT_ACTIONS[status].map(a => ({ ...a, key: a.status }))
 
   return (
     <div className="bg-surface border border-border rounded-2xl p-5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all">
-      {/* Top */}
       <div className="flex items-start justify-between mb-3 gap-2 flex-wrap">
         <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-1 rounded-lg shrink-0">
           #{order.order_number}
         </span>
         <div className="flex items-center gap-1.5 flex-wrap">
+          {(order.payment_source === 'WHATSAPP' || quote) && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border border-accent/30 text-accent bg-accent/10">
+              WhatsApp
+            </span>
+          )}
           {order.payment_source === 'PDV' && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border border-yellow-400/30 text-yellow-400 bg-yellow-400/10">
               PDV
@@ -87,98 +143,119 @@ export default function PedidoCard({ order }: Props) {
               Site
             </span>
           )}
-          <span
-            className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border shrink-0 ${ORDER_STATUS_COLORS[status]}`}
-          >
-            {ORDER_STATUS_LABELS[status]}
+          <span className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border shrink-0 ${statusColor}`}>
+            {statusLabel}
           </span>
         </div>
       </div>
 
-      {/* Customer */}
-      <div className="mb-1 font-semibold text-sm break-words">{order.customer_name}</div>
-      <a
-        href={`https://wa.me/${order.customer_whatsapp}`}
-        target="_blank"
-        rel="noreferrer"
-        className="text-accent text-xs mb-3 block hover:underline break-all"
-      >
-        {order.customer_whatsapp}
-      </a>
+      {quote && !editing && (
+        <p className="text-[11px] text-muted mb-3 leading-relaxed">
+          Intenção de compra pelo WhatsApp — o estoque só baixa quando você confirmar o pagamento.
+        </p>
+      )}
 
-      {/* Items */}
-      <div className="text-muted text-xs mb-3 leading-relaxed space-y-2">
-        {order.items_json.map((item, i) => (
-          <div key={i} className="flex gap-2 items-start min-w-0">
-            {item.photo ? (
-              <img
-                src={item.photo}
-                alt=""
-                className="w-8 h-8 rounded-lg object-cover shrink-0 bg-surface2"
-              />
-            ) : (
-              <span className="w-8 h-8 rounded-lg bg-surface2 shrink-0" aria-hidden />
+      {editing ? (
+        <PedidoQuoteEditor
+          orderId={order.id}
+          initialItems={items}
+          initialNotes={notes}
+          onSaved={(nextItems, nextNotes, nextTotal) => {
+            setItems(nextItems)
+            setNotes(nextNotes)
+            setTotal(nextTotal)
+            setSubtotal(nextTotal)
+            setEditing(false)
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <>
+          <div className="mb-1 font-semibold text-sm break-words">{order.customer_name}</div>
+          <a
+            href={`https://wa.me/${order.customer_whatsapp}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent text-xs mb-1 block hover:underline break-all"
+          >
+            {order.customer_whatsapp}
+          </a>
+          {order.customer_cpf_enc && (
+            <p className="text-[10px] text-muted mb-3">CPF informado no orçamento</p>
+          )}
+
+          <div className="text-muted text-xs mb-3 leading-relaxed space-y-2">
+            {items.map((item, i) => (
+              <div key={i} className="flex gap-2 items-start min-w-0">
+                {item.photo ? (
+                  <img src={item.photo} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0 bg-surface2" />
+                ) : (
+                  <span className="w-8 h-8 rounded-lg bg-surface2 shrink-0" aria-hidden />
+                )}
+                <div className="min-w-0">
+                  • {item.name}
+                  {item.color ? ` — ${item.color}` : ''} — {item.size} ({item.qty}x) — {fmtMoney(item.price)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {delivery && (
+            <div className="text-muted text-xs mb-3 leading-relaxed break-words">
+              {delivery.logradouro}, {delivery.numero}
+              {delivery.complemento ? ` — ${delivery.complemento}` : ''}
+              <br />
+              {delivery.bairro} — {delivery.cidade}/{delivery.uf} · CEP {delivery.cep}
+            </div>
+          )}
+
+          {notes.trim() && (
+            <div className="text-muted text-xs mb-3 italic break-words">Obs: {notes.trim()}</div>
+          )}
+
+          <div className="text-xs text-muted mb-3 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span>Subtotal</span>
+              <span className="tabular-nums">{fmtMoney(subtotal)}</span>
+            </div>
+            {showCouponLine && (
+              <div className="flex items-center justify-between gap-2">
+                <span>Desconto cupom</span>
+                <span className="tabular-nums">- {fmtMoney(dc)}</span>
+              </div>
             )}
-            <div className="min-w-0">
-              • {item.name}
-              {item.color ? ` — ${item.color}` : ''} — {item.size} ({item.qty}x) — R$
-              {item.price.toFixed(2).replace('.', ',')}
+            {showPixLine && (
+              <div className="flex items-center justify-between gap-2">
+                <span>Desconto PIX</span>
+                <span className="tabular-nums">- {fmtMoney(dp)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-foreground gap-2">
+              <span>Pagamento</span>
+              <span>{order.payment_method === 'PIX' ? 'PIX' : 'Outro'}</span>
+            </div>
+            <div className="flex items-center justify-between text-foreground gap-2 min-w-0">
+              <span className="shrink-0">Cupom</span>
+              <span className="break-all text-right">{order.coupon_code_applied ?? '—'}</span>
             </div>
           </div>
-        ))}
-      </div>
 
-      {delivery && (
-        <div className="text-muted text-xs mb-3 leading-relaxed break-words">
-          {delivery.logradouro}, {delivery.numero}
-          {delivery.complemento ? ` — ${delivery.complemento}` : ''}
-          <br />
-          {delivery.bairro} — {delivery.cidade}/{delivery.uf} · CEP {delivery.cep}
-        </div>
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <span className="text-accent font-bold text-base tabular-nums">{fmtMoney(total)}</span>
+            <span className="text-muted text-[11px] shrink-0">{timeAgo(order.created_at)}</span>
+          </div>
+        </>
       )}
 
-      {order.notes?.trim() && (
-        <div className="text-muted text-xs mb-3 italic break-words">Obs: {order.notes.trim()}</div>
+      {actionError && (
+        <p className="text-xs text-warm mb-3 break-words">{actionError}</p>
       )}
-
-      <div className="text-xs text-muted mb-3 space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <span>Subtotal</span>
-          <span className="tabular-nums">R${Number(order.subtotal ?? order.total).toFixed(2).replace('.', ',')}</span>
-        </div>
-        {showCouponLine && (
-          <div className="flex items-center justify-between gap-2">
-            <span>Desconto cupom</span>
-            <span className="tabular-nums">- R${dc.toFixed(2).replace('.', ',')}</span>
-          </div>
-        )}
-        {showPixLine && (
-          <div className="flex items-center justify-between gap-2">
-            <span>Desconto PIX</span>
-            <span className="tabular-nums">- R${dp.toFixed(2).replace('.', ',')}</span>
-          </div>
-        )}
-        <div className="flex items-center justify-between text-foreground gap-2">
-          <span>Pagamento</span>
-          <span>{order.payment_method === 'PIX' ? 'PIX' : 'Outro'}</span>
-        </div>
-        <div className="flex items-center justify-between text-foreground gap-2 min-w-0">
-          <span className="shrink-0">Cupom</span>
-          <span className="break-all text-right">{order.coupon_code_applied ?? '—'}</span>
-        </div>
-      </div>
-
-      {/* Bottom */}
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <span className="text-accent font-bold text-base tabular-nums">
-          R${Number(order.total_final ?? order.total).toFixed(2).replace('.', ',')}
-        </span>
-        <span className="text-muted text-[11px] shrink-0">{timeAgo(order.created_at)}</span>
-      </div>
 
       {cancelConfirm && (
         <div className="mb-3 p-3 rounded-xl border border-warm/40 bg-warm/5 text-sm">
-          <p className="text-foreground font-medium mb-2">Tem certeza? Esta ação não pode ser desfeita.</p>
+          <p className="text-foreground font-medium mb-2">
+            {quote ? 'Descartar este orçamento?' : 'Tem certeza? Esta ação não pode ser desfeita.'}
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -194,31 +271,38 @@ export default function PedidoCard({ order }: Props) {
               className="px-3 py-2 min-h-[40px] rounded-lg border border-warm text-warm text-xs font-semibold hover:bg-warm/10 disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               {pending && pendingKey === 'cancel' ? <Loader2 size={14} className="animate-spin" /> : null}
-              Sim, cancelar
+              {quote ? 'Sim, descartar' : 'Sim, cancelar'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Actions */}
-      {actions.length > 0 && !cancelConfirm && (
+      {actions.length > 0 && !cancelConfirm && !editing && (
         <div className="flex gap-2 flex-wrap">
           {actions.map(action => (
             <button
-              key={action.status}
+              key={action.key}
               onClick={() => {
                 if (action.destructive) {
                   setCancelConfirm(true)
                   return
                 }
-                handleAction(action.status, action.status)
+                if (action.key === 'edit') {
+                  setEditing(true)
+                  return
+                }
+                if (action.key === 'confirm_payment') {
+                  void confirmQuotePayment()
+                  return
+                }
+                if ('status' in action && action.status) {
+                  handleAction(action.status, action.key)
+                }
               }}
-              disabled={pending}
+              disabled={pending || pendingKey === action.key}
               className={`px-3.5 py-2 min-h-[40px] rounded-lg border text-xs font-semibold transition-all disabled:opacity-50 inline-flex items-center justify-center gap-1.5 ${action.cls}`}
             >
-              {pending && pendingKey === action.status && !action.destructive ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : null}
+              {pendingKey === action.key ? <Loader2 size={14} className="animate-spin" /> : null}
               {action.label}
             </button>
           ))}

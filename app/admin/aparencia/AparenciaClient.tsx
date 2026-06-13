@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { Camera, Image } from 'lucide-react'
 import {
   THEMES,
   THEME_NAMES,
@@ -37,6 +38,7 @@ type Props = {
   products:       StorePreviewProduct[]
   assistantName:  string
   tagline?:       string | null
+  categoryNavStyle?: 'pills' | 'circles'
   initial:        Initial
 }
 
@@ -175,6 +177,7 @@ export default function AparenciaClient({
   products,
   assistantName,
   tagline,
+  categoryNavStyle = 'pills',
   initial,
 }: Props) {
   const available  = getAvailableThemes(plan)
@@ -258,9 +261,10 @@ export default function AparenciaClient({
     products,
     assistantName,
     tagline,
+    categoryNavStyle,
   }), [
     themeName, previewPrimary, previewAccent, background, shimmer, canShimmer,
-    storeName, previewLogo, products, assistantName, tagline,
+    storeName, previewLogo, products, assistantName, tagline, categoryNavStyle,
   ])
 
   const selectTheme = useCallback((name: ThemeName) => {
@@ -504,7 +508,7 @@ export default function AparenciaClient({
               onKeyDown={e => e.key === 'Enter' && fileInputRef.current?.click()}
               className="flex items-center gap-3 p-3 bg-surface2 border border-dashed border-border rounded-xl cursor-pointer hover:border-primary/60 transition-colors min-h-[44px]"
             >
-              <span className="text-2xl shrink-0">📷</span>
+              <Camera size={24} className="shrink-0 text-muted" aria-hidden />
               <div className="min-w-0">
                 <div className="text-sm font-semibold truncate">
                   {fileName ?? 'Clique para escolher a logo'}
@@ -540,7 +544,7 @@ export default function AparenciaClient({
         ) : !canAnalyze ? (
           <div className={adminCard}>
             <div className="flex items-center gap-2 text-sm text-muted">
-              <span>📸</span>
+              <Image size={16} className="shrink-0" aria-hidden />
               <span>Upload de logo disponível nos planos pagos</span>
             </div>
           </div>

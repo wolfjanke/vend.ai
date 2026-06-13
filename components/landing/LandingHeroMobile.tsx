@@ -1,7 +1,14 @@
 'use client'
 
+import { Shirt } from 'lucide-react'
+
 /** Prévia compacta da vitrine no hero — visível só abaixo de `lg`. */
 export default function LandingHeroMobile() {
+  const cards = [
+    { name: 'Saia', price: 'R$109' },
+    { name: 'Camiseta', price: 'R$79' },
+  ]
+
   return (
     <div
       className="flex lg:hidden justify-center w-full min-w-0 mt-6 animate-fade-up"
@@ -17,12 +24,9 @@ export default function LandingHeroMobile() {
             <span className="text-[10px] text-muted truncate">Urban Mix</span>
           </div>
           <div className="grid grid-cols-2 gap-2 mb-3">
-            {[
-              ['👗', 'Saia', 'R$109'],
-              ['👕', 'Camiseta', 'R$79'],
-            ].map(([emoji, name, price]) => (
+            {cards.map(({ name, price }) => (
               <div key={name} className="bg-surface rounded-[10px] p-2 border border-border text-center min-w-0">
-                <div className="text-xl mb-0.5">{emoji}</div>
+                <Shirt size={20} className="text-muted mx-auto mb-0.5 shrink-0" aria-hidden />
                 <div className="text-[10px] text-foreground truncate">{name}</div>
                 <div className="text-accent text-[11px] font-bold tabular-nums">{price}</div>
               </div>

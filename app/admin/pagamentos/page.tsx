@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CreditCard } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
@@ -18,8 +19,9 @@ function EstadoGratis() {
   return (
     <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 max-w-2xl">
       <p className="text-xs font-bold tracking-wider uppercase text-primary mb-2">Checkout integrado</p>
-      <h2 className="font-syne font-bold text-lg sm:text-xl mb-3 break-words">
-        💳 Aceite cartão na sua loja
+      <h2 className="font-syne font-bold text-lg sm:text-xl mb-3 break-words flex items-center gap-2">
+        <CreditCard size={22} className="shrink-0 text-primary" aria-hidden />
+        Aceite cartão na sua loja
       </h2>
       <p className="text-sm text-muted leading-relaxed break-words mb-4">
         Seus clientes poderão pagar com cartão diretamente no site, em até 12x.

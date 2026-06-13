@@ -37,6 +37,7 @@ export default async function CategoriasPage() {
       <CategoriesManager
         customCategories={store.settings_json?.customCategories ?? []}
         productCounts={counts}
+        categoryNavStyle={store.settings_json?.categoryNavStyle ?? 'pills'}
       />
     </div>
   )

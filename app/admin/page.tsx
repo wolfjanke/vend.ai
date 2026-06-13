@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
           <input
             type="email"
             className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-            placeholder="📧 E-mail"
+            placeholder="Seu e-mail"
             value={email}
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
@@ -56,7 +56,7 @@ export default function AdminLoginPage() {
           <input
             type="password"
             className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-            placeholder="🔒 Senha"
+            placeholder="Sua senha"
             value={pass}
             onChange={e => setPass(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}

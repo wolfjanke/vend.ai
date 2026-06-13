@@ -15,7 +15,7 @@ export function upgradeEmailHtml(props: UpgradeEmailProps): string {
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#1A1A1A;">
-      Plano atualizado com sucesso! 🚀
+      Plano atualizado com sucesso!
     </h1>
     <p style="margin:0 0 24px;font-size:15px;color:#666666;">
       Olá, <strong>${ownerName}</strong>! Sua loja

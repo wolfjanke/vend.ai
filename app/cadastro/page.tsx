@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { z } from 'zod'
+import { Camera, LayoutDashboard, Store, CheckCircle2 } from 'lucide-react'
+import { stripEmojis } from '@/lib/strip-emoji'
 import MaskedInput from '@/components/ui/MaskedInput'
 import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
@@ -230,9 +232,9 @@ function CadastroPage() {
               <div>
                 <input
                   className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.name ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
-                  placeholder="👤 Seu nome completo"
+                  placeholder="Seu nome completo"
                   value={name}
-                  onChange={e => { setName(e.target.value); setFieldErr(p => { const n = { ...p }; delete n.name; return n }) }}
+                  onChange={e => { setName(stripEmojis(e.target.value)); setFieldErr(p => { const n = { ...p }; delete n.name; return n }) }}
                 />
                 {fieldErr.name && <p className="text-xs text-warm mt-1">{fieldErr.name}</p>}
               </div>
@@ -240,7 +242,7 @@ function CadastroPage() {
                 <input
                   type="email"
                   className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.email ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
-                  placeholder="📧 Seu e-mail"
+                  placeholder="Seu e-mail"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setFieldErr(p => { const n = { ...p }; delete n.email; return n }) }}
                 />
@@ -250,7 +252,7 @@ function CadastroPage() {
                 <input
                   type="password"
                   className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.pass ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
-                  placeholder="🔒 Crie uma senha"
+                  placeholder="Crie uma senha"
                   value={pass}
                   onChange={e => { setPass(e.target.value); setFieldErr(p => { const n = { ...p }; delete n.pass; return n }) }}
                   onKeyDown={e => e.key === 'Enter' && handleStep1()}
@@ -292,9 +294,9 @@ function CadastroPage() {
               <div>
                 <input
                   className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.storeName ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
-                  placeholder="🏪 Nome da sua loja"
+                  placeholder="Nome da sua loja"
                   value={storeName}
-                  onChange={e => { setStoreName(e.target.value); setSlug(slugify(e.target.value) || 'sua-loja'); setFieldErr(p => { const n = { ...p }; delete n.storeName; return n }) }}
+                  onChange={e => { setStoreName(stripEmojis(e.target.value)); setSlug(slugify(e.target.value) || 'sua-loja'); setFieldErr(p => { const n = { ...p }; delete n.storeName; return n }) }}
                 />
                 {fieldErr.storeName && <p className="text-xs text-warm mt-1">{fieldErr.storeName}</p>}
               </div>
@@ -311,7 +313,7 @@ function CadastroPage() {
                 <MaskedInput
                   mask="phone"
                   className={`w-full min-h-[44px] px-4 py-3.5 bg-surface2 border rounded-[14px] text-foreground text-sm outline-none transition-all placeholder:text-muted ${fieldErr.whatsapp ? 'border-warm' : 'border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)]'}`}
-                  placeholder="📱 WhatsApp (11) 99999-9999"
+                  placeholder="WhatsApp (11) 99999-9999"
                   value={wpp}
                   onChange={v => { setWpp(v); setFieldErr(p => { const n = { ...p }; delete n.whatsapp; return n }) }}
                   autoComplete="tel"
@@ -391,7 +393,7 @@ function CadastroPage() {
 
         {step === 3 && (
           <div>
-            <div className="text-center text-6xl mb-4 animate-bounce2">🎉</div>
+            <CheckCircle2 size={56} className="mx-auto text-accent mb-4 animate-bounce2" aria-hidden />
             <h2 className="font-syne font-extrabold text-xl sm:text-2xl mb-1 text-center">Sua loja está no ar!</h2>
             <p className="text-sm text-muted text-center mb-5">Tudo pronto para começar a vender</p>
             <div className="flex flex-col gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl mb-5 min-w-0 overflow-hidden">
@@ -406,16 +408,16 @@ function CadastroPage() {
             </div>
             <div className="flex flex-col gap-2">
               {[
-                { icon: '📸', title: 'Cadastrar primeiro produto', sub: 'Tire uma foto e a IA faz o resto',    href: '/admin/produtos/novo' },
-                { icon: '📊', title: 'Ir para o painel',           sub: 'Ver pedidos e gerenciar sua loja',    href: '/admin/dashboard' },
-                { icon: '🛍️', title: 'Ver minha loja',             sub: 'Como seus clientes vão ver',          href: `/${finalSlug}` },
+                { Icon: Camera, title: 'Cadastrar primeiro produto', sub: 'Tire uma foto e a IA faz o resto',    href: '/admin/produtos/novo' },
+                { Icon: LayoutDashboard, title: 'Ir para o painel',           sub: 'Ver pedidos e gerenciar sua loja',    href: '/admin/dashboard' },
+                { Icon: Store, title: 'Ver minha loja',             sub: 'Como seus clientes vão ver',          href: `/${finalSlug}` },
               ].map(item => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className="flex items-center gap-3 p-3.5 bg-surface2 border border-border rounded-[14px] hover:border-primary transition-all group min-h-[44px]"
                 >
-                  <span className="text-xl shrink-0">{item.icon}</span>
+                  <item.Icon size={22} className="text-primary shrink-0" aria-hidden />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold">{item.title}</div>
                     <div className="text-xs text-muted break-words">{item.sub}</div>

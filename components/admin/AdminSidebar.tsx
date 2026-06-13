@@ -37,7 +37,7 @@ const navItems: NavItem[] = [
   { href: '/admin/financeiro',   label: 'Financeiro', Icon: BarChart2,       match: 'prefix' },
   { href: '/admin/pdv',          label: 'PDV',        Icon: ShoppingCart,    match: 'prefix', planOnly: 'loja' },
   { href: '/admin/plano',        label: 'Plano',      Icon: Crown,           match: 'exact' },
-  { href: '/admin/configuracoes', label: 'Config',   Icon: Settings,        match: 'exact' },
+  { href: '/admin/configuracoes', label: 'Configurações', Icon: Settings, match: 'exact' },
 ]
 
 function isActive(pathname: string, href: string, match: 'exact' | 'prefix') {

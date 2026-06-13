@@ -93,18 +93,24 @@ export interface StoreSettings {
   viDailyLimit?: number | null
   /** Categorias extras da loja (slug + rótulo exibido na vitrine e no admin). */
   customCategories?: CustomCategory[]
+  /** Estilo da barra de categorias na vitrine. */
+  categoryNavStyle?: 'pills' | 'circles'
+  /** Tamanho da logo no header da vitrine: sm (P), md (M), lg (G). */
+  logoSize?: 'sm' | 'md' | 'lg'
+}
+
+/** Categoria customizada por loja (valor = slug estável no produto). */
+export interface CustomCategory {
+  value:     string
+  label:     string
+  emoji?:    string
+  imageUrl?: string | null
 }
 
 export type CheckoutMode =
   | 'whatsapp_only'
   | 'whatsapp_and_checkout'
   | 'checkout_only'
-
-/** Categoria customizada por loja (valor = slug estável no produto). */
-export interface CustomCategory {
-  value: string
-  label: string
-}
 
 export type CheckoutChannel = 'site' | 'whatsapp'
 export type CheckoutPaymentMethod = 'PIX' | 'CARTAO' | 'DINHEIRO' | 'OUTRO'
@@ -214,9 +220,29 @@ export interface Store extends StoreAddress {
   assistant_name?:            string
   assistant_welcome_message?: string | null
   assistant_tone?:              'friendly' | 'formal' | 'playful' | 'professional'
+  assistant_gender?:            'feminine' | 'masculine' | 'neutral'
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────────
+export type PrimaryAxis = 'color' | 'model' | 'none'
+export type StockAxis = 'clothing' | 'volume' | 'unique'
+
+export interface CatalogAxes {
+  primaryAxis: PrimaryAxis
+  stockAxis:   StockAxis
+}
+
+export type VariationKind = 'color' | 'volume' | 'bottle' | 'single' | 'concentration'
+
+export type PhotoVariationHint = 'colors' | 'volumes' | 'concentrations' | 'unspecified'
+
+export interface ProductAnalysisAttributes {
+  brand?:          string
+  line?:           string
+  concentration?:  string
+  volumeMl?:       number | null
+}
+
 export interface ProductVariant {
   id:          string
   color:       string
@@ -224,6 +250,27 @@ export interface ProductVariant {
   photos:      string[]
   stock:       Record<string, number>
   variantType?: VariantType
+  /** Preço por chave de stock (ex.: 50ml). */
+  stockPrices?:      Record<string, number>
+  /** Promo opcional por chave de stock. */
+  stockPromoPrices?: Record<string, number>
+}
+
+/** Público-alvo de um produto (cadastro + vitrine). */
+export type ProductAudience = 'feminine' | 'masculine' | 'unisex' | 'kids'
+
+export type ProductAudienceConfidence = 'alta' | 'media' | 'baixa'
+
+export const PRODUCT_AUDIENCE_OPTIONS: Array<{ value: ProductAudience; label: string }> = [
+  { value: 'feminine',  label: 'Feminino' },
+  { value: 'masculine', label: 'Masculino' },
+  { value: 'unisex',    label: 'Unissex' },
+  { value: 'kids',      label: 'Infantil' },
+]
+
+export function getProductAudienceLabel(audience: ProductAudience | null | undefined): string {
+  if (!audience) return 'Não informado'
+  return PRODUCT_AUDIENCE_OPTIONS.find(o => o.value === audience)?.label ?? audience
 }
 
 export interface Product {
@@ -233,9 +280,11 @@ export interface Product {
   slug?:         string
   description:   string
   category:      string
+  audience?:     ProductAudience | null
   price:         number
   promo_price:   number | null
   variants_json: ProductVariant[]
+  catalog_axes?: CatalogAxes | null
   active:        boolean
   created_at:    string
 }
@@ -336,6 +385,7 @@ export interface StoreContext {
   name:             string
   assistantName?:   string
   welcomeMessage?:  string | null
+  assistantGender?: 'feminine' | 'masculine' | 'neutral'
   plan?:            PlanSlug
   freteInfo?:       string
   pagamentoInfo?:   string
@@ -363,12 +413,14 @@ export type ProductAudienceHint = '' | GenderFocus | 'kids'
 export type ProductAnalysisMode = 'single' | 'multi'
 
 export interface ProductAnalysisHints {
-  mode?:         ProductAnalysisMode
-  productCount?: number
-  pieceType?:    string
-  audience?:     ProductAudienceHint
-  colorsNote?:   string
-  freeText?:     string
+  mode?:            ProductAnalysisMode
+  productCount?:    number
+  pieceType?:       string
+  audience?:        ProductAudienceHint
+  colorsNote?:      string
+  freeText?:        string
+  /** O que muda entre fotos no modo single. */
+  photoVariation?:  PhotoVariationHint
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -418,7 +470,30 @@ export function normalizeProductCategory(raw: string, customSlugs?: string[]): s
   return synonyms[t] ?? 'outro'
 }
 
-export const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'Único']
+export const CLOTHING_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'Único']
+/** Alias legado — preferir CLOTHING_SIZES. */
+export const SIZES = CLOTHING_SIZES
+
+export const VOLUME_PRESETS = ['5ml', '10ml', '30ml', '50ml', '100ml', '200ml', 'Único']
+
+const VOLUME_KEY_PATTERN = /\d+\s*ml/i
+
+/** Chaves de stock para o grid admin conforme eixo. Preserva chaves extras existentes. */
+export function stockKeysForAxes(
+  stockAxis: StockAxis,
+  existingStock?: Record<string, number> | null,
+): string[] {
+  const preset =
+    stockAxis === 'volume' ? VOLUME_PRESETS
+    : stockAxis === 'unique' ? ['Único']
+    : CLOTHING_SIZES
+  const extra = Object.keys(existingStock ?? {}).filter(k => !preset.includes(k))
+  return [...preset, ...extra]
+}
+
+export function isVolumeStockKey(key: string): boolean {
+  return VOLUME_KEY_PATTERN.test(String(key ?? '').trim())
+}
 
 // ─── Payments / Asaas ─────────────────────────────────────────────────────────
 export type PaymentSource = 'WHATSAPP' | 'CHECKOUT' | 'PDV'

@@ -52,7 +52,7 @@ export async function PUT(
     )
   }
 
-  const { name, description, category, price, promo_price, variants_json, active } = parsed.data
+  const { name, description, category, audience, price, promo_price, variants_json, catalog_axes, active } = parsed.data
   const productSlug = await resolveProductSlugForStore(session.storeId, name, id)
 
   await sql`
@@ -61,9 +61,11 @@ export async function PUT(
       slug = ${productSlug},
       description = ${description ?? ''},
       category = ${category ?? 'outro'},
+      audience = ${audience ?? null},
       price = ${price},
       promo_price = ${promo_price ?? null},
       variants_json = ${JSON.stringify(variants_json ?? [])}::jsonb,
+      catalog_axes = ${catalog_axes ? JSON.stringify(catalog_axes) : null}::jsonb,
       active = ${active ?? true}
     WHERE id = ${id} AND store_id = ${session.storeId}
   `

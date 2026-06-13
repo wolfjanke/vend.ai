@@ -1,4 +1,15 @@
 import { redirect }   from 'next/navigation'
+import {
+  Circle,
+  CheckCircle,
+  Truck,
+  Check,
+  XCircle,
+  Smartphone,
+  Globe,
+  ShoppingCart,
+  type LucideIcon,
+} from 'lucide-react'
 import { getSessionSafe }  from '@/lib/auth'
 import { sql }         from '@/lib/db'
 import PedidoCard      from '@/components/admin/PedidoCard'
@@ -7,20 +18,20 @@ import Pagination      from '@/components/ui/Pagination'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 import type { Order, OrderStatus } from '@/types'
 
-const STATUS_FILTERS: Array<{ value: OrderStatus | 'TODOS'; label: string }> = [
+const STATUS_FILTERS: Array<{ value: OrderStatus | 'TODOS'; label: string; Icon?: LucideIcon }> = [
   { value: 'TODOS',      label: 'Todos' },
-  { value: 'NOVO',       label: '🔵 Novos' },
-  { value: 'CONFIRMADO', label: '✅ Confirmados' },
-  { value: 'EM_ENTREGA', label: '🚚 Em Entrega' },
-  { value: 'ENTREGUE',   label: '✔️ Entregues' },
-  { value: 'CANCELADO',  label: '❌ Cancelados' },
+  { value: 'NOVO',       label: 'Orçamentos',  Icon: Circle },
+  { value: 'CONFIRMADO', label: 'Confirmados', Icon: CheckCircle },
+  { value: 'EM_ENTREGA', label: 'Em entrega',  Icon: Truck },
+  { value: 'ENTREGUE',   label: 'Entregues',   Icon: Check },
+  { value: 'CANCELADO',  label: 'Cancelados',  Icon: XCircle },
 ]
 
-const SOURCE_FILTERS = [
+const SOURCE_FILTERS: Array<{ value: string; label: string; Icon?: LucideIcon }> = [
   { value: '',          label: 'Todas origens' },
-  { value: 'WHATSAPP',  label: '📱 WhatsApp' },
-  { value: 'CHECKOUT',  label: '🌐 Site' },
-  { value: 'PDV',       label: '🛒 PDV' },
+  { value: 'WHATSAPP',  label: 'WhatsApp', Icon: Smartphone },
+  { value: 'CHECKOUT',  label: 'Site',     Icon: Globe },
+  { value: 'PDV',       label: 'PDV',      Icon: ShoppingCart },
 ]
 
 const PAGE_SIZE = 20
@@ -133,12 +144,13 @@ export default async function PedidosPage({ searchParams }: Props) {
               <a
                 key={f.value}
                 href={buildHref(f.value === 'TODOS' ? { status: '' } : { status: f.value })}
-                className={`px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-full text-xs font-semibold border transition-all ${
+                className={`px-3.5 py-2 min-h-[40px] inline-flex items-center gap-1.5 rounded-full text-xs font-semibold border transition-all ${
                   (statusFilter ?? 'TODOS') === f.value
                     ? 'bg-primary/20 border-primary text-primary'
                     : 'bg-surface border-border text-muted hover:text-foreground'
                 }`}
               >
+                {f.Icon && <f.Icon size={13} className="shrink-0" aria-hidden />}
                 {f.label}
               </a>
             ))}
@@ -176,12 +188,13 @@ export default async function PedidosPage({ searchParams }: Props) {
               <a
                 key={f.value}
                 href={buildHref(f.value === 'TODOS' ? { status: '' } : { status: f.value })}
-                className={`px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-full text-xs font-semibold border transition-all whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-2 min-h-[40px] inline-flex items-center gap-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap shrink-0 ${
                   (statusFilter ?? 'TODOS') === f.value
                     ? 'bg-primary/20 border-primary text-primary'
                     : 'bg-surface border-border text-muted hover:text-foreground'
                 }`}
               >
+                {f.Icon && <f.Icon size={13} className="shrink-0" aria-hidden />}
                 {f.label}
               </a>
             ))}
@@ -195,12 +208,13 @@ export default async function PedidosPage({ searchParams }: Props) {
               <a
                 key={f.value}
                 href={buildHref({ source: f.value })}
-                className={`px-3.5 py-2 min-h-[38px] inline-flex items-center rounded-full text-xs font-semibold border transition-all whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-2 min-h-[38px] inline-flex items-center gap-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap shrink-0 ${
                   sourceFilter === f.value
                     ? 'bg-primary/20 border-primary text-primary'
                     : 'bg-surface border-border text-muted hover:text-foreground'
                 }`}
               >
+                {f.Icon && <f.Icon size={13} className="shrink-0" aria-hidden />}
                 {f.label}
               </a>
             ))}

@@ -199,7 +199,8 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
         net_value,
         checkout_url,
         pix_qr_code,
-        pix_copy_paste
+        pix_copy_paste,
+        privacy_consent_at
       ) VALUES (
         ${store.id},
         ${orderNumber},
@@ -224,7 +225,8 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
         ${quote.netValue},
         ${paymentResult.invoiceUrl},
         ${paymentResult.pixQrCode ?? null},
-        ${paymentResult.pixCopiaECola ?? null}
+        ${paymentResult.pixCopiaECola ?? null},
+        NOW()
       )
     `
   } catch (err) {

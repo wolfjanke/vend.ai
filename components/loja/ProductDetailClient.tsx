@@ -7,7 +7,10 @@ import { getCategoryDisplayLabel } from '@/types'
 import ProductPlaceholder from '@/components/loja/ProductPlaceholder'
 import { useLoja } from '@/components/loja/LojaContext'
 import { findSimilarInStock, soldOutMessage } from '@/lib/vi-triggers'
+import { vitrineText } from '@/lib/strip-emoji'
 import { isPaidViPlan } from '@/lib/plans'
+import { getCatalogAxes, getAxisLabels, shouldShowPrimarySelector, shouldShowSecondarySelector } from '@/lib/catalog-axes'
+import { resolveSkuUnitPrice, resolveProductDisplayPriceRange } from '@/lib/product-pricing'
 
 interface Props {
   product: Product
@@ -25,8 +28,17 @@ export default function ProductDetailClient({ product }: Props) {
     : []
   const isSoldOut = !variant || Object.values(variant.stock).every(q => Number(q) === 0)
   const effectiveSize = size ?? (allSizes.length === 1 ? allSizes[0] : null)
-  const price = Number(product.promo_price ?? product.price)
-  const catLabel = getCategoryDisplayLabel(product.category, store.settings_json?.customCategories ?? [])
+  const catalogAxes = getCatalogAxes(product)
+  const axisLabels = getAxisLabels(catalogAxes)
+  const priceRange = resolveProductDisplayPriceRange(product)
+  const price = effectiveSize && variant
+    ? resolveSkuUnitPrice(product, variant, effectiveSize)
+    : priceRange.min
+  const showPrimary = shouldShowPrimarySelector(product)
+  const showSecondary = shouldShowSecondarySelector(product) && allSizes.length > 0
+  const catLabel = vitrineText(getCategoryDisplayLabel(product.category, store.settings_json?.customCategories ?? []))
+  const displayName = vitrineText(product.name)
+  const displayDescription = vitrineText(product.description ?? '')
 
   const photos = variant?.photos?.filter(Boolean) ?? []
 
@@ -42,9 +54,9 @@ export default function ProductDetailClient({ product }: Props) {
     const alt = findSimilarInStock(products, product.category, product.id, baseUrl, store.slug)
     const slug = product.slug?.trim() || product.id
     openViWithMessage(
-      soldOutMessage(product.name, alt),
+      soldOutMessage(product.name, alt, store.assistant_tone ?? 'friendly'),
     )
-  }, [product.id, isSoldOut, plan, products, product.category, product.name, product.slug, baseUrl, store.slug, openViWithMessage])
+  }, [product.id, isSoldOut, plan, products, product.category, product.name, product.slug, baseUrl, store.slug, store.assistant_tone, openViWithMessage])
 
   const canAdd = !isSoldOut && !!variant && !!effectiveSize
 
@@ -53,7 +65,7 @@ export default function ProductDetailClient({ product }: Props) {
     addToCart({
       product_id: product.id,
       variant_id: variant.id,
-      name:       product.name,
+      name:       displayName,
       size:       effectiveSize!,
       color:      variant.color,
       qty:        1,
@@ -67,7 +79,7 @@ export default function ProductDetailClient({ product }: Props) {
   return (
     <div className="px-4 md:px-6 py-4 pb-32 max-w-3xl mx-auto min-w-0">
       <nav className="text-xs text-muted mb-4 flex flex-wrap items-center gap-1 break-words">
-        <Link href={`/${store.slug}`} className="hover:text-primary">{store.name}</Link>
+        <Link href={`/${store.slug}`} className="hover:text-primary">{vitrineText(store.name)}</Link>
         <span>/</span>
         <span>{catLabel}</span>
       </nav>
@@ -83,7 +95,7 @@ export default function ProductDetailClient({ product }: Props) {
         <div className="min-w-0">
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-surface2 border border-border">
             {photos[photoIdx] ? (
-              <img src={photos[photoIdx]} alt={product.name} className="w-full h-full object-cover" />
+              <img src={photos[photoIdx]} alt={displayName} className="w-full h-full object-cover" />
             ) : (
               <ProductPlaceholder
                 category={product.category}
@@ -111,27 +123,29 @@ export default function ProductDetailClient({ product }: Props) {
         </div>
 
         <div className="min-w-0 flex flex-col">
-          <h1 className="font-syne font-bold text-xl sm:text-2xl mb-2 break-words">{product.name}</h1>
+          <h1 className="font-syne font-bold text-xl sm:text-2xl mb-2 break-words">{displayName}</h1>
           <p className="text-xs text-muted uppercase tracking-wide mb-3">{catLabel}</p>
           <div className="flex flex-wrap items-baseline gap-2 mb-4">
             <span className="produto-preco font-bold text-2xl tabular-nums">
-              R${price.toFixed(2).replace('.', ',')}
+              {priceRange.hasSkuPrices && !effectiveSize && priceRange.min !== priceRange.max
+                ? `De R$${priceRange.min.toFixed(2).replace('.', ',')}`
+                : `R$${price.toFixed(2).replace('.', ',')}`}
             </span>
-            {product.promo_price != null && (
+            {product.promo_price != null && !priceRange.hasSkuPrices && (
               <span className="text-muted line-through text-sm tabular-nums">
                 R${Number(product.price).toFixed(2).replace('.', ',')}
               </span>
             )}
           </div>
-          {product.description?.trim() && (
+          {displayDescription && (
             <p className="text-sm text-muted leading-relaxed mb-4 break-words whitespace-pre-wrap">
-              {product.description}
+              {displayDescription}
             </p>
           )}
 
-          {!isSoldOut && product.variants_json.length > 1 && (
+          {!isSoldOut && showPrimary && (
             <div className="mb-4">
-              <p className="text-[10px] text-muted uppercase mb-2">Cor</p>
+              <p className="text-[10px] text-muted uppercase mb-2">{axisLabels.primary}</p>
               <div className="flex flex-wrap gap-2">
                 {product.variants_json.map((v, i) => (
                   <button
@@ -149,9 +163,9 @@ export default function ProductDetailClient({ product }: Props) {
             </div>
           )}
 
-          {!isSoldOut && (
+          {!isSoldOut && showSecondary && (
             <div className="mb-6">
-              <p className="text-[10px] text-muted uppercase mb-2">Tamanho</p>
+              <p className="text-[10px] text-muted uppercase mb-2">{axisLabels.secondary}</p>
               <div className="flex flex-wrap gap-2">
                 {allSizes.map(s => (
                   <button

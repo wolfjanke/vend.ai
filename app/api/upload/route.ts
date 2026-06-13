@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get('content-type') ?? ''
     let base64: string
+    let purpose: 'logo' | 'categoria' = 'logo'
 
     if (contentType.includes('multipart/form-data')) {
       const fd = await req.formData()
@@ -41,16 +42,22 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = await file.arrayBuffer()
       const b64 = Buffer.from(arrayBuffer).toString('base64')
       base64 = `data:${file.type || 'image/png'};base64,${b64}`
+      const rawPurpose = String(fd.get('purpose') ?? 'logo').trim()
+      purpose = rawPurpose === 'categoria' ? 'categoria' : 'logo'
     } else {
-      const body = await req.json() as { base64?: string }
+      const body = await req.json() as { base64?: string; purpose?: string }
       base64 = body.base64 ?? ''
+      purpose = body.purpose === 'categoria' ? 'categoria' : 'logo'
     }
 
     if (!base64) {
       return NextResponse.json({ error: 'Imagem inválida' }, { status: 400 })
     }
 
-    const folder = `vendai/${session.storeId}/logos`
+    const folder =
+      purpose === 'categoria'
+        ? `vendai/${session.storeId}/categorias`
+        : `vendai/${session.storeId}/logos`
     const timestamp = Math.floor(Date.now() / 1000).toString()
 
     const signParams: Record<string, string> = { folder, timestamp }

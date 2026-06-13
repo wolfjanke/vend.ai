@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Smartphone } from 'lucide-react'
 import type { Order } from '@/types'
 
 const SUGESTOES = [
@@ -54,8 +55,9 @@ export default function RecoveryCard({ order }: Props) {
         <span className="text-[11px] text-muted">{timeAgo(order.created_at)}</span>
       </div>
       <div className="font-semibold text-sm mb-1">{order.customer_name}</div>
-      <a href={`https://wa.me/${order.customer_whatsapp}`} target="_blank" rel="noreferrer" className="text-accent text-xs mb-3 block hover:underline">
-        📱 {order.customer_whatsapp}
+      <a href={`https://wa.me/${order.customer_whatsapp}`} target="_blank" rel="noreferrer" className="text-accent text-xs mb-3 inline-flex items-center gap-1.5 hover:underline break-all">
+        <Smartphone size={13} className="shrink-0" aria-hidden />
+        {order.customer_whatsapp}
       </a>
       <div className="text-muted text-xs mb-3 leading-relaxed">
         {order.items_json.map((item, i) => (

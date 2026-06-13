@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { signOut } from 'next-auth/react'
-import { Info, Loader2, Trash2 } from 'lucide-react'
+import { Info, Loader2 } from 'lucide-react'
 import type { Store, AgeGroup, GenderFocus, DeliveryZone } from '@/types'
 import { canUseAssistantFeature, type PlanSlug } from '@/lib/plans'
 import Link from 'next/link'
@@ -12,12 +12,57 @@ import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import { maskPhone } from '@/lib/masks'
+import { stripEmojis } from '@/lib/strip-emoji'
 import SectionHeader from '@/components/admin/SectionHeader'
-import { adminCard } from '@/lib/admin-ui'
-import ConfirmDialog from '@/components/admin/ConfirmDialog'
+import AdminPrivacySection from '@/components/admin/AdminPrivacySection'
 import CheckoutModeSection from '@/components/admin/CheckoutModeSection'
+import ConfigSectionNav from '@/components/admin/ConfigSectionNav'
+import { adminCard, configSectionAnchor } from '@/lib/admin-ui'
 import { normalizeCheckoutMode } from '@/lib/checkout-availability'
 import type { CheckoutMode } from '@/types'
+import {
+  LOGO_SIZE_OPTIONS,
+  logoHeaderClassName,
+  normalizeLogoSize,
+  type LogoSize,
+} from '@/lib/store-logo'
+import {
+  ASSISTANT_GENDER_OPTIONS,
+  assistantNameFieldLabel,
+  assistantToneFieldLabel,
+  normalizeAssistantGender,
+  welcomePreviewPlain,
+  type AssistantGender,
+} from '@/lib/assistant-gender'
+import type { ConfigSectionId } from '@/components/admin/ConfigSectionNav'
+
+function ConfigCard({
+  id,
+  title,
+  subtitle,
+  children,
+}: {
+  id:       ConfigSectionId
+  title:    string
+  subtitle?: string
+  children: ReactNode
+}) {
+  return (
+    <section id={id} className={`${adminCard} ${configSectionAnchor} space-y-5`}>
+      <div>
+        <h2 className="font-syne font-bold text-base sm:text-lg text-foreground">{title}</h2>
+        {subtitle ? <p className="text-xs text-muted mt-1 break-words">{subtitle}</p> : null}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function viBarColor(percent: number) {
+  if (percent >= 80) return 'bg-warm'
+  if (percent >= 60) return 'bg-yellow-400'
+  return 'bg-accent'
+}
 
 function initialWppDisplay(w: string) {
   const d = w.replace(/\D/g, '')
@@ -67,7 +112,10 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
   const [pwdLoading, setPwdLoading] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoUploading, setLogoUploading] = useState(false)
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
+  const [logoSaving, setLogoSaving] = useState(false)
+  const [logoSavedFlash, setLogoSavedFlash] = useState(false)
+  const [logoSize, setLogoSize] = useState<LogoSize>(() => normalizeLogoSize(settings.logoSize))
+  const logoUrlPersistedRef = useRef(store.logo_url ?? '')
 
   useEffect(() => {
     if (!pwdOpen) return
@@ -118,9 +166,40 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
 
   const [assistantName, setAssistantName] = useState(store.assistant_name?.trim() || 'Vi')
   const [assistantWelcome, setAssistantWelcome] = useState(store.assistant_welcome_message ?? '')
+  const [assistantGender, setAssistantGender] = useState<AssistantGender>(() =>
+    normalizeAssistantGender(store.assistant_gender),
+  )
   const [assistantTone, setAssistantTone] = useState<
     'friendly' | 'formal' | 'playful' | 'professional'
   >((store.assistant_tone as 'friendly' | 'formal' | 'playful' | 'professional') ?? 'friendly')
+
+  async function persistLogoSettings(patch: { logo_url?: string | null; logoSize?: LogoSize }) {
+    setLogoSaving(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/store/logo', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(patch),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data?.error ?? 'Erro ao salvar logo.')
+        return false
+      }
+      if (patch.logo_url !== undefined) {
+        logoUrlPersistedRef.current = patch.logo_url ?? ''
+      }
+      setLogoSavedFlash(true)
+      setTimeout(() => setLogoSavedFlash(false), 2000)
+      return true
+    } catch {
+      setError('Erro ao salvar logo.')
+      return false
+    } finally {
+      setLogoSaving(false)
+    }
+  }
 
   async function uploadLogoFile(file: File) {
     setLogoUploading(true)
@@ -135,8 +214,14 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
           body:    JSON.stringify({ base64 }),
         })
         const data = await res.json()
-        if (data.url) setLogoUrl(data.url)
-        else setError('Falha no upload da logo')
+        if (!data.url) {
+          setError(data?.error === 'cloudinary_not_configured'
+            ? 'Upload indisponível — configure Cloudinary ou cole a URL da logo.'
+            : 'Falha no upload da logo')
+          return
+        }
+        setLogoUrl(data.url)
+        await persistLogoSettings({ logo_url: data.url })
       } catch {
         setError('Falha no upload da logo')
       } finally {
@@ -144,6 +229,17 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
       }
     }
     reader.readAsDataURL(file)
+  }
+
+  async function handleLogoSizeChange(size: LogoSize) {
+    setLogoSize(size)
+    await persistLogoSettings({ logoSize: size })
+  }
+
+  async function handleLogoUrlBlur() {
+    const trimmed = logoUrl.trim()
+    if (trimmed === logoUrlPersistedRef.current.trim()) return
+    await persistLogoSettings({ logo_url: trimmed || null })
   }
 
   function addDeliveryZone() {
@@ -192,6 +288,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
       tagline:        tagline.trim() ? tagline.trim().slice(0, 60) : null,
       whatsapp:       wpp,
       logo_url:       logoUrl.trim() || null,
+      logoSize,
       freteInfo:      freteInfo.trim(),
       pagamentoInfo:  pagamentoInfo.trim(),
       genderFocus,
@@ -212,6 +309,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
       assistant_name:          canName ? assistantName.trim() || 'Vi' : undefined,
       assistant_welcome_message: canWelcome ? (assistantWelcome.trim() || null) : undefined,
       assistant_tone:          canTone ? assistantTone : undefined,
+      assistant_gender:        assistantGender,
     }
     const parsed = storeSettingsPatchSchema.safeParse(body)
     if (!parsed.success) {
@@ -235,6 +333,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
       return
     }
     setSaved(true)
+    logoUrlPersistedRef.current = logoUrl.trim()
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -261,49 +360,124 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
 
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL : ''
 
-  const privacyMail = 'privacidade@vend.ai'
-
   return (
     <>
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-      <div className={`${adminCard} flex flex-col gap-2 xl:col-span-8`}>
-        <SectionHeader title="Informações básicas" />
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Nome da loja</label>
-          <input
-            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all"
-            value={name}
-            onChange={e => setName(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-            Slogan / tagline <span className="font-normal normal-case">(opcional)</span>
-          </label>
-          <input
-            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all"
-            value={tagline}
-            maxLength={60}
-            placeholder="Ex.: Moda feminina com estilo"
-            onChange={e => setTagline(e.target.value)}
-          />
-          <p className="text-[11px] text-muted mt-1">{tagline.length}/60 — aparece abaixo do nome na vitrine</p>
-        </div>
+      <ConfigSectionNav />
 
-        <SectionHeader
-          title="Perfil da loja"
-          description="Usado na Vi, na busca da loja e na análise de produtos por IA."
-        />
-        <div className="flex items-center gap-2 mb-2">
-          <span
-            className="text-muted"
-            title="Usado pela Vi para sugerir produtos e pela IA de cadastro para classificar peças."
-          >
-            <Info size={16} aria-hidden />
-          </span>
-          <p className="text-xs text-muted">Público e faixa etária ajudam a Vi e a IA a entenderem seu catálogo.</p>
-        </div>
-        <div>
+      <div className="flex flex-col gap-6">
+        <ConfigCard
+          id="config-loja"
+          title="Loja"
+          subtitle="Nome, identidade visual e perfil do catálogo para a vitrine e a IA."
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Nome da loja</label>
+              <input
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all"
+                value={name}
+                onChange={e => setName(stripEmojis(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+                Slogan / tagline <span className="font-normal normal-case">(opcional)</span>
+              </label>
+              <input
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all"
+                value={tagline}
+                maxLength={60}
+                placeholder="Ex.: Moda feminina com estilo"
+                onChange={e => setTagline(stripEmojis(e.target.value))}
+              />
+              <p className="text-[11px] text-muted mt-1">{tagline.length}/60 — aparece abaixo do nome na vitrine</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Logo da loja</label>
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+              const f = e.target.files?.[0]
+              if (f) void uploadLogoFile(f)
+              e.target.value = ''
+            }} />
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center mb-3">
+              {logoUrl.trim() ? (
+                <img
+                  src={logoUrl.trim()}
+                  alt=""
+                  className={`${logoHeaderClassName(logoSize)} border border-border bg-surface2`}
+                />
+              ) : (
+                <div className="w-11 h-11 rounded-lg border border-dashed border-border bg-surface2 shrink-0" aria-hidden />
+              )}
+              <div className="flex flex-col gap-2 flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={logoUploading || logoSaving}
+                    className="min-h-[44px] px-4 py-2.5 bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold hover:bg-primary/20 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                  >
+                    {(logoUploading || logoSaving) ? <Loader2 size={16} className="animate-spin" /> : null}
+                    {logoUploading ? 'Enviando…' : logoSaving ? 'Salvando…' : 'Enviar imagem'}
+                  </button>
+                  <span className="text-xs text-muted">Salva automaticamente · ou cole uma URL</span>
+                </div>
+                {(logoSavedFlash || logoSaving) && (
+                  <p className="text-xs text-accent">
+                    {logoSaving ? 'Salvando logo…' : '✓ Logo salva na vitrine'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <input
+              type="url"
+              className="w-full min-h-[44px] mb-3 px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary transition-all placeholder:text-muted"
+              value={logoUrl}
+              onChange={e => setLogoUrl(e.target.value)}
+              onBlur={() => void handleLogoUrlBlur()}
+              placeholder="https://…"
+            />
+            <div>
+              <p className="text-[11px] text-muted mb-2">Tamanho na vitrine</p>
+              <div className="flex flex-wrap gap-2">
+                {LOGO_SIZE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => void handleLogoSizeChange(opt.value)}
+                    disabled={logoSaving}
+                    className={`min-h-[44px] min-w-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors ${
+                      logoSize === opt.value
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                    }`}
+                    title={opt.hint}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted mt-2 break-words">
+                P = compacta · M = padrão (recomendado) · G = destaque grande. Salva na hora — teste G na vitrine.
+              </p>
+            </div>
+          </div>
+
+          <SectionHeader
+            title="Perfil da loja"
+            description="Usado no Assistente IA, na busca da loja e na análise de produtos por IA."
+          />
+          <div className="flex items-center gap-2 -mt-2 mb-1">
+            <span
+              className="text-muted shrink-0"
+              title="Usado pelo Assistente IA para sugerir produtos e pela IA de cadastro para classificar peças."
+            >
+              <Info size={16} aria-hidden />
+            </span>
+            <p className="text-xs text-muted">Público e faixa etária ajudam o Assistente IA e a IA a entenderem seu catálogo.</p>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] text-muted block mb-1">Público principal</label>
@@ -331,60 +505,26 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
               </select>
             </div>
           </div>
-        </div>
+        </ConfigCard>
 
-        <SectionHeader title="Contato" />
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">WhatsApp</label>
-          <MaskedInput
-            mask="phone"
-            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-            placeholder="(11) 99999-9999"
-            value={wpp}
-            onChange={setWpp}
-            autoComplete="tel"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Logo da loja</label>
-          <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-            const f = e.target.files?.[0]
-            if (f) void uploadLogoFile(f)
-            e.target.value = ''
-          }} />
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center mb-2">
-            {logoUrl.trim() ? (
-              <img
-                src={logoUrl.trim()}
-                alt=""
-                className="w-14 h-14 rounded-full object-cover border border-border bg-surface2 shrink-0"
-              />
-            ) : null}
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-1 min-w-0">
-              <button
-                type="button"
-                onClick={() => logoInputRef.current?.click()}
-                disabled={logoUploading}
-                className="min-h-[44px] px-4 py-2.5 bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold hover:bg-primary/20 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-              >
-                {logoUploading ? <Loader2 size={16} className="animate-spin" /> : null}
-                {logoUploading ? 'Enviando…' : 'Enviar imagem'}
-              </button>
-              <span className="text-xs text-muted">ou cole uma URL abaixo</span>
-            </div>
+        <ConfigCard
+          id="config-contato"
+          title="Contato"
+          subtitle="WhatsApp da loja e endereço opcional para referência."
+        >
+          <div>
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">WhatsApp</label>
+            <MaskedInput
+              mask="phone"
+              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+              placeholder="(11) 99999-9999"
+              value={wpp}
+              onChange={setWpp}
+              autoComplete="tel"
+            />
           </div>
-          <input
-            type="url"
-            className="w-full min-h-[44px] mt-2 px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary transition-all placeholder:text-muted"
-            value={logoUrl}
-            onChange={e => setLogoUrl(e.target.value)}
-            placeholder="https://…"
-          />
-        </div>
 
-        <SectionHeader title="Endereço da loja (opcional)" />
-        <div>
+          <SectionHeader title="Endereço da loja (opcional)" />
           <div className="space-y-2">
             <div>
               <label className="text-[11px] text-muted block mb-1">CEP</label>
@@ -441,315 +581,366 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
               />
             </div>
           </div>
-        </div>
+        </ConfigCard>
 
-        <SectionHeader title="Frete e entrega" />
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Informações de frete</label>
-          <textarea
-            className="w-full px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y placeholder:text-muted"
-            value={freteInfo}
-            onChange={e => setFreteInfo(e.target.value)}
-            placeholder="Ex: Frete grátis para São Paulo e Guarulhos. Demais cidades consulte."
-          />
-          <p className="text-xs text-muted mt-1.5">A Vi e o banner usam esse texto para informar o cliente.</p>
-        </div>
-
-        <div>
-          <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Zonas de entrega (checkout)</p>
-          <p className="text-xs text-muted mb-3 break-words">
-            Cadastre cidade e UF com a taxa. Lista vazia = entrega em qualquer lugar com frete R$ 0 (útil só com frete grátis mínimo abaixo). Com zonas, só essas cidades recebem entrega.
-          </p>
-          {deliveryZones.length === 0 && (
-            <p className="text-xs text-muted mb-3 p-3 rounded-xl border border-dashed border-border bg-surface2/50">
-              Nenhuma cidade cadastrada. Adicione abaixo ou deixe vazio para não restringir por cidade.
-            </p>
-          )}
-          <div className="space-y-3">
-            {deliveryZones.map((z, i) => (
-              <div
-                key={z.id}
-                className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_auto] gap-2 items-end border border-border/60 rounded-xl p-3 bg-surface2/50"
-              >
-                <div className="min-w-0">
-                  <label className="text-[11px] text-muted block mb-1">Cidade</label>
-                  <input
-                    className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0"
-                    value={z.city}
-                    onChange={e => updateDeliveryZone(i, { city: e.target.value })}
-                    placeholder="Ex: Guarulhos"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-muted block mb-1">UF</label>
-                  <input
-                    className="w-full min-h-[44px] px-2 py-2.5 bg-surface2 border border-border rounded-xl text-sm uppercase text-center"
-                    maxLength={2}
-                    value={z.uf}
-                    onChange={e => updateDeliveryZone(i, { uf: e.target.value.toUpperCase() })}
-                    placeholder="SP"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-muted block mb-1">Taxa (R$)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    className="w-full min-h-[44px] px-2 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0"
-                    value={Number.isFinite(z.fee) ? z.fee : 0}
-                    onChange={e => {
-                      const v = parseFloat(e.target.value)
-                      updateDeliveryZone(i, { fee: Number.isFinite(v) ? Math.max(0, v) : 0 })
-                    }}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeDeliveryZone(i)}
-                  className="min-h-[44px] px-3 border border-warm/30 text-warm text-xs rounded-xl hover:bg-warm/10 shrink-0 justify-self-start sm:justify-self-end"
-                >
-                  Remover
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addDeliveryZone}
-              className="w-full min-h-[44px] border border-dashed border-border rounded-xl text-sm text-muted hover:text-foreground hover:border-muted transition-colors"
-            >
-              + Adicionar cidade
-            </button>
-          </div>
-          <div className="mt-4">
-            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-              Frete grátis a partir do pedido (R$)
-            </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-w-0"
-              value={freeShippingMinStr}
-              onChange={e => setFreeShippingMinStr(e.target.value)}
-              placeholder="Ex: 150 (subtotal após cupom)"
+        <ConfigCard
+          id="config-venda"
+          title="Venda"
+          subtitle="Frete, pagamento e como o cliente finaliza o pedido na vitrine."
+        >
+          <SectionHeader title="Frete e entrega" />
+          <div>
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Informações de frete</label>
+            <textarea
+              className="w-full px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y placeholder:text-muted"
+              value={freteInfo}
+              onChange={e => setFreteInfo(stripEmojis(e.target.value))}
+              placeholder="Ex: Frete grátis para São Paulo e Guarulhos. Demais cidades consulte."
             />
-            <p className="text-xs text-muted mt-1.5 break-words">
-              Deixe em branco para não aplicar frete grátis automático. O valor considera o subtotal após desconto do cupom.
-            </p>
+            <p className="text-xs text-muted mt-1.5">O Assistente IA e o banner usam esse texto para informar o cliente.</p>
           </div>
-        </div>
 
-        <SectionHeader title="Pagamento" />
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Formas de pagamento</label>
-          <textarea
-            className="w-full px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y placeholder:text-muted"
-            value={pagamentoInfo}
-            onChange={e => setPagamentoInfo(e.target.value)}
-            placeholder="Ex: Parcele em até 3x sem juros."
+          <div>
+            <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Zonas de entrega (checkout)</p>
+            <p className="text-xs text-muted mb-3 break-words">
+              Cadastre cidade e UF com a taxa. Lista vazia = entrega em qualquer lugar com frete R$ 0 (útil só com frete grátis mínimo abaixo). Com zonas, só essas cidades recebem entrega.
+            </p>
+            {deliveryZones.length === 0 && (
+              <p className="text-xs text-muted mb-3 p-3 rounded-xl border border-dashed border-border bg-surface2/50">
+                Nenhuma cidade cadastrada. Adicione abaixo ou deixe vazio para não restringir por cidade.
+              </p>
+            )}
+            <div className="space-y-3">
+              {deliveryZones.map((z, i) => (
+                <div
+                  key={z.id}
+                  className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_auto] gap-2 items-end border border-border/60 rounded-xl p-3 bg-surface2/50"
+                >
+                  <div className="min-w-0">
+                    <label className="text-[11px] text-muted block mb-1">Cidade</label>
+                    <input
+                      className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0"
+                      value={z.city}
+                      onChange={e => updateDeliveryZone(i, { city: e.target.value })}
+                      placeholder="Ex: Guarulhos"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-muted block mb-1">UF</label>
+                    <input
+                      className="w-full min-h-[44px] px-2 py-2.5 bg-surface2 border border-border rounded-xl text-sm uppercase text-center"
+                      maxLength={2}
+                      value={z.uf}
+                      onChange={e => updateDeliveryZone(i, { uf: e.target.value.toUpperCase() })}
+                      placeholder="SP"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-muted block mb-1">Taxa (R$)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      className="w-full min-h-[44px] px-2 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0"
+                      value={Number.isFinite(z.fee) ? z.fee : 0}
+                      onChange={e => {
+                        const v = parseFloat(e.target.value)
+                        updateDeliveryZone(i, { fee: Number.isFinite(v) ? Math.max(0, v) : 0 })
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeDeliveryZone(i)}
+                    className="min-h-[44px] px-3 border border-warm/30 text-warm text-xs rounded-xl hover:bg-warm/10 shrink-0 justify-self-start sm:justify-self-end"
+                  >
+                    Remover
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addDeliveryZone}
+                className="w-full min-h-[44px] border border-dashed border-border rounded-xl text-sm text-muted hover:text-foreground hover:border-muted transition-colors"
+              >
+                + Adicionar cidade
+              </button>
+            </div>
+            <div className="mt-4">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+                Frete grátis a partir do pedido (R$)
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-w-0"
+                value={freeShippingMinStr}
+                onChange={e => setFreeShippingMinStr(e.target.value)}
+                placeholder="Ex: 150 (subtotal após cupom)"
+              />
+              <p className="text-xs text-muted mt-1.5 break-words">
+                Deixe em branco para não aplicar frete grátis automático. O valor considera o subtotal após desconto do cupom.
+              </p>
+            </div>
+          </div>
+
+          <SectionHeader title="Pagamento" />
+          <div>
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Formas de pagamento</label>
+            <textarea
+              className="w-full px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y placeholder:text-muted"
+              value={pagamentoInfo}
+              onChange={e => setPagamentoInfo(stripEmojis(e.target.value))}
+              placeholder="Ex: Parcele em até 3x sem juros."
+            />
+            <p className="text-xs text-muted mt-1.5">O Assistente IA usa esse texto quando o cliente perguntar sobre pagamento.</p>
+            <div className="mt-4">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+                Parcelamento na vitrine (sem juros)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={48}
+                inputMode="numeric"
+                className="w-full min-h-[44px] max-w-[120px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
+                value={installmentsMaxStr}
+                onChange={e => setInstallmentsMaxStr(e.target.value)}
+                placeholder="Ex: 6"
+              />
+              <p className="text-xs text-muted mt-1.5 break-words">
+                Número máximo de parcelas sem juros usado na loja para exibir &quot;Nx R$ …&quot; em cada produto. Deixe em branco para não mostrar essa linha.
+              </p>
+            </div>
+          </div>
+
+          <CheckoutModeSection
+            plan={plan}
+            checkoutMode={checkoutMode}
+            checkoutEligible={checkoutEligible}
           />
-          <p className="text-xs text-muted mt-1.5">A Vi usa esse texto quando o cliente perguntar sobre pagamento.</p>
-          <div className="mt-4">
-            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-              Parcelamento na vitrine (sem juros)
-            </label>
+        </ConfigCard>
+
+        <ConfigCard
+          id="config-vi"
+          title="Assistente IA"
+          subtitle="Consumo, limites e personalidade do assistente na vitrine."
+        >
+          {viStats && (
+            <div className="rounded-xl border border-border bg-surface2/60 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Uso este mês</p>
+                  <p className="font-syne font-bold text-lg mt-1 tabular-nums break-words">
+                    {viStats.used.toLocaleString('pt-BR')} / {viStats.limit.toLocaleString('pt-BR')} msgs
+                  </p>
+                </div>
+                <span className="text-sm font-semibold text-muted tabular-nums shrink-0">
+                  {Math.min(100, viStats.limit > 0 ? Math.round((viStats.used / viStats.limit) * 100) : 0)}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-surface overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${viBarColor(viStats.limit > 0 ? (viStats.used / viStats.limit) * 100 : 0)}`}
+                  style={{
+                    width: `${Math.min(100, viStats.limit > 0 ? (viStats.used / viStats.limit) * 100 : 0)}%`,
+                  }}
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                <p>
+                  Excedente:{' '}
+                  <strong className="text-foreground tabular-nums">{viStats.overage.toLocaleString('pt-BR')}</strong>
+                </p>
+                <p>
+                  Reset em: <strong className="text-foreground">{viStats.daysReset}</strong> dias
+                </p>
+              </div>
+            </div>
+          )}
+
+          <SectionHeader title="Limite diário (opcional)" />
+          <label className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+            <input
+              type="radio"
+              name="viDaily"
+              checked={!viDailyEnabled}
+              onChange={() => setViDailyEnabled(false)}
+              className="shrink-0"
+            />
+            Sem limite diário (padrão)
+          </label>
+          <label className="flex flex-wrap items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+            <input
+              type="radio"
+              name="viDaily"
+              checked={viDailyEnabled}
+              onChange={() => setViDailyEnabled(true)}
+              className="shrink-0"
+            />
+            Definir limite:
             <input
               type="number"
               min={1}
-              max={48}
-              inputMode="numeric"
-              className="w-full min-h-[44px] max-w-[120px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
-              value={installmentsMaxStr}
-              onChange={e => setInstallmentsMaxStr(e.target.value)}
-              placeholder="Ex: 6"
+              disabled={!viDailyEnabled}
+              value={viDailyLimitStr}
+              onChange={e => setViDailyLimitStr(e.target.value)}
+              className="w-24 min-h-[44px] px-2 py-2 bg-surface2 border border-border rounded-lg text-sm disabled:opacity-50"
             />
-            <p className="text-xs text-muted mt-1.5 break-words">
-              Número máximo de parcelas sem juros usado na loja para exibir &quot;Nx R$ …&quot; em cada produto. Deixe em branco para não mostrar essa linha.
+            <span>mensagens/dia</span>
+          </label>
+          <p className="text-[11px] text-muted -mt-2">
+            Útil para controlar consumo em dias de alto tráfego. Quando atingido, o assistente direciona para o WhatsApp.
+          </p>
+
+          <SectionHeader title="Apresentação" />
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Gênero gramatical</p>
+            <div className="flex flex-wrap gap-2">
+              {ASSISTANT_GENDER_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  title={opt.hint}
+                  onClick={() => setAssistantGender(opt.value)}
+                  className={`min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors ${
+                    assistantGender === opt.value
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted break-words">
+              Feminino: &quot;Sou a Vi&quot; · Masculino: &quot;Sou o Leo&quot; · Neutro: &quot;Sou Vi&quot; (sem a/o).
             </p>
           </div>
-        </div>
 
-        <CheckoutModeSection
-          plan={plan}
-          checkoutMode={checkoutMode}
-          checkoutEligible={checkoutEligible}
-        />
+          <div className="space-y-3 pt-2 border-t border-border">
+            <p className="text-sm font-medium">{assistantNameFieldLabel(assistantGender)}</p>
+            {!canName && (
+              <p className="text-xs text-muted flex items-center gap-1.5 break-words">
+                <Lock size={14} className="shrink-0" aria-hidden />
+                Personalize o nome a partir do plano Starter.{' '}
+                <Link href="/#planos" className="text-primary underline">Fazer upgrade</Link>
+              </p>
+            )}
+            <input
+              type="text"
+              maxLength={20}
+              disabled={!canName}
+              value={assistantName}
+              onChange={e => setAssistantName(e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, ''))}
+              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm disabled:opacity-50"
+              placeholder="Vi"
+            />
+            <p className="text-[11px] text-muted break-words">
+              Prévia: {welcomePreviewPlain(assistantName || 'Vi', name.trim() || store.name, assistantTone, assistantGender)}
+            </p>
+          </div>
 
-        <SectionHeader title="Conta e link da loja" />
-        <div>
-          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Link da loja</label>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-[12px] min-w-0 overflow-hidden">
-            <span className="font-mono text-xs sm:text-sm text-accent break-all min-w-0">
-              {baseUrl}/{store.slug}
-            </span>
+          {canWelcome && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <p className="text-sm font-medium">Mensagem de boas-vindas personalizada</p>
+              <textarea
+                value={assistantWelcome}
+                onChange={e => setAssistantWelcome(stripEmojis(e.target.value))}
+                rows={3}
+                maxLength={500}
+                placeholder="Olá! Posso te ajudar a encontrar algo especial hoje?"
+                className="w-full px-4 py-3 bg-surface2 border border-border rounded-xl text-sm resize-y min-h-[88px]"
+              />
+              <p className="text-[11px] text-muted">Deixe vazio para usar a mensagem padrão.</p>
+            </div>
+          )}
+
+          {canTone && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <p className="text-sm font-medium">{assistantToneFieldLabel(assistantGender)}</p>
+              {[
+                { value: 'friendly', label: 'Simpático e próximo (padrão)' },
+                { value: 'formal', label: 'Formal e profissional' },
+                { value: 'playful', label: 'Divertido e jovial' },
+                { value: 'professional', label: 'Técnico e informativo' },
+              ].map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
+                  <input
+                    type="radio"
+                    name="assistantTone"
+                    checked={assistantTone === opt.value}
+                    onChange={() => setAssistantTone(opt.value as typeof assistantTone)}
+                    className="shrink-0"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          )}
+        </ConfigCard>
+
+        <ConfigCard
+          id="config-conta"
+          title="Conta"
+          subtitle="Link público da loja, senha e salvamento das alterações."
+        >
+          <div>
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Link da loja</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-[12px] min-w-0 overflow-hidden">
+              <span className="font-mono text-xs sm:text-sm text-accent break-all min-w-0">
+                {baseUrl}/{store.slug}
+              </span>
+              <button
+                type="button"
+                onClick={() => { if (baseUrl) void navigator.clipboard.writeText(`${baseUrl}/${store.slug}`) }}
+                className="shrink-0 text-xs px-3 py-2 min-h-[44px] sm:min-h-0 bg-accent text-bg rounded-lg font-bold self-start sm:ml-auto"
+              >
+                Copiar
+              </button>
+            </div>
+            <p className="text-xs text-muted mt-1.5">O slug não pode ser alterado após o cadastro.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPwdOpen(true)}
+            className="w-full min-h-[44px] py-3 rounded-[12px] border border-border text-sm text-muted hover:text-foreground hover:border-muted transition-all"
+          >
+            Alterar senha
+          </button>
+
+          {error && <p className="text-sm text-warm">{error}</p>}
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={loading}
+            className={`w-full min-h-[48px] py-3 rounded-[12px] font-syne font-bold text-sm transition-all ${
+              saved ? 'bg-accent text-bg' : 'bg-primary text-white hover:shadow-[0_4px_20px_var(--primary-glow)]'
+            } disabled:opacity-60`}
+          >
+            {loading ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar alterações'}
+          </button>
+        </ConfigCard>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AdminPrivacySection />
+
+          <div className={`${adminCard} border-warm/20 flex flex-col`}>
+            <h3 className="font-syne font-bold text-sm text-warm mb-2">Zona de risco</h3>
+            <p className="text-xs text-muted mb-4 break-words flex-1">
+              Para sair da sessão atual neste dispositivo.
+            </p>
             <button
               type="button"
-              onClick={() => { if (baseUrl) void navigator.clipboard.writeText(`${baseUrl}/${store.slug}`) }}
-              className="shrink-0 text-xs px-3 py-2 min-h-[44px] sm:min-h-0 bg-accent text-bg rounded-lg font-bold self-start sm:ml-auto"
+              onClick={() => signOut({ callbackUrl: '/admin' })}
+              className="px-4 py-2.5 border border-warm/30 text-warm text-sm rounded-xl hover:bg-warm/10 transition-all min-h-[44px] w-full sm:w-auto self-start"
             >
-              Copiar
+              Sair da conta
             </button>
           </div>
-          <p className="text-xs text-muted mt-1.5">O slug não pode ser alterado após o cadastro.</p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setPwdOpen(true)}
-          className="w-full min-h-[44px] py-3 rounded-[12px] border border-border text-sm text-muted hover:text-foreground hover:border-muted transition-all"
-        >
-          Alterar senha
-        </button>
-
-        {error && <p className="text-sm text-warm">{error}</p>}
-
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={loading}
-          className={`w-full min-h-[48px] py-3 rounded-[12px] font-syne font-bold text-sm transition-all ${
-            saved ? 'bg-accent text-bg' : 'bg-primary text-white hover:shadow-[0_4px_20px_var(--primary-glow)]'
-          } disabled:opacity-60`}
-        >
-          {loading ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar alterações'}
-        </button>
-      </div>
-
-      <div className="xl:col-span-4 space-y-6">
-      <div className={`${adminCard} space-y-4 xl:sticky xl:top-24`}>
-        <SectionHeader title="Vi — Assistente IA" />
-        {viStats && (
-          <div className="text-sm space-y-1 text-muted break-words">
-            <p>
-              Mensagens usadas este mês:{' '}
-              <strong className="text-foreground tabular-nums">
-                {viStats.used.toLocaleString('pt-BR')} / {viStats.limit.toLocaleString('pt-BR')}
-              </strong>
-            </p>
-            <p>Excedente acumulado: <strong className="text-foreground tabular-nums">{viStats.overage.toLocaleString('pt-BR')}</strong> mensagens</p>
-            <p>Reset em: <strong className="text-foreground">{viStats.daysReset}</strong> dias</p>
-          </div>
-        )}
-        <p className="text-xs text-muted">Limite diário de mensagens (opcional)</p>
-        <label className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
-          <input
-            type="radio"
-            name="viDaily"
-            checked={!viDailyEnabled}
-            onChange={() => setViDailyEnabled(false)}
-            className="shrink-0"
-          />
-          Sem limite diário (padrão)
-        </label>
-        <label className="flex flex-wrap items-center gap-2 text-sm min-h-[44px] cursor-pointer">
-          <input
-            type="radio"
-            name="viDaily"
-            checked={viDailyEnabled}
-            onChange={() => setViDailyEnabled(true)}
-            className="shrink-0"
-          />
-          Definir limite:
-          <input
-            type="number"
-            min={1}
-            disabled={!viDailyEnabled}
-            value={viDailyLimitStr}
-            onChange={e => setViDailyLimitStr(e.target.value)}
-            className="w-24 min-h-[44px] px-2 py-2 bg-surface2 border border-border rounded-lg text-sm disabled:opacity-50"
-          />
-          <span>mensagens/dia</span>
-        </label>
-        <p className="text-[11px] text-muted">
-          Útil para controlar consumo em dias de alto tráfego. Quando atingido, a assistente direciona para o WhatsApp.
-        </p>
-
-        <div className="border-t border-border pt-4 space-y-3">
-          <p className="text-sm font-medium">Nome da assistente</p>
-          {!canName && (
-            <p className="text-xs text-muted flex items-center gap-1.5 break-words">
-              <Lock size={14} className="shrink-0" aria-hidden />
-              Personalize o nome a partir do plano Starter.{' '}
-              <Link href="/#planos" className="text-primary underline">Fazer upgrade</Link>
-            </p>
-          )}
-          <input
-            type="text"
-            maxLength={20}
-            disabled={!canName}
-            value={assistantName}
-            onChange={e => setAssistantName(e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, ''))}
-            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm disabled:opacity-50"
-            placeholder="Vi"
-          />
-          <p className="text-[11px] text-muted break-words">
-            Prévia: Olá! Sou a {assistantName || 'Vi'}, assistente da {name.trim() || store.name} 👋
-          </p>
-        </div>
-
-        {canWelcome && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Mensagem de boas-vindas personalizada</p>
-            <textarea
-              value={assistantWelcome}
-              onChange={e => setAssistantWelcome(e.target.value)}
-              rows={3}
-              maxLength={500}
-              placeholder="Olá! Posso te ajudar a encontrar algo especial hoje? 😊"
-              className="w-full px-4 py-3 bg-surface2 border border-border rounded-xl text-sm resize-y min-h-[88px]"
-            />
-            <p className="text-[11px] text-muted">Deixe vazio para usar a mensagem padrão.</p>
-          </div>
-        )}
-
-        {canTone && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Tom da assistente</p>
-            {[
-              { value: 'friendly', label: 'Simpático e próximo (padrão)' },
-              { value: 'formal', label: 'Formal e profissional' },
-              { value: 'playful', label: 'Divertido e jovial' },
-              { value: 'professional', label: 'Técnico e informativo' },
-            ].map(opt => (
-              <label key={opt.value} className="flex items-center gap-2 text-sm min-h-[44px] cursor-pointer">
-                <input
-                  type="radio"
-                  name="assistantTone"
-                  checked={assistantTone === opt.value}
-                  onChange={() => setAssistantTone(opt.value as typeof assistantTone)}
-                  className="shrink-0"
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className={`${adminCard} border-warm/20`}>
-        <h3 className="font-syne font-bold text-sm text-warm mb-2">Zona de risco</h3>
-        <p className="text-xs text-muted mb-4 break-words">
-          Essas ações são sensíveis. Para exclusão de dados e conta, envie um e-mail conforme a LGPD.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: '/admin' })}
-            className="px-4 py-2.5 border border-warm/30 text-warm text-sm rounded-xl hover:bg-warm/10 transition-all min-h-[44px]"
-          >
-            Sair da conta
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteAccountOpen(true)}
-            className="px-4 py-2.5 border border-border text-muted text-sm rounded-xl hover:border-warm hover:text-warm transition-all min-h-[44px] inline-flex items-center justify-center gap-2"
-          >
-            <Trash2 size={16} aria-hidden />
-            Solicitar exclusão de conta
-          </button>
-        </div>
-      </div>
-      </div>
       </div>
 
       {pwdOpen && (
@@ -798,18 +989,6 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
         </div>
       )}
 
-      <ConfirmDialog
-        open={deleteAccountOpen}
-        title="Solicitar exclusão de conta"
-        description={`Envie um e-mail para ${privacyMail} com o assunto "Exclusão de conta" e o identificador da sua loja. Responderemos em até 15 dias úteis, conforme a LGPD.`}
-        confirmLabel="Abrir e-mail"
-        cancelLabel="Fechar"
-        onConfirm={() => {
-          window.location.href = `mailto:${privacyMail}?subject=${encodeURIComponent('Exclusão de conta — vend.ai')}`
-          setDeleteAccountOpen(false)
-        }}
-        onCancel={() => setDeleteAccountOpen(false)}
-      />
     </>
   )
 }

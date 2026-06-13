@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 400 })
     }
 
-    const { name, description, category, price, promo_price, variants_json, active } = parsed.data
+    const { name, description, category, audience, price, promo_price, variants_json, catalog_axes, active } = parsed.data
 
     const planRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
     const plan = (planRows[0]?.plan ?? 'free') as PlanSlug
@@ -47,16 +47,18 @@ export async function POST(req: NextRequest) {
     const productSlug = await resolveProductSlugForStore(session.storeId, name)
 
     const [product] = await sql`
-      INSERT INTO products (store_id, name, slug, description, category, price, promo_price, variants_json, active)
+      INSERT INTO products (store_id, name, slug, description, category, audience, price, promo_price, variants_json, catalog_axes, active)
       VALUES (
         ${session.storeId},
         ${name},
         ${productSlug},
         ${description ?? ''},
         ${category ?? 'outro'},
+        ${audience ?? null},
         ${price},
         ${promo_price ?? null},
         ${JSON.stringify(variants_json ?? [])}::jsonb,
+        ${catalog_axes ? JSON.stringify(catalog_axes) : null}::jsonb,
         ${active ?? true}
       )
       RETURNING id

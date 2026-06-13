@@ -54,12 +54,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { label: 'Pedidos',     href: '/admin/pedidos',      Icon: ShoppingBag,     match: 'prefix' },
       { label: 'Financeiro',  href: '/admin/financeiro',   Icon: DollarSign,    match: 'prefix' },
       { label: 'PDV',         href: '/admin/pdv',          Icon: Monitor,         match: 'prefix', planOnly: 'loja' },
-      { label: 'Vi este mês', href: '/admin/dashboard#vi', Icon: Bot,             match: 'exact' },
+      { label: 'Assistente IA este mês', href: '/admin/dashboard#vi', Icon: Bot, match: 'exact' },
     ],
   },
   {
     id:    'config',
-    label: 'Config',
+    label: 'Configurações',
     Icon:  Settings2,
     items: [
       { label: 'Configurações', href: '/admin/configuracoes', Icon: Settings,   match: 'exact' },

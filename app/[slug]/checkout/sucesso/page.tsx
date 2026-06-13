@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { CheckCircle2 } from 'lucide-react'
 import { sql } from '@/lib/db'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
@@ -51,7 +52,7 @@ export default async function CheckoutSuccessPage({ params, searchParams }: Prop
   return (
     <CheckoutPageLayout storeName={storeName} storeLogo={logo} storeSlug={slug}>
       <div className="max-w-lg mx-auto text-center py-12 px-4">
-        <div className="text-4xl mb-4" aria-hidden>✅</div>
+        <CheckCircle2 size={48} className="mx-auto text-accent mb-4" aria-hidden />
         <h1 className="font-syne font-bold text-xl sm:text-2xl mb-2">Pedido confirmado!</h1>
 
         {orderNumber && (

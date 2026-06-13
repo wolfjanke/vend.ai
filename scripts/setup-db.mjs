@@ -196,6 +196,22 @@ async function setup() {
   await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS assistant_name TEXT DEFAULT 'Vi'`
   await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS assistant_welcome_message TEXT DEFAULT NULL`
   await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS assistant_tone TEXT DEFAULT 'friendly'`
+  await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS assistant_gender TEXT DEFAULT 'feminine'`
+
+  // Migration 021: product audience
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS audience TEXT`
+  try {
+    await sql`ALTER TABLE products DROP CONSTRAINT IF EXISTS products_audience_check`
+    await sql`ALTER TABLE products ADD CONSTRAINT products_audience_check
+      CHECK (audience IS NULL OR audience IN ('feminine', 'masculine', 'unisex', 'kids'))`
+  } catch (e) {
+    if (e?.code !== '42710') throw e
+  }
+  await sql`CREATE INDEX IF NOT EXISTS products_audience_idx ON products(store_id, audience)`
+
+  // Migration 022: catalog axes (moda vs perfumaria labels/stock)
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS catalog_axes JSONB`
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS privacy_consent_at TIMESTAMPTZ`
 
   console.log('✓ Tabelas criadas!')
 

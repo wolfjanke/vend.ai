@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db'
 import type { CartItem, Product, ProductVariant } from '@/types'
+import { resolveSkuUnitPrice } from '@/lib/product-pricing'
 
 const PRICE_TOLERANCE = 0.01
 
@@ -21,9 +22,8 @@ export class OrderValidationError extends Error {
   }
 }
 
-function unitPrice(product: Product): number {
-  const p = product.promo_price != null ? Number(product.promo_price) : Number(product.price)
-  return Math.max(0, Number(p.toFixed(2)))
+function unitPrice(product: Product, variant: ProductVariant, size: string): number {
+  return resolveSkuUnitPrice(product, variant, size)
 }
 
 function findVariant(product: Product, variantId: string): ProductVariant | undefined {
@@ -39,10 +39,17 @@ function stockForSize(variant: ProductVariant, size: string): number {
 /**
  * Valida itens contra o catálogo da loja e retorna linhas com preço do banco.
  */
+export interface ResolveOrderLinesOptions {
+  /** Quando false, não exige estoque disponível (orçamento WhatsApp). */
+  checkStock?: boolean
+}
+
 export async function resolveOrderLines(
   storeId: string,
   inputs: OrderLineInput[],
+  options: ResolveOrderLinesOptions = {},
 ): Promise<CartItem[]> {
+  const checkStock = options.checkStock !== false
   if (!inputs.length) throw new OrderValidationError()
 
   const productIdSet = new Set(inputs.map(i => i.product_id))
@@ -66,11 +73,12 @@ export async function resolveOrderLines(
     if (!variant) throw new OrderValidationError('VARIANT')
 
     const size = String(input.size).trim()
-    if (!size || stockForSize(variant, size) < input.qty) {
+    if (!size) throw new OrderValidationError('VARIANT')
+    if (checkStock && stockForSize(variant, size) < input.qty) {
       throw new OrderValidationError('STOCK')
     }
 
-    const price = unitPrice(product)
+    const price = unitPrice(product, variant, size)
     if (input.price != null && Math.abs(input.price - price) > PRICE_TOLERANCE) {
       throw new OrderValidationError('PRICE')
     }
@@ -94,6 +102,34 @@ export async function resolveOrderLines(
 
 export function amountsMatch(a: number, b: number, tolerance = PRICE_TOLERANCE): boolean {
   return Math.abs(a - b) <= tolerance
+}
+
+/** Devolve estoque (ex.: cancelamento após pagamento confirmado). */
+export async function incrementStockForOrder(storeId: string, items: CartItem[]): Promise<void> {
+  for (const item of items) {
+    const rows = await sql`
+      SELECT variants_json FROM products
+      WHERE id = ${item.product_id} AND store_id = ${storeId} AND active = true
+      LIMIT 1
+    `
+    const row = rows[0] as { variants_json: ProductVariant[] } | undefined
+    if (!row) continue
+
+    const variants = (row.variants_json ?? []).map(v => ({
+      ...v,
+      stock: { ...(v.stock ?? {}) },
+    }))
+    const vi = variants.findIndex(v => v.id === item.variant_id)
+    if (vi < 0) continue
+
+    const current = Number(variants[vi].stock[item.size] ?? 0)
+    variants[vi].stock[item.size] = current + item.qty
+
+    await sql`
+      UPDATE products SET variants_json = ${JSON.stringify(variants)}::jsonb
+      WHERE id = ${item.product_id} AND store_id = ${storeId}
+    `
+  }
 }
 
 /** Decrementa estoque após validação das linhas (mesma loja). */

@@ -70,6 +70,7 @@ export default async function AparenciaPage() {
         products={previewProducts}
         assistantName={store.assistant_name?.trim() || 'Vi'}
         tagline={store.tagline ?? null}
+        categoryNavStyle={store.settings_json?.categoryNavStyle ?? 'pills'}
         initial={{
           theme_name:            (store.theme_name as string) ?? 'default',
           theme_primary_color:   store.theme_primary_color ?? null,

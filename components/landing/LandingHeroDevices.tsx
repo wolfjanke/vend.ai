@@ -1,42 +1,50 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import {
+  Shirt,
+  Sparkles,
+  ShoppingBag,
+  type LucideIcon,
+} from 'lucide-react'
 
 const ROTATE_MS = 5500
+
+type HeroCard = { Icon: LucideIcon; name: string; price: string }
 
 const VARIANTS = [
   {
     storeName: 'Urban Mix',
     slug: 'urban-mix',
     cards: [
-      ['👗', 'Saia Midi', 'R$109'],
-      ['👕', 'Camiseta', 'R$79'],
-      ['🧥', 'Jaqueta', 'R$189'],
-    ],
+      { Icon: Shirt, name: 'Saia Midi', price: 'R$109' },
+      { Icon: Shirt, name: 'Camiseta', price: 'R$79' },
+      { Icon: ShoppingBag, name: 'Jaqueta', price: 'R$189' },
+    ] satisfies HeroCard[],
     userBubble: 'Bermuda M pra homem',
-    assistantBubble: 'Achei 2 opções! 🎉',
+    assistantBubble: 'Achei 2 opções!',
   },
   {
     storeName: 'Urban Mix',
     slug: 'urban-mix',
     cards: [
-      ['✨', 'Conjunto', 'R$199'],
-      ['🩳', 'Bermuda', 'R$99'],
-      ['👕', 'Tie-Dye', 'R$69'],
-    ],
+      { Icon: Sparkles, name: 'Conjunto', price: 'R$199' },
+      { Icon: Shirt, name: 'Bermuda', price: 'R$99' },
+      { Icon: Shirt, name: 'Tie-Dye', price: 'R$69' },
+    ] satisfies HeroCard[],
     userBubble: 'Vestido festa tamanho P',
-    assistantBubble: 'Encontrei 2 opções! 🎉',
+    assistantBubble: 'Encontrei 2 opções!',
   },
   {
     storeName: 'Urban Mix',
     slug: 'urban-mix',
     cards: [
-      ['👖', 'Calça Slim', 'R$189'],
-      ['🧥', 'Moletom', 'R$149'],
-      ['👗', 'Vestido', 'R$189'],
-    ],
+      { Icon: ShoppingBag, name: 'Calça Slim', price: 'R$189' },
+      { Icon: ShoppingBag, name: 'Moletom', price: 'R$149' },
+      { Icon: Shirt, name: 'Vestido', price: 'R$189' },
+    ] satisfies HeroCard[],
     userBubble: 'Tem desconto no PIX?',
-    assistantBubble: '5% no PIX sim! 💸',
+    assistantBubble: '5% no PIX sim!',
   },
 ] as const
 
@@ -88,14 +96,12 @@ export default function LandingHeroDevices() {
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5 flex-1 min-h-0">
-                  {v.cards.map(([emoji, name, price]) => (
+                  {v.cards.map(({ Icon, name, price }) => (
                     <div
                       key={name}
                       className="bg-surface border border-border rounded-lg p-1.5 flex flex-col items-center text-center min-w-0"
                     >
-                      <div className="text-lg leading-none mb-0.5" aria-hidden>
-                        {emoji}
-                      </div>
+                      <Icon size={16} className="text-muted mb-0.5 shrink-0" aria-hidden />
                       <div className="text-[9px] text-foreground truncate w-full">{name}</div>
                       <div className="text-[9px] text-accent font-bold tabular-nums">{price}</div>
                     </div>
@@ -131,14 +137,12 @@ export default function LandingHeroDevices() {
                 </span>
               </div>
               <div className="flex gap-2 mb-2.5" key={`m-cards-${index}`}>
-                {v.cards.slice(0, 2).map(([emoji, name, price]) => (
+                {v.cards.slice(0, 2).map(({ Icon, name, price }) => (
                   <div
                     key={name}
                     className="flex-1 min-w-0 bg-surface rounded-[10px] p-2 border border-border text-center"
                   >
-                    <div className="text-2xl mb-1" aria-hidden>
-                      {emoji}
-                    </div>
+                    <Icon size={22} className="text-muted mx-auto mb-1 shrink-0" aria-hidden />
                     <div className="text-[10px] text-foreground truncate">{name}</div>
                     <div className="text-accent text-[11px] font-bold">{price}</div>
                   </div>

@@ -11,7 +11,7 @@ export function viIpLimit() {
 }
 
 export const VI_WHATSAPP_REDIRECT_MESSAGE =
-  'Que ótimo você chegou até aqui! 😊\nNossa equipe vai adorar te atender pessoalmente.\nFala com a gente pelo WhatsApp 👇'
+  'Que ótimo você chegou até aqui!\nNossa equipe vai adorar te atender pessoalmente.\nFala com a gente pelo WhatsApp.'
 
 type StoreUsageRow = {
   id:                    string

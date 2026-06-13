@@ -440,21 +440,18 @@ export default function LandingPage() {
               quote: 'Montei minha loja em um dia. A Vi atende meus clientes e os pedidos chegam certinhos no WhatsApp. Não precisei de nada técnico.',
               name: 'Maria',
               store: 'Brechó da Maria',
-              emoji: '🧕',
               highlight: 'pedidos chegam certinhos no WhatsApp',
             },
             {
               quote: 'A IA no cadastro salvou horas da minha semana. Foto da peça e já tenho nome e descrição. Antes eu ficava fazendo isso no celular até meia-noite.',
               name: 'Ana',
               store: 'Moda & Você',
-              emoji: '👩‍🦱',
               highlight: 'A IA no cadastro salvou horas',
             },
             {
               quote: 'Comecei com o plano grátis pra testar. Em uma semana já estava no Starter. A Vi vendeu mais do que eu esperava.',
               name: 'Cris',
               store: 'Estilo Cris',
-              emoji: '👩',
               highlight: 'A Vi vendeu mais do que eu esperava',
             },
           ].map((t, i) => (
@@ -475,7 +472,12 @@ export default function LandingPage() {
                   &rdquo;
                 </p>
                 <div className="flex items-center gap-3 pt-2 border-t border-border">
-                  <span className="text-2xl">{t.emoji}</span>
+                  <span
+                    className="w-10 h-10 rounded-full bg-primary/15 text-primary font-syne font-bold text-sm flex items-center justify-center shrink-0"
+                    aria-hidden
+                  >
+                    {t.name.charAt(0)}
+                  </span>
                   <div>
                     <p className="font-syne font-bold text-sm">{t.name}</p>
                     <p className="text-xs text-muted">{t.store}</p>
@@ -549,11 +551,11 @@ export default function LandingPage() {
               </thead>
               <tbody>
                 {[
-                  { plan: 'Grátis', monthly: 'R$0', checkout: '—', take: '—', fixed: '—', highlight: false },
-                  { plan: 'Starter', monthly: 'R$49,90', checkout: '✓', take: '3,5%', fixed: '+R$0,99', highlight: false },
-                  { plan: 'Pro ⭐', monthly: 'R$99,90', checkout: '✓', take: '2,75%', fixed: '+R$0,99', highlight: true },
-                  { plan: 'Loja', monthly: 'R$199,90', checkout: '✓', take: '1,7%', fixed: '+R$0,99', highlight: false },
-                  { plan: 'Enterprise', monthly: 'R$399,90', checkout: '✓', take: '1,5%', fixed: '+R$0,99', highlight: false },
+                  { plan: 'Grátis', monthly: 'R$0', checkout: '—', take: '—', fixed: '—', highlight: false, featured: false },
+                  { plan: 'Starter', monthly: 'R$49,90', checkout: '✓', take: '3,5%', fixed: '+R$0,99', highlight: false, featured: false },
+                  { plan: 'Pro', monthly: 'R$99,90', checkout: '✓', take: '2,75%', fixed: '+R$0,99', highlight: true, featured: true },
+                  { plan: 'Loja', monthly: 'R$199,90', checkout: '✓', take: '1,7%', fixed: '+R$0,99', highlight: false, featured: false },
+                  { plan: 'Enterprise', monthly: 'R$399,90', checkout: '✓', take: '1,5%', fixed: '+R$0,99', highlight: false, featured: false },
                 ].map(row => (
                   <tr
                     key={row.plan}
@@ -564,7 +566,12 @@ export default function LandingPage() {
                     }`}
                   >
                     <td className={`py-3.5 px-3 sm:px-4 font-syne font-bold whitespace-nowrap first:pl-0 ${row.highlight ? 'text-primary' : 'text-foreground'}`}>
-                      {row.plan}
+                      <span className="inline-flex items-center gap-1.5">
+                        {row.plan}
+                        {'featured' in row && row.featured && (
+                          <Star size={14} className="fill-accent text-accent shrink-0" aria-label="Plano em destaque" />
+                        )}
+                      </span>
                     </td>
                     <td className="py-3.5 px-3 sm:px-4 text-foreground tabular-nums whitespace-nowrap">{row.monthly}</td>
                     <td className="py-3.5 px-3 sm:px-4 text-accent font-semibold whitespace-nowrap">{row.checkout}</td>

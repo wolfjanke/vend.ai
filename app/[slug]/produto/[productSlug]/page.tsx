@@ -73,8 +73,8 @@ export default async function ProductPage({ params }: Props) {
     const [productRows, catalog] = await Promise.all([
       sql`
         SELECT
-          id, store_id, name, slug, description, category, price, promo_price,
-          variants_json, active, created_at
+          id, store_id, name, slug, description, category, audience, price, promo_price,
+          variants_json, catalog_axes, active, created_at
         FROM products
         WHERE store_id = ${storeId} AND slug = ${params.productSlug} AND active = true
         LIMIT 1
@@ -97,6 +97,7 @@ export default async function ProductPage({ params }: Props) {
     assistant_name:          (storeRow!.assistant_name as string) ?? 'Vi',
     assistant_welcome_message: (storeRow!.assistant_welcome_message as string | null) ?? null,
     assistant_tone:          (storeRow!.assistant_tone as Store['assistant_tone']) ?? 'friendly',
+    assistant_gender:        (storeRow!.assistant_gender as Store['assistant_gender']) ?? 'feminine',
     logo_url:                resolveStoreTheme(storeRow!).displayLogo ?? publicStore.logo_url,
     checkoutSiteEnabled:     checkoutAvailability.siteEnabled,
     checkoutWhatsappEnabled: checkoutAvailability.whatsappEnabled,

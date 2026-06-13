@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { sql } from '@/lib/db'
 import { getSessionSafe } from '@/lib/auth'
 import { digitsOnly } from '@/lib/masks'
 import { logServerError } from '@/lib/logger'
+import { anonymizeCustomerOrders } from '@/lib/lgpd'
 export { dynamic } from '@/lib/route-dynamic'
 
 
 const schema = z.object({
   customerWhatsapp: z.string().min(10).max(20),
 })
-
-const ANON_NAME = 'Titular removido (LGPD)'
 
 export async function POST(req: NextRequest) {
   const session = await getSessionSafe()
@@ -27,23 +25,13 @@ export async function POST(req: NextRequest) {
     }
 
     const phone = digitsOnly(parsed.data.customerWhatsapp)
+    const { updated } = await anonymizeCustomerOrders(
+      session.storeId,
+      phone,
+      'Anonimizado pelo lojista',
+    )
 
-    const result = await sql`
-      UPDATE orders
-      SET
-        customer_name = ${ANON_NAME},
-        customer_whatsapp = '***',
-        notes = COALESCE(notes, '') || E'\n[LGPD] Anonimizado pelo lojista em ' || NOW()::text,
-        delivery_address = NULL
-      WHERE store_id = ${session.storeId}
-        AND regexp_replace(customer_whatsapp, '\\D', '', 'g') = ${phone}
-      RETURNING id
-    `
-
-    return NextResponse.json({
-      ok:      true,
-      updated: result.length,
-    })
+    return NextResponse.json({ ok: true, updated })
   } catch (error) {
     logServerError('[admin/privacidade/excluir-cliente]', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

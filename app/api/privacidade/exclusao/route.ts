@@ -4,6 +4,7 @@ import { sql } from '@/lib/db'
 import { digitsOnly } from '@/lib/masks'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import { logServerError } from '@/lib/logger'
+import { anonymizeCustomerOrders } from '@/lib/lgpd'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -11,8 +12,6 @@ const schema = z.object({
   storeSlug:          z.string().min(2).max(40),
   customerWhatsapp:   z.string().min(10).max(20),
 })
-
-const ANON_NAME = 'Titular removido (LGPD)'
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req)
@@ -42,20 +41,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: 'Solicitação registrada.' })
     }
 
-    await sql`
-      UPDATE orders
-      SET
-        customer_name = ${ANON_NAME},
-        customer_whatsapp = '***',
-        notes = COALESCE(notes, '') || E'\n[LGPD] Anonimizado em ' || NOW()::text,
-        delivery_address = NULL
-      WHERE store_id = ${store.id}
-        AND regexp_replace(customer_whatsapp, '\\D', '', 'g') = ${phone}
-    `
+    const { updated } = await anonymizeCustomerOrders(
+      store.id as string,
+      phone,
+      'Anonimizado pelo titular via vitrine',
+    )
 
     return NextResponse.json({
       ok:      true,
-      message: 'Solicitação recebida. Dados pessoais serão anonimizados conforme a política de privacidade (até 15 dias úteis).',
+      updated,
+      message: updated > 0
+        ? 'Dados pessoais anonimizados nos pedidos vinculados ao WhatsApp informado.'
+        : 'Nenhum pedido encontrado para este WhatsApp. Se você acredita que há erro, contate a loja ou privacidade@vend.ai.',
     })
   } catch (error) {
     logServerError('[POST /api/privacidade/exclusao]', error)

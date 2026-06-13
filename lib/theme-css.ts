@@ -38,7 +38,10 @@ export function generateThemeCss(
       ? theme.defaultColors.background
       : theme.defaultColors.backgroundLight
 
-  const c = deriveThemeColors(primary, accent, background, pageBg)
+  const c = deriveThemeColors(primary, accent, background, pageBg, {
+    text:      background === 'light' ? theme.defaultColors.text : undefined,
+    textMuted: background === 'light' ? theme.defaultColors.textMuted : undefined,
+  })
   const typography = themeTypographyCssVars(getThemeTypography(theme.name))
   const shadow =
     background === 'dark'
@@ -156,6 +159,6 @@ export function resolveStoreTheme(row: StoreThemeRow): {
     css,
     fontUrl:     getGoogleFontsUrl(theme),
     cardTheme:   themeToCardConfig(theme, shimmer),
-    displayLogo: row.theme_logo_url?.trim() || row.logo_url?.trim() || null,
+    displayLogo: row.logo_url?.trim() || row.theme_logo_url?.trim() || null,
   }
 }

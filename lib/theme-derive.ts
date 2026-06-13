@@ -150,6 +150,35 @@ function relativeLuminance(hex: string): number {
   return 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!
 }
 
+export function contrastRatio(fg: string, bg: string): number {
+  const l1 = relativeLuminance(fg)
+  const l2 = relativeLuminance(bg)
+  const lighter = Math.max(l1, l2)
+  const darker = Math.min(l1, l2)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+function meetsContrast(fg: string, bg: string, minRatio: number): boolean {
+  return contrastRatio(fg, bg) >= minRatio
+}
+
+function pickReadableColor(
+  candidates: string[],
+  bg: string,
+  minRatio: number,
+): string {
+  for (const candidate of candidates) {
+    const hex = expandHex(candidate)
+    if (meetsContrast(hex, bg, minRatio)) return hex
+  }
+  let tone = expandHex(candidates[0] ?? '#1A1A2E')
+  for (let i = 0; i < 16; i++) {
+    if (meetsContrast(tone, bg, minRatio)) return tone
+    tone = darken(tone, 6)
+  }
+  return tone
+}
+
 /** Cor “clara” para texto de botão (luminância relativa WCAG). */
 export function isLight(hex: string): boolean {
   return relativeLuminance(hex) > 0.55
@@ -160,6 +189,7 @@ export function deriveThemeColors(
   accent: string,
   background: ThemeBackground,
   pageBgFallback?: string,
+  themeText?: { text?: string; textMuted?: string },
 ): DerivedThemeColors {
   const p = expandHex(primary)
   const a = expandHex(accent)
@@ -173,6 +203,25 @@ export function deriveThemeColors(
   const border = isDark ? alpha(p, 0.15) : alpha(p, 0.2)
   const faint = isDark ? '#33334A' : '#C8C0B8'
 
+  const textPrimary = isDark
+    ? '#F0F0FF'
+    : (themeText?.text?.trim() || '#1A1A2E')
+  const textSecondary = isDark ? '#AAAACC' : '#4A4A6A'
+  const textMutedBase = isDark
+    ? '#666688'
+    : (themeText?.textMuted?.trim() || '#8888AA')
+  const textMuted = isDark
+    ? textMutedBase
+    : pickReadableColor([textMutedBase, darken(textMutedBase, 12), textSecondary], pageBg, 4.5)
+
+  const pricePrimary = isDark
+    ? pickReadableColor([a, lighten(a, 10), p, '#F0F0FF'], cardBg, 3)
+    : pickReadableColor(
+        [darken(p, 22), darken(p, 12), textPrimary, darken(a, 50), p],
+        cardBg,
+        3,
+      )
+
   return {
     primary: p,
     accent: a,
@@ -184,9 +233,9 @@ export function deriveThemeColors(
     primarySurface: alpha(p, 0.1),
     primaryBorder: alpha(p, 0.2),
 
-    textPrimary: isDark ? '#F0F0FF' : '#1A1A2E',
-    textSecondary: isDark ? '#AAAACC' : '#4A4A6A',
-    textMuted: isDark ? '#666688' : '#8888AA',
+    textPrimary,
+    textSecondary,
+    textMuted,
 
     cardBg,
     cardBgHover,
@@ -194,19 +243,19 @@ export function deriveThemeColors(
     cardBorderHover: alpha(p, 0.5),
 
     headerBg: isDark ? alpha('#000000', 0.9) : alpha('#FFFFFF', 0.95),
-    headerText: isDark ? '#F0F0FF' : '#1A1A2E',
+    headerText: isDark ? '#F0F0FF' : textPrimary,
 
-    chipBg: isDark ? alpha('#FFFFFF', 0.08) : alpha('#000000', 0.06),
-    chipBgActive: alpha(p, 0.15),
-    chipText: isDark ? '#AAAACC' : '#4A4A6A',
-    chipTextActive: p,
+    chipBg: isDark ? alpha('#FFFFFF', 0.08) : alpha('#000000', 0.05),
+    chipBgActive: isDark ? alpha(p, 0.15) : alpha(p, 0.12),
+    chipText: isDark ? '#AAAACC' : textSecondary,
+    chipTextActive: isDark ? p : pickReadableColor([p, darken(p, 15), textPrimary], pageBg, 3),
 
     buttonBg: p,
-    buttonText: isLight(p) ? '#1A1A2E' : '#FFFFFF',
+    buttonText: isLight(p) ? textPrimary : '#FFFFFF',
     buttonHover: darken(p, 10),
 
-    pricePrimary: a,
-    priceOld: isDark ? '#555577' : '#AAAAAA',
+    pricePrimary,
+    priceOld: isDark ? '#555577' : pickReadableColor(['#999999', '#888888', textMuted], cardBg, 3),
 
     viAvatar: `linear-gradient(135deg, ${p}, ${a})`,
     viBubbleBg: isDark ? alpha(p, 0.12) : alpha(p, 0.08),

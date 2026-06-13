@@ -11,11 +11,20 @@ import type {
   ProductAnalysisHints,
   ProductAudienceHint,
   ProductAnalysisMode,
+  ProductAudience,
+  ProductAudienceConfidence,
+  CatalogAxes,
+  PhotoVariationHint,
+  StockAxis,
 } from '@/types'
-import { PRODUCT_CATEGORIES, SIZES, getCategoryDisplayLabel } from '@/types'
+import { PRODUCT_CATEGORIES, CLOTHING_SIZES, getCategoryDisplayLabel, PRODUCT_AUDIENCE_OPTIONS, stockKeysForAxes } from '@/types'
 import { adminCard } from '@/lib/admin-ui'
+import { stripEmojis } from '@/lib/strip-emoji'
 import MaskedInput from '@/components/ui/MaskedInput'
 import { numberToCurrencyInput, parseCurrency } from '@/lib/masks'
+import type { AnalysisAiMeta, MappedVariantDraft } from '@/lib/product-analysis-map'
+import { stockAxisFromProduct } from '@/lib/product-analysis-map'
+import { getAxisLabels, variationKindLabel } from '@/lib/catalog-axes'
 
 interface Props {
   storeId:           string
@@ -31,16 +40,23 @@ interface VariantState {
   photos:            File[]
   existingPhotoUrls?: string[]
   stock:             Record<string, number>
+  stockPrices?:      Record<string, number>
+  stockPromoPrices?: Record<string, number>
   variantType:       VariantType
 }
 
 type BatchProductDraft = {
-  nome:       string
-  descricao:  string
-  categoria:  string
-  variantes:  Array<{ cor: string; corHex: string }>
-  file:       File
-  photoFiles?: File[]
+  nome:                 string
+  descricao:            string
+  categoria:            string
+  audience:             ProductAudience | null
+  audienceConfidence:   ProductAudienceConfidence | null
+  variantes:            Array<{ cor: string; corHex: string }>
+  catalogAxes?:         CatalogAxes
+  aiMeta?:              AnalysisAiMeta | null
+  variantDrafts?:       MappedVariantDraft[]
+  file:                 File
+  photoFiles?:          File[]
 }
 
 const VARIANT_TYPE_OPTIONS: Array<{ value: VariantType; label: string }> = [
@@ -52,6 +68,19 @@ const VARIANT_TYPE_OPTIONS: Array<{ value: VariantType; label: string }> = [
 ]
 
 type CadastroStep = 1 | 2 | 3 | 4
+
+const PHOTO_VARIATION_OPTIONS: Array<{ value: PhotoVariationHint | 'unspecified'; label: string }> = [
+  { value: 'unspecified',    label: 'Não informar (IA decide)' },
+  { value: 'colors',         label: 'Cores diferentes' },
+  { value: 'volumes',        label: 'Volumes diferentes (50ml, 100ml…)' },
+  { value: 'concentrations', label: 'Concentrações (EDT, EDP…)' },
+]
+
+const STOCK_AXIS_OPTIONS: Array<{ value: StockAxis; label: string }> = [
+  { value: 'clothing', label: 'Tamanho de roupa (P, M, G…)' },
+  { value: 'volume',   label: 'Volume (ml)' },
+  { value: 'unique',   label: 'Único (sem variação de tamanho)' },
+]
 
 const AUDIENCE_HINT_OPTIONS: Array<{ value: ProductAudienceHint; label: string }> = [
   { value: '',          label: 'Não informar' },
@@ -185,6 +214,10 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const [hintAudience, setHintAudience] = useState<ProductAudienceHint>('')
   const [hintColors, setHintColors]     = useState('')
   const [hintNote, setHintNote]         = useState('')
+  const [hintPhotoVariation, setHintPhotoVariation] = useState<PhotoVariationHint | 'unspecified'>('unspecified')
+  const [catalogAxes, setCatalogAxes] = useState<CatalogAxes>({ primaryAxis: 'color', stockAxis: 'clothing' })
+  const [aiMeta, setAiMeta] = useState<AnalysisAiMeta | null>(null)
+  const [customStockKey, setCustomStockKey] = useState('')
   const [batchQueue, setBatchQueue]     = useState<BatchProductDraft[]>([])
   const [batchIndex, setBatchIndex]     = useState(0)
   const [active,    setActive]    = useState(true)
@@ -193,30 +226,46 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const [prodName,  setProdName]  = useState('')
   const [prodDesc,  setProdDesc]  = useState('')
   const [prodCat,   setProdCat]   = useState('')
+  const [prodAudience, setProdAudience] = useState<ProductAudience | ''>('')
   const [prodPrice, setProdPrice] = useState('')
   const [prodPromo, setProdPromo] = useState('')
   const [variants,  setVariants]  = useState<VariantState[]>([])
 
-  const [aiBadges, setAiBadges] = useState({ name: false, desc: false, cat: false })
+  const [aiBadges, setAiBadges] = useState({ name: false, desc: false, cat: false, audience: false })
+  const [aiAudienceConfidence, setAiAudienceConfidence] = useState<ProductAudienceConfidence | null>(null)
 
   useEffect(() => {
     if (!initialProduct) return
     setProdName(initialProduct.name)
     setProdDesc(initialProduct.description ?? '')
     setProdCat(initialProduct.category ?? 'outro')
+    setProdAudience(initialProduct.audience ?? '')
     setProdPrice(numberToCurrencyInput(Number(initialProduct.price ?? 0)))
     setProdPromo(initialProduct.promo_price != null ? numberToCurrencyInput(Number(initialProduct.promo_price)) : '')
     setActive(initialProduct.active ?? true)
+    if (initialProduct.catalog_axes) {
+      setCatalogAxes(initialProduct.catalog_axes)
+    } else {
+      setCatalogAxes({
+        primaryAxis: stockAxisFromProduct(null, initialProduct.variants_json) === 'volume' ? 'none' : 'color',
+        stockAxis:   stockAxisFromProduct(null, initialProduct.variants_json),
+      })
+    }
     setVariants(
-      (initialProduct.variants_json ?? []).map((v: ProductVariant) => ({
-        id:                v.id,
-        color:             v.color,
-        colorHex:          v.colorHex ?? '#888888',
-        photos:            [],
-        existingPhotoUrls: v.photos ?? [],
-        stock:             v.stock ?? Object.fromEntries(SIZES.map(s => [s, 0])),
-        variantType:       v.variantType ?? 'cor',
-      }))
+      (initialProduct.variants_json ?? []).map((v: ProductVariant) => {
+        const axis = initialProduct.catalog_axes?.stockAxis ?? stockAxisFromProduct(null, [v])
+        return {
+          id:                v.id,
+          color:             v.color,
+          colorHex:          v.colorHex ?? '#888888',
+          photos:            [],
+          existingPhotoUrls: v.photos ?? [],
+          stock:             v.stock ?? Object.fromEntries(stockKeysForAxes(axis, v.stock).map(s => [s, 0])),
+          stockPrices:       v.stockPrices ?? {},
+          stockPromoPrices:  v.stockPromoPrices ?? {},
+          variantType:       v.variantType ?? 'cor',
+        }
+      })
     )
   }, [initialProduct])
 
@@ -269,63 +318,113 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     if (hintAudience) hints.audience = hintAudience
     if (hintMode === 'single' && hintColors.trim()) hints.colorsNote = hintColors.trim()
     if (hintNote.trim()) hints.freeText = hintNote.trim()
+    if (hintMode === 'single' && hintPhotoVariation !== 'unspecified') {
+      hints.photoVariation = hintPhotoVariation
+    }
     return hints
   }
 
+  function variantDraftsToState(drafts: MappedVariantDraft[], filesSnapshot: File[]): VariantState[] {
+    return drafts.map(d => ({
+      id:               d.id,
+      color:            d.color,
+      colorHex:         d.colorHex,
+      photos:           d.photoIndices.flatMap(i => (filesSnapshot[i] ? [filesSnapshot[i]] : [])),
+      stock:            d.stock,
+      stockPrices:      d.stockPrices ?? {},
+      stockPromoPrices: {},
+      variantType:      d.variantType,
+    }))
+  }
+
   function applySingleAnalysis(
-    data: { nome?: string; descricao?: string; categoria?: string; variantes?: Array<{ cor: string; corHex: string }> },
+    data: {
+      nome?: string
+      descricao?: string
+      categoria?: string
+      audience?: ProductAudience | null
+      audienceConfidence?: ProductAudienceConfidence | null
+      variantes?: Array<{ cor: string; corHex: string }>
+      catalogAxes?: CatalogAxes
+      aiMeta?: AnalysisAiMeta
+      variantDrafts?: MappedVariantDraft[]
+    },
     filesSnapshot: File[],
   ) {
     setBatchQueue([])
     setBatchIndex(0)
-    setProdName(data.nome ?? '')
-    setProdDesc(data.descricao ?? '')
+    setProdName(stripEmojis(data.nome ?? ''))
+    setProdDesc(stripEmojis(data.descricao ?? ''))
     setProdCat(data.categoria ?? '')
-    setAiBadges({ name: true, desc: true, cat: true })
+    setProdAudience(data.audience ?? '')
+    setAiAudienceConfidence(data.audienceConfidence ?? null)
+    setAiBadges({ name: true, desc: true, cat: true, audience: Boolean(data.audience) })
 
-    const rawVariantes = data.variantes ?? []
-    let generatedVariants: VariantState[] = rawVariantes.map(
-      (v: { cor: string; corHex: string }) => ({
-        id:          crypto.randomUUID(),
-        color:       v.cor,
-        colorHex:    v.corHex ?? '#888888',
-        photos:      [] as File[],
-        stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
-        variantType: 'cor' as VariantType,
-      }),
-    )
+    if (data.catalogAxes) setCatalogAxes(data.catalogAxes)
+    if (data.aiMeta) setAiMeta(data.aiMeta)
 
-    if (generatedVariants.length === 0) {
-      generatedVariants = [{
-        id:          crypto.randomUUID(),
-        color:       'Único',
-        colorHex:    '#888888',
-        photos:      [...filesSnapshot],
-        stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
-        variantType: 'cor' as VariantType,
-      }]
+    let generatedVariants: VariantState[]
+
+    if (data.variantDrafts?.length) {
+      generatedVariants = variantDraftsToState(data.variantDrafts, filesSnapshot)
+      const kind = data.aiMeta?.variationKind
+      if (kind === 'volume') {
+        setPostAiPhotoNote('Volumes detectados — defina estoque e preço por volume na etapa final.')
+      } else if (kind === 'color' && generatedVariants.length > 1) {
+        setPostAiPhotoNote('A 1.ª foto corresponde à 1.ª variação listada, quando aplicável.')
+      } else {
+        setPostAiPhotoNote('')
+      }
     } else {
-      const buckets = distributeFilesAcrossVariants(filesSnapshot, generatedVariants.length)
-      generatedVariants = generatedVariants.map((gv, i) => ({
-        ...gv,
-        photos: buckets[i] ?? [],
+      const rawVariantes = data.variantes ?? []
+      generatedVariants = rawVariantes.map((v: { cor: string; corHex: string }) => ({
+        id:               crypto.randomUUID(),
+        color:            v.cor,
+        colorHex:         v.corHex ?? '#888888',
+        photos:           [] as File[],
+        stock:            Object.fromEntries(CLOTHING_SIZES.map(s => [s, 0])),
+        stockPrices:      {},
+        stockPromoPrices: {},
+        variantType:      'cor' as VariantType,
       }))
-    }
 
-    const n = generatedVariants.length
-    const m = filesSnapshot.length
-    if (n > 1 && m > n) {
-      setPostAiPhotoNote('Fotos extra foram agrupadas na última cor — ajuste abaixo se precisar.')
-    } else if (m === n && n > 1) {
-      setPostAiPhotoNote('A 1.ª foto corresponde à 1.ª cor listada abaixo, e assim por diante.')
-    } else if (m < n) {
-      setPostAiPhotoNote('Há mais variações de cor do que fotos: algumas cores ficaram sem foto até você adicionar.')
-    } else {
-      setPostAiPhotoNote('')
+      if (generatedVariants.length === 0) {
+        generatedVariants = [{
+          id:               crypto.randomUUID(),
+          color:            'Único',
+          colorHex:         '#888888',
+          photos:           [...filesSnapshot],
+          stock:            Object.fromEntries(CLOTHING_SIZES.map(s => [s, 0])),
+          stockPrices:      {},
+          stockPromoPrices: {},
+          variantType:      'cor' as VariantType,
+        }]
+      } else {
+        const buckets = distributeFilesAcrossVariants(filesSnapshot, generatedVariants.length)
+        generatedVariants = generatedVariants.map((gv, i) => ({
+          ...gv,
+          photos: buckets[i] ?? [],
+        }))
+      }
+
+      const n = generatedVariants.length
+      const m = filesSnapshot.length
+      if (n > 1 && m > n) {
+        setPostAiPhotoNote('Fotos extra foram agrupadas na última variação — ajuste abaixo se precisar.')
+      } else if (m === n && n > 1) {
+        setPostAiPhotoNote('A 1.ª foto corresponde à 1.ª variação listada abaixo.')
+      } else if (m < n) {
+        setPostAiPhotoNote('Há mais variações do que fotos: algumas ficaram sem foto até você adicionar.')
+      } else {
+        setPostAiPhotoNote('')
+      }
     }
 
     setVariants(generatedVariants)
-    setAiStatus(`✓ ${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''} identificada${generatedVariants.length > 1 ? 's' : ''}`)
+    const label = data.aiMeta
+      ? variationKindLabel(data.aiMeta.variationKind, data.aiMeta.volumeLabels)
+      : `${generatedVariants.length} variação${generatedVariants.length > 1 ? 'ões' : ''}`
+    setAiStatus(`✓ ${label}`)
   }
 
   function persistCurrentBatchDraft(source: BatchProductDraft[] = batchQueue): BatchProductDraft[] {
@@ -341,6 +440,18 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         nome:      prodName,
         descricao: prodDesc,
         categoria: prodCat,
+        audience:  prodAudience || null,
+        catalogAxes,
+        aiMeta,
+        variantDrafts: variants.map(v => ({
+          id:            v.id,
+          color:         v.color,
+          colorHex:      v.colorHex,
+          stock:         v.stock,
+          stockPrices:   v.stockPrices,
+          variantType:   v.variantType,
+          photoIndices:  [],
+        })),
         variantes: variants.length
           ? variants.map(v => ({ cor: v.color, corHex: v.colorHex }))
           : item.variantes,
@@ -360,22 +471,33 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   function loadBatchProduct(queue: BatchProductDraft[], index: number) {
     const item = queue[index]
     if (!item) return
-    setProdName(item.nome)
-    setProdDesc(item.descricao)
+    setProdName(stripEmojis(item.nome))
+    setProdDesc(stripEmojis(item.descricao))
     setProdCat(item.categoria)
+    setProdAudience(item.audience ?? '')
+    setAiAudienceConfidence(item.audienceConfidence ?? null)
     setProdPrice('')
     setProdPromo('')
-    setAiBadges({ name: true, desc: true, cat: true })
-    const v = item.variantes[0] ?? { cor: 'Único', corHex: '#888888' }
+    setAiBadges({ name: true, desc: true, cat: true, audience: Boolean(item.audience) })
+    if (item.catalogAxes) setCatalogAxes(item.catalogAxes)
+    if (item.aiMeta) setAiMeta(item.aiMeta)
+
     const photoFiles = item.photoFiles?.length ? item.photoFiles : [item.file]
-    setVariants([{
-      id:          crypto.randomUUID(),
-      color:       v.cor,
-      colorHex:    v.corHex ?? '#888888',
-      photos:      [...photoFiles],
-      stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
-      variantType: 'cor' as VariantType,
-    }])
+    if (item.variantDrafts?.length) {
+      setVariants(variantDraftsToState(item.variantDrafts, photoFiles))
+    } else {
+      const v = item.variantes[0] ?? { cor: 'Único', corHex: '#888888' }
+      setVariants([{
+        id:               crypto.randomUUID(),
+        color:            v.cor,
+        colorHex:         v.corHex ?? '#888888',
+        photos:           [...photoFiles],
+        stock:            Object.fromEntries(stockKeysForAxes(catalogAxes.stockAxis).map(s => [s, 0])),
+        stockPrices:      {},
+        stockPromoPrices: {},
+        variantType:      'cor' as VariantType,
+      }])
+    }
     setPostAiPhotoNote(
       queue.length > 1
         ? 'Revise cada produto abaixo e publique um por vez na etapa final.'
@@ -389,7 +511,12 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       nome?: string
       descricao?: string
       categoria?: string
+      audience?: ProductAudience | null
+      audienceConfidence?: ProductAudienceConfidence | null
       variantes?: Array<{ cor: string; corHex: string }>
+      catalogAxes?: CatalogAxes
+      aiMeta?: AnalysisAiMeta
+      variantDrafts?: MappedVariantDraft[]
       fotoIndice?: number
     }>,
     filesSnapshot: File[],
@@ -400,10 +527,15 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         const file = filesSnapshot[idx] ?? filesSnapshot[i]
         if (!file) return null
         return {
-          nome:       p.nome ?? `Produto ${i + 1}`,
-          descricao:  p.descricao ?? '',
-          categoria:  p.categoria ?? 'outro',
-          variantes:  p.variantes?.length ? p.variantes : [{ cor: 'Único', corHex: '#888888' }],
+          nome:               p.nome ?? `Produto ${i + 1}`,
+          descricao:          p.descricao ?? '',
+          categoria:          p.categoria ?? 'outro',
+          audience:           p.audience ?? null,
+          audienceConfidence: p.audienceConfidence ?? null,
+          catalogAxes:        p.catalogAxes,
+          aiMeta:             p.aiMeta,
+          variantDrafts:      p.variantDrafts,
+          variantes:          p.variantes?.length ? p.variantes : [{ cor: 'Único', corHex: '#888888' }],
           file,
         }
       })
@@ -421,8 +553,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setPostAiPhotoNote('')
 
     const steps: Array<[number, string]> = [
-      [600,  'Identificando a peça…'],
-      [1500, 'Detectando variações de cor…'],
+      [600,  'Identificando o produto…'],
+      [1500, 'Detectando variações…'],
       [2500, 'Gerando nome e descrição…'],
     ]
     const timers = steps.map(([t, msg]) => setTimeout(() => setAiStatus(msg), t))
@@ -462,7 +594,9 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           color:       'Único',
           colorHex:    '#888888',
           photos:      [...filesSnapshot],
-          stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
+          stock:       Object.fromEntries(stockKeysForAxes(catalogAxes.stockAxis).map(s => [s, 0])),
+          stockPrices: {},
+          stockPromoPrices: {},
           variantType: 'cor' as VariantType,
         }])
       }
@@ -498,12 +632,14 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
   function addVariant() {
     setVariants(prev => [...prev, {
-      id:          crypto.randomUUID(),
-      color:       'Nova Cor',
-      colorHex:    '#888888',
-      photos:      [],
-      stock:       Object.fromEntries(SIZES.map(s => [s, 0])),
-      variantType: 'cor' as VariantType,
+      id:               crypto.randomUUID(),
+      color:            catalogAxes.primaryAxis === 'color' ? 'Nova cor' : 'Nova variação',
+      colorHex:         '#888888',
+      photos:           [],
+      stock:            Object.fromEntries(stockKeysForAxes(catalogAxes.stockAxis).map(s => [s, 0])),
+      stockPrices:      {},
+      stockPromoPrices: {},
+      variantType:      catalogAxes.stockAxis === 'volume' ? 'modelo' : 'cor',
     }])
   }
 
@@ -519,6 +655,54 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setVariants(prev => prev.map(v =>
       v.id === variantId ? { ...v, stock: { ...v.stock, [size]: qty } } : v
     ))
+  }
+
+  function updateStockPrice(variantId: string, size: string, priceStr: string) {
+    const num = parseCurrency(priceStr)
+    setVariants(prev => prev.map(v => {
+      if (v.id !== variantId) return v
+      const next = { ...(v.stockPrices ?? {}) }
+      if (num > 0) next[size] = num
+      else delete next[size]
+      return { ...v, stockPrices: next }
+    }))
+  }
+
+  function updateStockPromoPrice(variantId: string, size: string, priceStr: string) {
+    const num = parseCurrency(priceStr)
+    setVariants(prev => prev.map(v => {
+      if (v.id !== variantId) return v
+      const next = { ...(v.stockPromoPrices ?? {}) }
+      if (num > 0) next[size] = num
+      else delete next[size]
+      return { ...v, stockPromoPrices: next }
+    }))
+  }
+
+  function addCustomStockKey(variantId: string) {
+    const key = customStockKey.trim()
+    if (!key) return
+    setVariants(prev => prev.map(v => {
+      if (v.id !== variantId) return v
+      return {
+        ...v,
+        stock: { ...v.stock, [key]: v.stock[key] ?? 0 },
+      }
+    }))
+    setCustomStockKey('')
+  }
+
+  function handleStockAxisChange(axis: StockAxis) {
+    setCatalogAxes(prev => ({
+      primaryAxis: axis === 'volume' ? 'none' : prev.primaryAxis === 'none' ? 'color' : prev.primaryAxis,
+      stockAxis:   axis,
+    }))
+    setVariants(prev => prev.map(v => ({
+      ...v,
+      stock: Object.fromEntries(
+        stockKeysForAxes(axis, v.stock).map(s => [s, v.stock[s] ?? 0]),
+      ),
+    })))
   }
 
   function addVariantPhotos(variantId: string, fileList: FileList | null) {
@@ -586,6 +770,10 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         variants.map(async v => {
           const newUrls = await Promise.all(v.photos.map(uploadPhoto))
           const photoUrls = [...(v.existingPhotoUrls ?? []), ...newUrls]
+          const stockPrices = v.stockPrices && Object.keys(v.stockPrices).length > 0 ? v.stockPrices : undefined
+          const stockPromoPrices = v.stockPromoPrices && Object.keys(v.stockPromoPrices).length > 0
+            ? v.stockPromoPrices
+            : undefined
           return {
             id:          v.id,
             color:       v.color,
@@ -593,6 +781,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             photos:      photoUrls,
             stock:       v.stock,
             variantType: v.variantType,
+            stockPrices,
+            stockPromoPrices,
           }
         })
       )
@@ -602,9 +792,11 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         name:          prodName.trim(),
         description:   prodDesc.trim(),
         category:      prodCat,
+        audience:      prodAudience || null,
         price:         priceNum,
         promo_price:   promoNum > 0 ? promoNum : null,
         variants_json: finalVariants,
+        catalog_axes:  catalogAxes,
         active,
       }
 
@@ -639,6 +831,10 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     }
   }
 
+  const axisLabels = getAxisLabels(catalogAxes)
+  const showSkuPrices = catalogAxes.stockAxis === 'volume'
+    || variants.some(v => Object.keys(v.stockPrices ?? {}).length > 0)
+
   const categorySelect = (
     <select
       className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all appearance-none"
@@ -660,6 +856,31 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       )}
     </select>
   )
+
+  const audienceSelect = (
+    <select
+      className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all appearance-none"
+      value={prodAudience}
+      onChange={e => {
+        setProdAudience(e.target.value as ProductAudience | '')
+        setAiBadges(p => ({ ...p, audience: false }))
+        setAiAudienceConfidence(null)
+      }}
+    >
+      <option value="">Selecionar…</option>
+      {PRODUCT_AUDIENCE_OPTIONS.map(o => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  )
+
+  const audienceAiHint = aiBadges.audience && aiAudienceConfidence === 'baixa' ? (
+    <span className="text-[11px] text-muted mt-1 block break-words">
+      A peça era ambígua — sugerimos unissex. Ajuste se necessário.
+    </span>
+  ) : aiBadges.audience ? (
+    <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>
+  ) : null
 
   const showCommercial = isEdit || step === 4
   const showReview = !isEdit && step === 3 && analyzed
@@ -685,7 +906,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 </div>
                 <div className="font-syne font-semibold text-base mb-1">Fotos do produto</div>
                 <div className="text-sm text-muted mb-4 break-words max-w-md">
-                  Uma foto por cor ajuda a IA. Depois você revisa tudo antes de publicar.
+                  Roupas, perfumes ou outros — uma foto por cor ou volume ajuda a IA. Depois você revisa tudo.
                 </div>
                 <div className="px-5 py-2.5 min-h-[44px] flex items-center bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold">
                   Abrir galeria
@@ -713,7 +934,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           <div className={`${adminCard} mb-4`}>
             <div className="font-syne font-bold text-base mb-1">Contexto para a IA</div>
             <p className="text-sm text-muted mb-5 break-words">
-              A IA gera nome, descrição e categoria a partir das fotos. Você só indica quantos produtos são e o tipo geral.
+              A IA gera nome, descrição, categoria e público a partir das fotos — moda, perfumaria ou misto.
+              Informe o tipo de produto quando souber (ex.: Perfumes, Vestido).
             </p>
             <div className="flex flex-col gap-4">
               <div>
@@ -726,7 +948,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   >
                     <div className="font-syne font-semibold text-base mb-1">Um produto</div>
                     <div className={`text-sm break-words ${hintMode === 'single' ? 'text-primary/90' : 'text-muted'}`}>
-                      Várias fotos = cores do mesmo item
+                      Várias fotos = cores ou volumes do mesmo item
                     </div>
                   </button>
                   <button
@@ -772,7 +994,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   )}
                 </div>
                 <div className="min-w-0">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Tipo de peça</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Tipo de produto</label>
                   <select
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
                     value={hintPiece}
@@ -802,11 +1024,26 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               </div>
 
               {hintMode === 'single' && (
+                <div className="min-w-0">
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">O que muda entre as fotos?</label>
+                  <select
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                    value={hintPhotoVariation}
+                    onChange={e => setHintPhotoVariation(e.target.value as PhotoVariationHint | 'unspecified')}
+                  >
+                    {PHOTO_VARIATION_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {hintMode === 'single' && (
                 <div>
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Cores que você vê</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Cores ou volumes</label>
                   <input
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
-                    placeholder="Ex.: preto, off-white, azul marinho"
+                    placeholder="Ex.: preto, off-white — ou 50ml, 100ml"
                     value={hintColors}
                     onChange={e => setHintColors(e.target.value)}
                   />
@@ -930,13 +1167,42 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             {aiStatus && batchQueue.length <= 1 && (
               <p className={`text-xs mb-4 break-words ${aiStatus.startsWith('✓') ? 'text-accent' : 'text-warm'}`}>{aiStatus}</p>
             )}
+            {aiMeta && (
+              <div className="mb-4 p-3 rounded-xl border border-primary/30 bg-primary/5 min-w-0">
+                <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1">O que a IA detectou</p>
+                <p className="text-sm break-words">{variationKindLabel(aiMeta.variationKind, aiMeta.volumeLabels)}</p>
+                {aiMeta.attributes?.concentration && (
+                  <p className="text-xs text-muted mt-1 break-words">Concentração: {aiMeta.attributes.concentration}</p>
+                )}
+                {aiMeta.attributes?.volumeMl != null && (
+                  <p className="text-xs text-muted mt-1">Volume no rótulo: {aiMeta.attributes.volumeMl} ml</p>
+                )}
+                {aiMeta.confidenceNotes?.map((note, i) => (
+                  <p key={i} className="text-xs text-warm mt-1 break-words">{note}</p>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-col gap-3 mb-4">
+              <div className="min-w-0">
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Tipo de estoque</label>
+                <select
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                  value={catalogAxes.stockAxis}
+                  onChange={e => handleStockAxisChange(e.target.value as StockAxis)}
+                >
+                  {STOCK_AXIS_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div className="flex flex-col gap-3">
               <div>
                 <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Nome</label>
                 <input
                   className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
                   value={prodName}
-                  onChange={e => { setProdName(e.target.value); setAiBadges(p => ({ ...p, name: false })) }}
+                  onChange={e => { setProdName(stripEmojis(e.target.value)); setAiBadges(p => ({ ...p, name: false })) }}
                 />
                 {aiBadges.name && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
@@ -945,7 +1211,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 <textarea
                   className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y"
                   value={prodDesc}
-                  onChange={e => { setProdDesc(e.target.value); setAiBadges(p => ({ ...p, desc: false })) }}
+                  onChange={e => { setProdDesc(stripEmojis(e.target.value)); setAiBadges(p => ({ ...p, desc: false })) }}
                 />
                 {aiBadges.desc && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
@@ -954,27 +1220,40 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 {categorySelect}
                 {aiBadges.cat && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Público</label>
+                {audienceSelect}
+                {audienceAiHint}
+              </div>
             </div>
           </div>
 
           <div className={`${adminCard} mb-4`}>
-            <div className="font-syne font-bold text-base mb-1">Variações detectadas</div>
-            <p className="text-sm text-muted mb-4 break-words">Ajuste nomes de cor antes de definir preço e estoque.</p>
+            <div className="font-syne font-bold text-base mb-1">
+              {catalogAxes.stockAxis === 'volume' ? 'Volumes detectados' : catalogAxes.primaryAxis === 'color' ? 'Cores detectadas' : 'Variações detectadas'}
+            </div>
+            <p className="text-sm text-muted mb-4 break-words">
+              Ajuste {axisLabels.primary.toLowerCase()} antes de definir preço e estoque.
+            </p>
             {variants.map(v => (
               <div key={v.id} className="flex items-center gap-2.5 mb-3 flex-wrap min-w-0">
-                <div className="w-5 h-5 rounded-full border-2 border-white/20 shrink-0" style={{ background: v.colorHex }} />
+                {catalogAxes.primaryAxis !== 'none' && (
+                  <div className="w-5 h-5 rounded-full border-2 border-white/20 shrink-0" style={{ background: v.colorHex }} />
+                )}
                 <input
                   className="flex-1 min-w-0 min-h-[44px] px-3 py-2 bg-surface2 border border-border rounded-lg text-foreground text-sm outline-none focus:border-primary"
                   value={v.color}
                   onChange={e => updateVariant(v.id, { color: e.target.value })}
                 />
-                <input
-                  type="color"
-                  value={v.colorHex}
-                  onChange={e => updateVariant(v.id, { colorHex: e.target.value })}
-                  className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full cursor-pointer border-0 bg-transparent p-0 shrink-0"
-                  aria-label={`Cor de ${v.color}`}
-                />
+                {catalogAxes.primaryAxis === 'color' && (
+                  <input
+                    type="color"
+                    value={v.colorHex}
+                    onChange={e => updateVariant(v.id, { colorHex: e.target.value })}
+                    className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full cursor-pointer border-0 bg-transparent p-0 shrink-0"
+                    aria-label={`Cor de ${v.color}`}
+                  />
+                )}
                 <span className="text-[11px] text-muted shrink-0">
                   {v.photos.length} foto{v.photos.length !== 1 ? 's' : ''}
                 </span>
@@ -1009,6 +1288,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               onClick={() => {
                 if (!prodName.trim()) { alert('Informe o nome do produto'); return }
                 if (!prodCat) { alert('Selecione a categoria'); return }
+                if (!prodAudience) { alert('Selecione o público (feminino, masculino, unissex ou infantil)'); return }
                 if (!variants.length) { alert('Adicione ao menos uma variação'); return }
                 if (batchQueue.length > 1) {
                   setBatchQueue(persistCurrentBatchDraft())
@@ -1062,7 +1342,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 <input
                   className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
                   value={prodName}
-                  onChange={e => { setProdName(e.target.value); setAiBadges(p => ({ ...p, name: false })) }}
+                  onChange={e => { setProdName(stripEmojis(e.target.value)); setAiBadges(p => ({ ...p, name: false })) }}
                 />
               </div>
 
@@ -1071,7 +1351,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 <textarea
                   className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all min-h-[80px] resize-y"
                   value={prodDesc}
-                  onChange={e => { setProdDesc(e.target.value); setAiBadges(p => ({ ...p, desc: false })) }}
+                  onChange={e => { setProdDesc(stripEmojis(e.target.value)); setAiBadges(p => ({ ...p, desc: false })) }}
                 />
               </div>
 
@@ -1086,6 +1366,13 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   )}
                 </div>
 
+                <div className="min-w-0">
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Público</label>
+                  {audienceSelect}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="min-w-0">
                   <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Preço (R$)</label>
                   <MaskedInput
@@ -1133,26 +1420,44 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           {/* Variants */}
           <div className={`${adminCard} mb-4`}>
             <div className="font-syne font-bold text-base mb-1">Variações</div>
-            <p className="text-sm text-muted mb-4 break-words">Cor, modelo ou estampa diferente = produto diferente (conta no limite do plano). Tamanho = variação gratuita.</p>
+            <p className="text-sm text-muted mb-4 break-words">Cor, modelo ou estampa diferente = produto diferente (conta no limite do plano). {axisLabels.secondary} = variação gratuita.</p>
+
+            <div className="mb-4 min-w-0">
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Tipo de estoque</label>
+              <select
+                className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                value={catalogAxes.stockAxis}
+                onChange={e => handleStockAxisChange(e.target.value as StockAxis)}
+              >
+                {STOCK_AXIS_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
 
             {variants.map(v => {
               const noPhoto = variantHasNoPhoto(v)
+              const stockKeys = stockKeysForAxes(catalogAxes.stockAxis, v.stock)
               return (
               <div key={v.id} className="bg-surface2 border border-border rounded-2xl p-4 mb-3">
                 <div className="flex items-center gap-2.5 mb-3 flex-wrap">
-                  <div className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0" style={{ background: v.colorHex }} />
+                  {catalogAxes.primaryAxis !== 'none' && (
+                    <div className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0" style={{ background: v.colorHex }} />
+                  )}
                   <input
                     className="flex-1 min-w-0 px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground font-syne font-bold text-xs outline-none focus:border-primary transition-all"
                     value={v.color}
                     onChange={e => updateVariant(v.id, { color: e.target.value })}
                     placeholder="Nome da variação"
                   />
-                  <input
-                    type="color"
-                    value={v.colorHex}
-                    onChange={e => updateVariant(v.id, { colorHex: e.target.value })}
-                    className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent p-0 shrink-0"
-                  />
+                  {catalogAxes.primaryAxis === 'color' && (
+                    <input
+                      type="color"
+                      value={v.colorHex}
+                      onChange={e => updateVariant(v.id, { colorHex: e.target.value })}
+                      className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent p-0 shrink-0"
+                    />
+                  )}
                   {noPhoto && (
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-warm px-2 py-0.5 rounded border border-warm/30 bg-warm/10">Sem foto</span>
                   )}
@@ -1178,7 +1483,9 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 </div>
 
                 <div className="mb-4">
-                  <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Fotos desta cor</div>
+                  <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">
+                    Fotos {catalogAxes.primaryAxis === 'color' ? 'desta cor' : 'desta variação'}
+                  </div>
                   <div className="flex flex-wrap gap-2 items-start">
                     {(v.existingPhotoUrls ?? []).map((url, i) => (
                       <div key={`ex-${v.id}-${i}`} className="relative w-16 h-16 rounded-xl overflow-hidden border border-border shrink-0 group/thumb">
@@ -1218,20 +1525,59 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   <p className="text-[10px] text-muted mt-2 break-words">Use + para enviar mais imagens desta cor. Remova miniaturas para excluir antes de salvar.</p>
                 </div>
 
-                <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Estoque por tamanho</div>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {SIZES.map(s => (
-                    <div key={s} className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] font-bold text-muted">{s}</span>
+                <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">{axisLabels.stockGrid}</div>
+                <div className="space-y-2 mb-3">
+                  {stockKeys.map(s => (
+                    <div key={s} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center min-w-0">
+                      <span className="text-[10px] font-bold text-muted break-words">{s}</span>
                       <input
                         type="number"
                         min={0}
                         value={v.stock[s] ?? 0}
                         onChange={e => updateStock(v.id, s, parseInt(e.target.value) || 0)}
-                        className="w-full text-center py-1.5 bg-surface border border-border rounded-lg text-foreground text-sm font-semibold outline-none focus:border-primary transition-all"
+                        className="w-full min-h-[44px] text-center py-1.5 bg-surface border border-border rounded-lg text-foreground text-sm font-semibold outline-none focus:border-primary"
+                        aria-label={`Estoque ${s}`}
                       />
+                      {showSkuPrices && (
+                        <>
+                          <MaskedInput
+                            mask="currency"
+                            className="w-full min-h-[44px] px-2 py-1.5 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary"
+                            placeholder={prodPrice || 'R$ 0,00'}
+                            value={v.stockPrices?.[s] != null ? numberToCurrencyInput(v.stockPrices[s]) : ''}
+                            onChange={val => updateStockPrice(v.id, s, val)}
+                            inputMode="decimal"
+                          />
+                          <MaskedInput
+                            mask="currency"
+                            className="w-full min-h-[44px] px-2 py-1.5 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary"
+                            placeholder="Promo"
+                            value={v.stockPromoPrices?.[s] != null ? numberToCurrencyInput(v.stockPromoPrices[s]) : ''}
+                            onChange={val => updateStockPromoPrice(v.id, s, val)}
+                            inputMode="decimal"
+                          />
+                        </>
+                      )}
                     </div>
                   ))}
+                </div>
+                {showSkuPrices && (
+                  <p className="text-[10px] text-muted mb-2 break-words">Preço base do produto preenche linhas vazias na vitrine.</p>
+                )}
+                <div className="flex gap-2 items-center min-w-0">
+                  <input
+                    className="flex-1 min-w-0 min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary"
+                    placeholder={catalogAxes.stockAxis === 'volume' ? 'Ex: 15ml' : 'Ex: XG'}
+                    value={customStockKey}
+                    onChange={e => setCustomStockKey(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addCustomStockKey(v.id)}
+                    className="shrink-0 min-h-[44px] px-3 py-2 border border-border rounded-lg text-xs text-muted hover:border-primary hover:text-primary"
+                  >
+                    + {axisLabels.secondary}
+                  </button>
                 </div>
               </div>
             )})}

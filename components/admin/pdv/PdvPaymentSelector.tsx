@@ -1,20 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-
-interface CartItem {
-  productId: string
-  variantId: string
-  name:      string
-  color:     string
-  size:      string
-  price:     number
-  qty:       number
-}
+import { Banknote, QrCode, CreditCard, Link2 } from 'lucide-react'
+import type { PdvCartItem } from './pdv-types'
+import { formatPdvCurrency } from './pdv-utils'
 
 interface Props {
   storeId:       string
-  cart:          CartItem[]
+  cart:          PdvCartItem[]
   total:         number
   discount:      number
   custName:      string
@@ -25,16 +18,15 @@ interface Props {
   onBack:        () => void
 }
 
-function formatCurrency(v: number) {
-  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
 export default function PdvPaymentSelector({
-  storeId, cart, total, discount, custName, custPhone,
-  storeHasAsaas, storeWhatsapp, onDone, onBack,
+  storeId: _storeId, cart, total, discount, custName, custPhone,
+  storeHasAsaas, storeWhatsapp: _storeWhatsapp, onDone, onBack,
 }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
+
+  const previewLines = cart.slice(0, 3)
+  const extraCount = cart.length - previewLines.length
 
   async function finalize(method: 'dinheiro' | 'pix' | 'cartao') {
     setLoading(true)
@@ -67,7 +59,7 @@ export default function PdvPaymentSelector({
         setError(data.error ?? 'Erro ao registrar venda.')
         return
       }
-      onDone(`Venda ${data.orderNumber} registrada — ${formatCurrency(total)} em ${method}.`)
+      onDone(`Venda ${data.orderNumber} registrada — ${formatPdvCurrency(total)} em ${method}.`)
     } catch {
       setError('Erro de conexão.')
     } finally {
@@ -76,14 +68,13 @@ export default function PdvPaymentSelector({
   }
 
   async function finalizeLink() {
-    if (!custPhone) {
-      setError('Informe o WhatsApp do cliente para enviar o link.')
+    if (!custPhone.trim()) {
+      setError('Informe o WhatsApp do cliente. Volte e preencha em "Identificar cliente".')
       return
     }
     setLoading(true)
     setError(null)
     try {
-      // 1. Criar cobrança no Asaas (via checkout/payment com storeSlug)
       const payRes = await fetch('/api/admin/pdv/link', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,7 +91,6 @@ export default function PdvPaymentSelector({
         return
       }
 
-      // 2. Registrar pedido como PENDING
       await fetch('/api/admin/pdv', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,7 +115,6 @@ export default function PdvPaymentSelector({
         }),
       })
 
-      // 3. Abrir WhatsApp com o link
       const digits = custPhone.replace(/\D/g, '')
       const whatsappUrl = `https://wa.me/55${digits}?text=${encodeURIComponent(`Olá! Segue o link para pagamento do seu pedido: ${payData.invoiceUrl}`)}`
       window.open(whatsappUrl, '_blank')
@@ -141,37 +130,71 @@ export default function PdvPaymentSelector({
   const btnBase = 'w-full min-h-[52px] py-3 px-4 rounded-2xl border-2 text-left transition-colors disabled:opacity-50'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={onBack} className="text-muted text-sm hover:text-foreground transition-colors">
+        <button type="button" onClick={onBack} className="min-h-[44px] px-2 text-muted text-sm hover:text-foreground transition-colors">
           ← Voltar
         </button>
         <h2 className="font-syne font-bold text-base">Forma de pagamento</h2>
       </div>
-      <div className="bg-surface border border-border rounded-2xl p-4 text-center">
-        <div className="text-muted text-xs mb-1">Total</div>
-        <div className="font-syne font-extrabold text-2xl text-accent tabular-nums">{formatCurrency(total)}</div>
+
+      <div className="bg-surface border border-border rounded-2xl p-4">
+        <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Resumo</div>
+        <ul className="space-y-1 text-sm mb-3">
+          {previewLines.map((item, i) => (
+            <li key={`${item.variantId}-${item.size}-${i}`} className="truncate text-muted" title={`${item.qty}× ${item.name} (${item.color}, ${item.size})`}>
+              <span className="tabular-nums text-foreground">{item.qty}×</span>{' '}
+              {item.name}{' '}
+              <span className="text-xs">({item.color}, {item.size})</span>
+            </li>
+          ))}
+          {extraCount > 0 && (
+            <li className="text-xs text-muted">+{extraCount} item{extraCount > 1 ? 's' : ''}</li>
+          )}
+        </ul>
+        <div className="border-t border-border pt-3 text-center">
+          <div className="text-muted text-xs mb-1">Total</div>
+          <div className="font-syne font-extrabold text-2xl text-accent tabular-nums">{formatPdvCurrency(total)}</div>
+        </div>
       </div>
+
+      {!custPhone.trim() && storeHasAsaas && (
+        <p className="text-xs text-muted break-words px-1">
+          Para link de pagamento, volte e preencha o WhatsApp em &quot;Identificar cliente&quot;.
+        </p>
+      )}
 
       <div className="space-y-2">
         <button type="button" disabled={loading} onClick={() => finalize('dinheiro')} className={`${btnBase} border-accent/40 bg-accent/5 hover:bg-accent/10`}>
-          <span className="font-syne font-bold block">💵 Dinheiro</span>
+          <span className="font-syne font-bold block inline-flex items-center justify-center gap-2">
+            <Banknote size={18} aria-hidden />
+            Dinheiro
+          </span>
           <span className="text-xs text-muted mt-0.5 block">Recebeu em mãos — pedido confirmado</span>
         </button>
 
         <button type="button" disabled={loading} onClick={() => finalize('pix')} className={`${btnBase} border-primary/30 bg-primary/5 hover:bg-primary/10`}>
-          <span className="font-syne font-bold block">💠 PIX manual</span>
+          <span className="font-syne font-bold block inline-flex items-center justify-center gap-2">
+            <QrCode size={18} aria-hidden />
+            PIX manual
+          </span>
           <span className="text-xs text-muted mt-0.5 block">Você já recebeu o PIX — pedido confirmado</span>
         </button>
 
         <button type="button" disabled={loading} onClick={() => finalize('cartao')} className={`${btnBase} border-border hover:border-primary/50`}>
-          <span className="font-syne font-bold block">💳 Cartão</span>
+          <span className="font-syne font-bold block inline-flex items-center justify-center gap-2">
+            <CreditCard size={18} aria-hidden />
+            Cartão
+          </span>
           <span className="text-xs text-muted mt-0.5 block">Pagou na maquininha — pedido confirmado</span>
         </button>
 
         {storeHasAsaas && (
           <button type="button" disabled={loading} onClick={finalizeLink} className={`${btnBase} border-border hover:border-accent/50`}>
-            <span className="font-syne font-bold block">🔗 Link de pagamento</span>
+            <span className="font-syne font-bold block inline-flex items-center justify-center gap-2">
+              <Link2 size={18} aria-hidden />
+              Link de pagamento
+            </span>
             <span className="text-xs text-muted mt-0.5 block">Gera link e abre WhatsApp — pedido pendente até pagamento</span>
           </button>
         )}
