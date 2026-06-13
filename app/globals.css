@@ -288,7 +288,18 @@ html.js .reveal-none.is-visible {
 .store-theme-root .produto-card:hover {
   border-color: var(--theme-card-border-hover);
   background: var(--theme-card-bg-hover);
+}
+
+.store-theme-root[data-card-hover='lift'] .produto-card:hover {
   transform: translateY(-4px);
+}
+
+.store-theme-root[data-card-hover='shadow'] .produto-card:hover {
+  box-shadow: var(--theme-shadow);
+}
+
+.store-theme-root[data-card-hover='none'] .produto-card:hover {
+  transform: none;
 }
 
 .store-theme-root .produto-nome {
@@ -383,7 +394,7 @@ html.js .reveal-none.is-visible {
   left: 0;
   right: 0;
   padding: 16px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 60%);
+  background: var(--theme-overlay-gradient);
   color: #fff;
 }
 
@@ -466,7 +477,7 @@ html.js .reveal-none.is-visible {
   background: var(--theme-chip-bg);
   color: var(--theme-chip-text);
   border: 1px solid var(--theme-card-border);
-  border-radius: calc(var(--theme-card-radius) * 1.5);
+  border-radius: var(--theme-btn-radius, calc(var(--theme-card-radius) * 1.5));
   font-size: var(--theme-fs-filter);
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s, color 0.2s;
 }
@@ -588,34 +599,156 @@ html.js .reveal-none.is-visible {
   font-family: var(--theme-font-display);
   font-weight: var(--theme-font-weight-display);
   color: var(--theme-header-text);
+  letter-spacing: var(--theme-header-letter-spacing, -0.3px);
 }
 
-.store-theme-root[data-theme='street'] .produto-card {
-  border-radius: 0;
+/* ─── Catálogo: grids por layout de tema ─────────────────────────────────── */
+.store-theme-root .catalog-grid {
+  display: grid;
+  gap: var(--theme-card-gap);
+  grid-template-columns: repeat(var(--theme-catalog-cols-mobile), minmax(0, 1fr));
+  min-width: 0;
 }
 
-.store-theme-root[data-theme='pop'] .produto-card {
-  border-radius: 24px;
+@media (min-width: 768px) {
+  .store-theme-root .catalog-grid {
+    grid-template-columns: repeat(var(--theme-catalog-cols-desktop), minmax(0, 1fr));
+  }
 }
 
-.store-theme-root[data-theme='editorial'] .produto-card {
-  border-radius: 4px;
+.store-theme-root .catalog-grid-feed {
+  gap: var(--theme-card-gap);
 }
 
-.store-theme-root[data-theme='street'] .filter-chip {
-  border-radius: 0;
+.store-theme-root .catalog-grid-list {
+  grid-template-columns: 1fr;
 }
 
-.store-theme-root[data-theme='street'] .filter-chip.active {
-  border-width: 2px;
+@media (min-width: 768px) {
+  .store-theme-root .catalog-grid-list {
+    grid-template-columns: repeat(var(--theme-catalog-cols-desktop), minmax(0, 1fr));
+  }
 }
 
-.store-theme-root[data-theme='pop'] .filter-chip {
-  border-radius: 20px;
+.store-theme-root .catalog-grid-list-item .produto-card {
+  flex-direction: row;
+  align-items: stretch;
 }
 
-.store-theme-root[data-theme='pop'] .filter-chip.active {
-  background: var(--theme-primary);
+.store-theme-root .catalog-grid-list-item .produto-card-media {
+  width: 36%;
+  max-width: 140px;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.store-theme-root .catalog-grid-list-item .card-info-sidebar,
+.store-theme-root .catalog-grid-list-item .card-info-below {
+  flex: 1;
+  min-width: 0;
+  border-top: none;
+  border-left: 1px solid var(--theme-card-border);
+}
+
+.store-theme-root .theme-btn-primary {
+  background: var(--theme-btn-bg);
   color: var(--theme-btn-text);
-  border-color: var(--theme-primary);
+  border-radius: var(--theme-btn-radius);
+}
+
+.store-theme-root .theme-btn-gradient {
+  background: var(--theme-accent-gradient);
+  color: #fff;
+  border-radius: var(--theme-btn-radius);
+}
+
+.store-theme-root .produto-card-favorite {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.store-theme-root .produto-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  min-height: 14px;
+}
+
+.store-theme-root .produto-color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--theme-card-border);
+  flex-shrink: 0;
+}
+
+.store-theme-root .produto-discount-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--theme-accent);
+  color: #fff;
+  font-size: var(--theme-fs-badge);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.store-theme-root[data-theme='social'] .vi-chat-fab,
+.store-theme-root[data-catalog-layout='grid-feed'] .vi-chat-fab {
+  background: var(--theme-accent-gradient);
+}
+
+.store-theme-root[data-theme='street'] .vi-chat-fab {
+  background: var(--theme-primary);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--theme-primary) 45%, transparent);
+}
+
+/* ─── Admin: highlight de cores no preview da aparência ─────────────────── */
+@keyframes pulse-highlight {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0.85; transform: scale(1.02); }
+}
+
+.store-theme-preview.highlight-primary .preview-btn-primary,
+.store-theme-preview.highlight-primary .filter-chip.active,
+.store-theme-preview.highlight-primary .preview-vi-avatar,
+.store-theme-preview.highlight-primary .preview-vi-name {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+  animation: pulse-highlight 1s ease infinite alternate;
+}
+
+.store-theme-preview.highlight-accent .preview-price,
+.store-theme-preview.highlight-accent .preview-badge {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+  animation: pulse-highlight 1s ease infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-theme-preview.highlight-primary .preview-btn-primary,
+  .store-theme-preview.highlight-primary .filter-chip.active,
+  .store-theme-preview.highlight-primary .preview-vi-avatar,
+  .store-theme-preview.highlight-primary .preview-vi-name,
+  .store-theme-preview.highlight-accent .preview-price,
+  .store-theme-preview.highlight-accent .preview-badge {
+    animation: none;
+    outline-width: 2px;
+  }
 }

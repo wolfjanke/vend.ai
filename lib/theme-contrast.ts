@@ -42,6 +42,43 @@ function contrastRatio(fg: string, bg: string): number {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
+export function getHexContrastRatio(fg: string, bg: string): number {
+  if (!isValidHex(fg) || !isValidHex(bg)) return 21
+  return contrastRatio(expandHex(fg), expandHex(bg))
+}
+
+function mixHex(hex: string, target: string, t: number): string {
+  const a = hexToRgb(hex)
+  const b = hexToRgb(target)
+  const ch = (x: number, y: number) =>
+    Math.max(0, Math.min(255, Math.round(x + (y - x) * t)))
+  const r = ch(a.r, b.r)
+  const g = ch(a.g, b.g)
+  const bl = ch(a.b, b.b)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`
+}
+
+/** Escurece ou clareia a cor até atingir contraste mínimo vs fundo (WCAG AA 4.5:1). */
+export function adjustHexForContrast(
+  fg: string,
+  bg: string,
+  targetRatio = 4.5,
+): string {
+  if (!isValidHex(fg) || !isValidHex(bg)) return fg
+  let color = expandHex(fg)
+  const bgHex = expandHex(bg)
+  if (contrastRatio(color, bgHex) >= targetRatio) return color
+
+  const towardWhite = relativeLuminance(bgHex) < 0.5
+  const target = towardWhite ? '#FFFFFF' : '#000000'
+
+  for (let step = 0; step < 12; step++) {
+    color = mixHex(color, target, 0.15)
+    if (contrastRatio(color, bgHex) >= targetRatio) return color
+  }
+  return color
+}
+
 function meetsWcagAA(fg: string, bg: string): boolean {
   return contrastRatio(fg, bg) >= 4.5
 }

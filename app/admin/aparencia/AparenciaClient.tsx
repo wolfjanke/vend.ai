@@ -14,11 +14,15 @@ import {
   type ThemeName,
 } from '@/lib/themes'
 import type { PlanSlug } from '@/lib/plans'
+import type { CustomCategory } from '@/types'
 import StoreThemePreview from '@/components/admin/StoreThemePreview'
+import ColorHelpButton from '@/components/admin/ColorHelpButton'
 import ThemeSuggestionCards from '@/components/admin/ThemeSuggestionCards'
 import type { StorePreviewProduct } from '@/lib/preview-products'
 import type { LogoBackgroundAnalysis, ThemeAnalysisSuggestion } from '@/lib/theme-ai'
 import { adminCard } from '@/lib/admin-ui'
+import { COLOR_PRESETS } from '@/lib/color-presets'
+import { adjustHexForContrast, getHexContrastRatio, isValidHex } from '@/lib/theme-contrast'
 
 type Initial = {
   theme_name:            string
@@ -39,6 +43,7 @@ type Props = {
   assistantName:  string
   tagline?:       string | null
   categoryNavStyle?: 'pills' | 'circles'
+  customCategories?: CustomCategory[]
   initial:        Initial
 }
 
@@ -85,6 +90,23 @@ const ANALYZE_STEPS = [
   'Cruzando segmento, público e estilo…',
   'Gerando 3 sugestões de tema com IA…',
 ] as const
+
+const PRIMARY_COLOR_HELP = [
+  'Botão "Adicionar ao carrinho"',
+  'Chips de categoria ativos',
+  'Avatar e balões da Vi',
+  'Bordas de foco nos campos',
+  'Links em hover',
+] as const
+
+const ACCENT_COLOR_HELP = [
+  'Preço dos produtos',
+  'Badge "Promoção" e "Novo"',
+  '"Últimas unidades disponíveis"',
+  'Desconto em destaque no carrinho',
+] as const
+
+const CONTRAST_WARN_THRESHOLD = 3
 
 function AnalyzeAiFeedback({ phase }: { phase: number }) {
   const stepIndex = Math.min(phase, ANALYZE_STEPS.length - 1)
@@ -178,6 +200,7 @@ export default function AparenciaClient({
   assistantName,
   tagline,
   categoryNavStyle = 'pills',
+  customCategories = [],
   initial,
 }: Props) {
   const available  = getAvailableThemes(plan)
@@ -185,6 +208,7 @@ export default function AparenciaClient({
   const canAnalyze = plan !== 'free'
 
   const [themeName, setThemeName] = useState<ThemeName>((initial.theme_name as ThemeName) || 'default')
+  const [segmentFilter, setSegmentFilter] = useState<string>('all')
   const themeDef = getTheme(themeName)
 
   const [primary, setPrimary] = useState(initial.theme_primary_color || themeDef.defaultColors.primary)
@@ -208,6 +232,7 @@ export default function AparenciaClient({
   const [suggestions,  setSuggestions]  = useState<ThemeAnalysisSuggestion[]>([])
   const [logoHarmony,    setLogoHarmony]  = useState<LogoBackgroundAnalysis | null>(null)
   const [uploadConfigured, setUploadConfigured] = useState<boolean | null>(null)
+  const [highlightedColor, setHighlightedColor] = useState<'primary' | 'accent' | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -247,8 +272,33 @@ export default function AparenciaClient({
   // Debounce de 300ms nos inputs hex para não recalcular preview a cada tecla
   const previewPrimary = useDebounce(primary, 300)
   const previewAccent  = useDebounce(accent,  300)
-
   const previewLogo = logoUrl ?? storeLogoUrl
+
+  const pageBgHex =
+    background === 'dark'
+      ? themeDef.defaultColors.background
+      : themeDef.defaultColors.backgroundLight
+
+  const activePresetId = useMemo(() => {
+    const match = COLOR_PRESETS.find(
+      p =>
+        p.primary.toUpperCase() === primary.trim().toUpperCase() &&
+        p.accent.toUpperCase() === accent.trim().toUpperCase(),
+    )
+    return match?.id ?? null
+  }, [primary, accent])
+
+  const primaryContrastIssue = useMemo(() => {
+    if (!isValidHex(primary)) return null
+    if (getHexContrastRatio(primary, pageBgHex) >= CONTRAST_WARN_THRESHOLD) return null
+    return 'Contraste baixo — texto pode ser difícil de ler'
+  }, [primary, pageBgHex])
+
+  const accentContrastIssue = useMemo(() => {
+    if (!isValidHex(accent)) return null
+    if (getHexContrastRatio(accent, pageBgHex) >= CONTRAST_WARN_THRESHOLD) return null
+    return 'Destaque pouco visível no fundo escolhido'
+  }, [accent, pageBgHex])
 
   const previewProps = useMemo(() => ({
     themeName,
@@ -262,10 +312,29 @@ export default function AparenciaClient({
     assistantName,
     tagline,
     categoryNavStyle,
+    customCategories,
+    highlightedColor,
   }), [
     themeName, previewPrimary, previewAccent, background, shimmer, canShimmer,
     storeName, previewLogo, products, assistantName, tagline, categoryNavStyle,
+    customCategories, highlightedColor,
   ])
+
+  const segmentOptions = useMemo(() => {
+    const segments = new Set<string>()
+    for (const name of THEME_NAMES) {
+      for (const s of THEMES[name].forSegments) segments.add(s)
+    }
+    return ['all', ...Array.from(segments).sort()]
+  }, [])
+
+  const filteredThemeNames = useMemo(() => {
+    if (segmentFilter === 'all') return THEME_NAMES
+    return THEME_NAMES.filter(name =>
+      THEMES[name].forSegments.includes(segmentFilter) ||
+      THEMES[name].forSegments.includes('todos'),
+    )
+  }, [segmentFilter])
 
   const selectTheme = useCallback((name: ThemeName) => {
     if (!available.includes(name)) return
@@ -276,6 +345,11 @@ export default function AparenciaClient({
     setBackground(t.defaultBackground)
     if (defaultShimmerForTheme(name)) setShimmer(true)
   }, [available])
+
+  function applyPreset(preset: (typeof COLOR_PRESETS)[number]) {
+    setPrimary(preset.primary)
+    setAccent(preset.accent)
+  }
 
   function applySuggestion(s: ThemeAnalysisSuggestion) {
     if (!available.includes(s.themeName)) return
@@ -394,8 +468,24 @@ export default function AparenciaClient({
         {/* ── Tema ── */}
         <section className={`${adminCard} space-y-3`}>
           <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Tema</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {THEME_NAMES.map(name => {
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            {segmentOptions.map(seg => (
+              <button
+                key={seg}
+                type="button"
+                onClick={() => setSegmentFilter(seg)}
+                className={`shrink-0 min-h-[36px] px-3 rounded-full border text-xs capitalize ${
+                  segmentFilter === seg
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border bg-surface2 text-muted'
+                }`}
+              >
+                {seg === 'all' ? 'Todos' : seg.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2 max-h-[420px] overflow-y-auto pr-1">
+            {filteredThemeNames.map(name => {
               const t      = THEMES[name]
               const locked = !available.includes(name)
               return (
@@ -421,53 +511,164 @@ export default function AparenciaClient({
 
         {/* ── Cores & fundo ── */}
         <section className={`${adminCard} space-y-4`}>
-          <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Cores</h2>
-          {([
-            { key: 'primary' as const, label: 'Primária', val: primary, set: setPrimary },
-            { key: 'accent' as const, label: 'Destaque', val: accent, set: setAccent },
-          ]).map(({ key, label, val, set }) => (
-              <div key={key} className="flex items-center gap-3 min-w-0">
+          <div>
+            <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Cores da marca</h2>
+            <p className="text-xs text-muted mt-1 break-words">
+              Escolha 2 cores ou use uma combinação sugerida. O fundo e os textos se ajustam automaticamente.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              Combinações sugeridas
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+              {COLOR_PRESETS.map(preset => {
+                const isActive = activePresetId === preset.id
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className={`shrink-0 flex flex-col items-center gap-1.5 py-2 px-3 rounded-[10px] min-w-[72px] min-h-[44px] transition-colors ${
+                      isActive
+                        ? 'border-[1.5px] border-primary bg-primary/10'
+                        : 'border border-border bg-surface2 hover:border-primary/40'
+                    }`}
+                  >
+                    <div className="flex gap-1">
+                      <span
+                        className="w-5 h-5 rounded-full border border-white/20 shrink-0"
+                        style={{ background: preset.primary }}
+                        aria-hidden
+                      />
+                      <span
+                        className="w-5 h-5 rounded-full border border-white/20 shrink-0"
+                        style={{ background: preset.accent }}
+                        aria-hidden
+                      />
+                    </div>
+                    <span className="text-[11px] text-muted">{preset.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-1 border-t border-border">
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <input
                   type="color"
-                  value={val}
-                  onChange={e => set(e.target.value)}
+                  value={primary}
+                  onChange={e => setPrimary(e.target.value)}
+                  onFocus={() => setHighlightedColor('primary')}
+                  onBlur={() => setHighlightedColor(null)}
                   className="w-11 h-11 min-h-[44px] rounded-lg border border-border shrink-0 cursor-pointer"
-                  aria-label={label}
+                  aria-label="Cor primária"
                 />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-xs font-semibold text-foreground">Cor primária</p>
+                    <ColorHelpButton title="Cor primária" items={[...PRIMARY_COLOR_HELP]} />
+                  </div>
+                  <p className="text-[11px] text-muted break-words">A cor da sua marca</p>
+                </div>
                 <input
                   type="text"
-                  value={val}
-                  onChange={e => set(e.target.value)}
-                  className="flex-1 min-w-0 min-h-[44px] px-3 rounded-xl bg-surface2 border border-border text-sm font-mono break-all"
-                  aria-label={label}
+                  value={primary}
+                  onChange={e => setPrimary(e.target.value)}
+                  onFocus={() => setHighlightedColor('primary')}
+                  onBlur={() => setHighlightedColor(null)}
+                  className="w-[6.5rem] min-w-0 min-h-[44px] px-2 rounded-xl bg-surface2 border border-border text-xs font-mono"
+                  aria-label="Cor primária (hex)"
                 />
               </div>
-            ))}
+              {primaryContrastIssue && (
+                <div className="pl-14 space-y-1">
+                  <p className="text-[11px] text-warm break-words">⚠️ {primaryContrastIssue}</p>
+                  <button
+                    type="button"
+                    onClick={() => setPrimary(adjustHexForContrast(primary, pageBgHex))}
+                    className="text-[11px] text-primary underline min-h-[32px]"
+                  >
+                    Ajustar automaticamente
+                  </button>
+                </div>
+              )}
+            </div>
 
-        {/* ── Fundo ── */}
-        <div className="space-y-2">
-          <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Fundo</h2>
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <input
+                  type="color"
+                  value={accent}
+                  onChange={e => setAccent(e.target.value)}
+                  onFocus={() => setHighlightedColor('accent')}
+                  onBlur={() => setHighlightedColor(null)}
+                  className="w-11 h-11 min-h-[44px] rounded-lg border border-border shrink-0 cursor-pointer"
+                  aria-label="Cor de destaque"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-xs font-semibold text-foreground">Cor de destaque</p>
+                    <ColorHelpButton title="Cor de destaque" items={[...ACCENT_COLOR_HELP]} />
+                  </div>
+                  <p className="text-[11px] text-muted break-words">O que chama atenção para comprar</p>
+                </div>
+                <input
+                  type="text"
+                  value={accent}
+                  onChange={e => setAccent(e.target.value)}
+                  onFocus={() => setHighlightedColor('accent')}
+                  onBlur={() => setHighlightedColor(null)}
+                  className="w-[6.5rem] min-w-0 min-h-[44px] px-2 rounded-xl bg-surface2 border border-border text-xs font-mono"
+                  aria-label="Cor de destaque (hex)"
+                />
+              </div>
+              {accentContrastIssue && (
+                <div className="pl-14 space-y-1">
+                  <p className="text-[11px] text-warm break-words">⚠️ {accentContrastIssue}</p>
+                  <button
+                    type="button"
+                    onClick={() => setAccent(adjustHexForContrast(accent, pageBgHex))}
+                    className="text-[11px] text-primary underline min-h-[32px]"
+                  >
+                    Ajustar automaticamente
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+        <div className="space-y-2 pt-1 border-t border-border">
+          <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Fundo da vitrine</h2>
+          <p className="text-[11px] text-muted break-words">
+            Define o clima geral da loja. Textos e cards se ajustam automaticamente.
+          </p>
           <div className="flex flex-wrap gap-2">
             {themeDef.allowLightBackground && (
               <button
                 type="button"
                 onClick={() => setBackground('light')}
-                className={`min-h-[44px] px-4 rounded-xl border text-sm ${
+                className={`min-h-[44px] px-4 rounded-xl border text-sm text-left ${
                   background === 'light' ? 'border-primary bg-primary/10' : 'border-border'
                 }`}
               >
-                Claro
+                <span className="block font-medium">Claro</span>
+                <span className="block text-[10px] text-muted mt-0.5">Vitrine clara, produto em destaque</span>
               </button>
             )}
             {themeDef.allowDarkBackground && (
               <button
                 type="button"
                 onClick={() => setBackground('dark')}
-                className={`min-h-[44px] px-4 rounded-xl border text-sm ${
+                className={`min-h-[44px] px-4 rounded-xl border text-sm text-left ${
                   background === 'dark' ? 'border-primary bg-primary/10' : 'border-border'
                 }`}
               >
-                Escuro
+                <span className="block font-medium">Escuro</span>
+                <span className="block text-[10px] text-muted mt-0.5">Vitrine escura, look premium</span>
               </button>
             )}
           </div>
