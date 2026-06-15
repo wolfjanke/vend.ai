@@ -12,7 +12,7 @@ const schema = z.object({ email: z.string().email() })
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req)
-  if (!checkRateLimit(`auth:forgot:${ip}`, 3, 3_600_000)) {
+  if (!(await checkRateLimit(`auth:forgot:${ip}`, 3, 3_600_000))) {
     return NextResponse.json({ ok: true })
   }
 

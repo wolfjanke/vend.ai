@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import type { ViMessage, StoreContext } from '@/types'
-import { defaultWelcomeMessage } from '@/lib/assistant-gender'
-import { normalizeAssistantGender } from '@/lib/assistant-gender'
+import { defaultWelcomeMessage, normalizeAssistantGender } from '@/lib/assistant-gender'
+import { renderSafeMarkdown } from '@/lib/safe-markdown'
 
 function buildViSuggestions(ctx: StoreContext): Array<{ label: string; text: string }> {
   const gf = ctx.genderFocus ?? 'feminine'
@@ -184,26 +184,6 @@ export default function ViChat({
     }
   }
 
-  function escapeHtml(s: string) {
-    return s
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-  }
-
-  function renderContent(text: string) {
-    const safe = escapeHtml(text)
-    return safe
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-semibold break-all">$1</a>',
-      )
-      .replace(/\n/g, '<br />')
-  }
-
   const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
   return (
@@ -250,7 +230,7 @@ export default function ViChat({
                     ? 'bg-primary/20 border border-primary/30 rounded-br-[4px]'
                     : 'bg-surface2 border border-border rounded-bl-[4px]'
                 }`}
-                dangerouslySetInnerHTML={{ __html: renderContent(msg.content) }}
+                dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(msg.content) }}
               />
               <div className={`text-[10px] text-muted mt-1 ${msg.role === 'user' ? 'text-right' : ''}`}>{now}</div>
             </div>

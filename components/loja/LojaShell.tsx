@@ -274,7 +274,7 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          storeId:          store.id,
+          storeSlug:        store.slug,
           items:            cart,
           customerName:     name,
           customerWhatsapp: phone,

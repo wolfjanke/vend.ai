@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/lgpd-retention",
       "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/vi-overage",
+      "schedule": "0 4 1 * *"
     }
   ],
   "redirects": [

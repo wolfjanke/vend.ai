@@ -12,7 +12,7 @@ export { dynamic } from '@/lib/route-dynamic'
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req)
-  if (!checkRateLimit(`auth:register:${ip}`, 5, 3_600_000)) {
+  if (!(await checkRateLimit(`auth:register:${ip}`, 5, 3_600_000))) {
     return NextResponse.json({ error: 'Muitas tentativas. Tente novamente mais tarde.' }, { status: 429 })
   }
 

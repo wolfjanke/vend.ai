@@ -284,7 +284,7 @@ export const checkoutPaymentSchema = z.object({
 })
 
 export const orderCreateSchema = z.object({
-  storeId:          z.string().uuid(),
+  storeSlug:        z.string().min(2).max(40),
   items:            z.array(z.object({
     product_id: z.string(),
     variant_id: z.string(),
@@ -308,6 +308,12 @@ export const orderCreateSchema = z.object({
   privacyConsent:   z.literal(true, {
     message: 'É necessário aceitar a política de privacidade',
   }),
+})
+
+export const lgpdExclusaoSchema = z.object({
+  storeSlug:        z.string().min(2).max(40),
+  customerWhatsapp: z.string().min(10).max(20),
+  orderNumber:      z.string().regex(/^\d{4}$/, 'Número do pedido inválido (4 dígitos)'),
 })
 
 const quoteUpdateItemSchema = z.object({

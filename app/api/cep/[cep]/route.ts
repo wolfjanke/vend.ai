@@ -9,7 +9,7 @@ const CEP_IP_WINDOW = 60_000
 
 export async function GET(req: NextRequest, { params }: { params: { cep: string } }) {
   const ip = clientIp(req)
-  if (!checkRateLimit(`cep:ip:${ip}`, CEP_IP_LIMIT, CEP_IP_WINDOW)) {
+  if (!(await checkRateLimit(`cep:ip:${ip}`, CEP_IP_LIMIT, CEP_IP_WINDOW))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
   }
 

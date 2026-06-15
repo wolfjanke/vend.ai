@@ -14,38 +14,56 @@ function cronAuthorized(req: NextRequest): boolean {
   return auth === `Bearer ${secret}`
 }
 
+async function runViOverageCron() {
+  if (!getVendaiAsaasKey()) {
+    return NextResponse.json({ error: 'Pagamentos não configurados', skipped: true })
+  }
+
+  const stores = await sql`
+    SELECT id, plan, vi_overage_messages
+    FROM stores
+    WHERE vi_overage_messages > 0
+      AND plan IN ('starter', 'pro', 'loja', 'enterprise')
+  `
+
+  const results: Array<{ storeId: string; charged: boolean; amountCents: number }> = []
+
+  for (const row of stores) {
+    const storeId = row.id as string
+    const plan = row.plan as PlanSlug
+    if (!isPaidPlan(plan)) continue
+    try {
+      const r = await chargeViOverage(storeId)
+      results.push({ storeId, ...r })
+    } catch (err) {
+      logServerError(`[cron/vi-overage] store ${storeId}`, err)
+    }
+  }
+
+  return NextResponse.json({ ok: true, processed: results.length, results })
+}
+
+/** Vercel Cron envia GET com Authorization: Bearer CRON_SECRET */
+export async function GET(req: NextRequest) {
+  if (!cronAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    return await runViOverageCron()
+  } catch (err) {
+    logServerError('[cron/vi-overage]', err)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!cronAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!getVendaiAsaasKey()) {
-    return NextResponse.json({ error: 'Pagamentos não configurados', skipped: true })
-  }
-
   try {
-    const stores = await sql`
-      SELECT id, plan, vi_overage_messages
-      FROM stores
-      WHERE vi_overage_messages > 0
-        AND plan IN ('starter', 'pro', 'loja', 'enterprise')
-    `
-
-    const results: Array<{ storeId: string; charged: boolean; amountCents: number }> = []
-
-    for (const row of stores) {
-      const storeId = row.id as string
-      const plan = row.plan as PlanSlug
-      if (!isPaidPlan(plan)) continue
-      try {
-        const r = await chargeViOverage(storeId)
-        results.push({ storeId, ...r })
-      } catch (err) {
-        logServerError(`[cron/vi-overage] store ${storeId}`, err)
-      }
-    }
-
-    return NextResponse.json({ ok: true, processed: results.length, results })
+    return await runViOverageCron()
   } catch (err) {
     logServerError('[cron/vi-overage]', err)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

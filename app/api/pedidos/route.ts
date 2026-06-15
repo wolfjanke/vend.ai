@@ -21,7 +21,7 @@ const PEDIDOS_STORE_WINDOW = 60_000
 export async function POST(req: NextRequest) {
   const ip = clientIp(req)
 
-  if (!checkRateLimit(`pedidos:ip:${ip}`, PEDIDOS_IP_LIMIT, PEDIDOS_IP_WINDOW)) {
+  if (!(await checkRateLimit(`pedidos:ip:${ip}`, PEDIDOS_IP_LIMIT, PEDIDOS_IP_WINDOW))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
   }
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     const {
-      storeId,
+      storeSlug,
       items: clientItems,
       customerName,
       customerWhatsapp,
@@ -56,13 +56,15 @@ export async function POST(req: NextRequest) {
       payment_source: paymentSource,
     } = parsed.data
 
-    if (!checkRateLimit(`pedidos:store:${storeId}`, PEDIDOS_STORE_LIMIT, PEDIDOS_STORE_WINDOW)) {
-      return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
-    }
-
-    const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${storeId} LIMIT 1`
+    const storeRows = await sql`SELECT id, settings_json FROM stores WHERE slug = ${storeSlug} LIMIT 1`
     if (storeRows.length === 0) {
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 })
+    }
+
+    const storeId = storeRows[0].id as string
+
+    if (!(await checkRateLimit(`pedidos:store:${storeId}`, PEDIDOS_STORE_LIMIT, PEDIDOS_STORE_WINDOW))) {
+      return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
     }
 
     let items

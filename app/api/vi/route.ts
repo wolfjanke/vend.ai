@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req)
     const { limit, windowMs } = viIpLimit()
-    if (!checkRateLimit(`vi:ip:${ip}`, limit, windowMs)) {
+    if (!(await checkRateLimit(`vi:ip:${ip}`, limit, windowMs))) {
       return NextResponse.json(
         { error: 'Muitas mensagens em pouco tempo. Aguarde um minuto.' },
         { status: 429 },

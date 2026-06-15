@@ -13,7 +13,7 @@ interface RouteParams {
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const ip = clientIp(req)
 
-  if (!checkRateLimit(`checkout:ip:${ip}`, RATE_LIMIT, RATE_WINDOW)) {
+  if (!(await checkRateLimit(`checkout:ip:${ip}`, RATE_LIMIT, RATE_WINDOW))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde 1 minuto.' }, { status: 429 })
   }
 

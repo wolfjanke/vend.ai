@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const rateKey = `theme:analyze:${session.storeId}`
-    if (!checkRateLimit(rateKey, 5, 3_600_000)) {
+    if (!(await checkRateLimit(rateKey, 5, 3_600_000))) {
       return NextResponse.json({ error: 'Limite de 5 análises por hora atingido.' }, { status: 429 })
     }
 

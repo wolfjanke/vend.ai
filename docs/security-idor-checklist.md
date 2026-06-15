@@ -4,6 +4,7 @@ Procedimento manual antes do lançamento. Autenticado como **loja B**, usar IDs 
 
 | Rota | Método | Filtro `store_id` / sessão | Esperado (B → recurso A) |
 |------|--------|----------------------------|---------------------------|
+| `/api/pedidos` | POST | tenant resolvido por `storeSlug` no body (não confiar em UUID do cliente) | N/A (público) |
 | `/api/produtos` | POST | `session.storeId` no INSERT | N/A (cria em B) |
 | `/api/produtos/[id]` | GET/PUT/DELETE | `AND store_id = session.storeId` | 404 |
 | `/api/pedidos/[id]` | PUT/PATCH | `AND store_id = session.storeId` | 403/404 |

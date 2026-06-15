@@ -10,7 +10,7 @@ const RATE_WINDOW = 60_000
 export async function POST(req: NextRequest) {
   const ip = clientIp(req)
 
-  if (!checkRateLimit(`checkout:ip:${ip}`, RATE_LIMIT, RATE_WINDOW)) {
+  if (!(await checkRateLimit(`checkout:ip:${ip}`, RATE_LIMIT, RATE_WINDOW))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde 1 minuto.' }, { status: 429 })
   }
 

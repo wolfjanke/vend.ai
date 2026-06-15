@@ -12,6 +12,7 @@ interface Props {
 export default function LojaPrivacyFooter({ storeSlug }: Props) {
   const [open, setOpen] = useState(false)
   const [phone, setPhone] = useState('')
+  const [orderNumber, setOrderNumber] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -27,12 +28,22 @@ export default function LojaPrivacyFooter({ storeSlug }: Props) {
       return
     }
 
+    const orderDigits = digitsOnly(orderNumber)
+    if (orderDigits.length !== 4) {
+      setError('Informe o número do pedido com 4 dígitos (veja na mensagem do WhatsApp).')
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/privacidade/exclusao', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ storeSlug, customerWhatsapp: digits }),
+        body:    JSON.stringify({
+          storeSlug,
+          customerWhatsapp: digits,
+          orderNumber:      orderDigits,
+        }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -41,6 +52,7 @@ export default function LojaPrivacyFooter({ storeSlug }: Props) {
       }
       setMessage(typeof data.message === 'string' ? data.message : 'Solicitação processada.')
       setPhone('')
+      setOrderNumber('')
     } catch {
       setError('Erro de conexão. Tente novamente.')
     } finally {
@@ -91,8 +103,8 @@ export default function LojaPrivacyFooter({ storeSlug }: Props) {
               Solicitar anonimização de dados
             </h2>
             <p className="text-sm text-muted mb-4 break-words leading-relaxed">
-              Se você é cliente desta loja e quer que seus dados pessoais nos pedidos sejam anonimizados,
-              informe o WhatsApp usado no pedido. O processamento é imediato, conforme a{' '}
+              Informe o WhatsApp e o número do pedido usados na compra (o número aparece na mensagem
+              enviada ao WhatsApp da loja). Processamos conforme a{' '}
               <Link href="/privacidade" target="_blank" className="text-primary underline">
                 Política de Privacidade
               </Link>.
@@ -110,6 +122,22 @@ export default function LojaPrivacyFooter({ storeSlug }: Props) {
                   placeholder="(00) 00000-0000"
                   className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary"
                   autoComplete="tel"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+                  Número do pedido
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={orderNumber}
+                  onChange={e => setOrderNumber(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="0000"
+                  className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm outline-none focus:border-primary font-mono tracking-widest"
+                  autoComplete="off"
                 />
               </div>
 
