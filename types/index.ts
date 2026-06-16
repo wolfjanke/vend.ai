@@ -70,12 +70,24 @@ export interface CheckoutChannelsConfig {
   whatsappEnabled?: boolean
 }
 
+/** Link de pagamento externo configurado pelo lojista (Mercado Pago, PagBank, etc.). */
+export interface PaymentLink {
+  id:     string
+  label:  string
+  url:    string
+  active?: boolean
+}
+
 export interface StoreSettings {
   theme?:            'dark' | 'light'
   welcomeMessage?:   string
   inactivityDelay?:  number
   freteInfo?:        string
   pagamentoInfo?:    string
+  /** Chave PIX exibida na vitrine e na mensagem de pedido. */
+  pixKey?:           string
+  /** Links externos de pagamento (até 3). */
+  paymentLinks?:     PaymentLink[]
   bannerMessages?:   BannerMessage[]
   pixDiscountPercent?: number
   couponRules?:      CouponRule[]
@@ -209,6 +221,7 @@ export interface Store extends StoreAddress {
   subscription_started_at?: string | null
   subscription_ends_at?:   string | null
   trial_ends_at?:          string | null
+  billing_cycle?:          'monthly' | 'quarterly' | 'annual'
   terms_version?:          string | null
   terms_accepted_at?:      string | null
   terms_accepted_ip?:      string | null

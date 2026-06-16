@@ -2,14 +2,28 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Crown } from 'lucide-react'
-import { formatPlanPrice } from '@/lib/plans'
+import {
+  formatPlanPrice,
+  formatBillingCycleLabel,
+  formatBillingPeriodNoun,
+  getDailyCentsFromCharge,
+  PLAN_FEATURE_LINES,
+  type BillingCycle,
+  type PlanSlug,
+} from '@/lib/plans'
 import { adminCard } from '@/lib/admin-ui'
-import type { PlanSlug, SubscriptionStatus } from '@/types'
+import type { SubscriptionStatus } from '@/types'
+
+interface PlanBilling {
+  displayMonthlyCents: number
+  chargeAmountCents: number
+}
 
 interface PlanOption {
   slug: PlanSlug
   name: string
   priceCents: number
+  billing: Record<BillingCycle, PlanBilling>
 }
 
 interface BillingRow {
@@ -27,6 +41,7 @@ interface SubscriptionData {
   subscriptionEndsAt: string | null
   trialEndsAt: string | null
   trialDaysRemaining: number | null
+  billingCycle: BillingCycle
   paymentsConfigured: boolean
   usage: {
     productCount: number
@@ -46,9 +61,16 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelado',
 }
 
+const BILLING_CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual']
+
 function formatDate(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('pt-BR')
+}
+
+function formatDaily(cents: number): string {
+  if (cents < 100) return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`
+  return formatPlanPrice(cents)
 }
 
 export default function PlanoClient() {
@@ -57,6 +79,7 @@ export default function PlanoClient() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -69,7 +92,9 @@ export default function PlanoClient() {
         setData(null)
         return
       }
-      setData(await res.json())
+      const json = await res.json() as SubscriptionData
+      setData(json)
+      setBillingCycle(json.billingCycle ?? 'monthly')
     } catch {
       setError('Erro de conexão')
       setData(null)
@@ -89,6 +114,7 @@ export default function PlanoClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan,
+          billingCycle,
           action: data?.subscriptionStatus && data.subscriptionStatus !== 'CANCELLED' ? 'upgrade' : 'create',
         }),
       })
@@ -142,6 +168,9 @@ export default function PlanoClient() {
     ? STATUS_LABELS[data.subscriptionStatus] ?? data.subscriptionStatus
     : isPaid ? 'Ativo' : 'Grátis'
 
+  const currentBilling = currentPlan?.billing[data.billingCycle]
+  const currentDisplayMonthly = currentBilling?.displayMonthlyCents ?? currentPlan?.priceCents ?? 0
+
   return (
     <div className="space-y-5 min-w-0">
       {error && (
@@ -167,10 +196,16 @@ export default function PlanoClient() {
             <div className="font-semibold">{statusLabel}</div>
           </div>
           {isPaid && currentPlan && (
-            <div>
-              <div className="text-muted text-xs mb-0.5">Valor mensal</div>
-              <div className="font-semibold tabular-nums">{formatPlanPrice(currentPlan.priceCents)}</div>
-            </div>
+            <>
+              <div>
+                <div className="text-muted text-xs mb-0.5">Valor mensal</div>
+                <div className="font-semibold tabular-nums">{formatPlanPrice(currentDisplayMonthly)}</div>
+              </div>
+              <div>
+                <div className="text-muted text-xs mb-0.5">Ciclo</div>
+                <div className="font-semibold break-words">{formatBillingCycleLabel(data.billingCycle)}</div>
+              </div>
+            </>
           )}
           <div>
             <div className="text-muted text-xs mb-0.5">Renovação</div>
@@ -222,14 +257,51 @@ export default function PlanoClient() {
       <div className="xl:col-span-8 space-y-5">
       <div>
         <h2 className="font-syne font-bold text-sm mb-3">Planos disponíveis</h2>
+
+        <div className="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Periodicidade de cobrança">
+          {BILLING_CYCLES.map(cycle => {
+            const active = billingCycle === cycle
+            const isAnnual = cycle === 'annual'
+            return (
+              <button
+                key={cycle}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setBillingCycle(cycle)}
+                className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold border transition-all break-words ${
+                  active
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-border text-muted hover:border-primary hover:text-foreground'
+                }`}
+              >
+                {formatBillingCycleLabel(cycle)}
+                {isAnnual && (
+                  <span className={`ml-1.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
+                    active ? 'bg-white/20 text-white' : 'bg-accent/20 text-accent'
+                  }`}>
+                    Melhor valor
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
         <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2">
           {data.plans.map(p => {
-            const isCurrent = p.slug === data.plan
+            const isCurrent = p.slug === data.plan && isPaid
             const isPopular = p.slug === 'pro'
+            const cyclePricing = p.billing[billingCycle]
+            const displayMonthly = cyclePricing.displayMonthlyCents
+            const chargeAmount = cyclePricing.chargeAmountCents
+            const periodNoun = formatBillingPeriodNoun(billingCycle)
+            const dailyCents = getDailyCentsFromCharge(chargeAmount, billingCycle)
+
             return (
               <div
                 key={p.slug}
-                className={`${adminCard} flex flex-col ${
+                className={`${adminCard} flex flex-col min-w-0 ${
                   isPopular ? 'border-primary/50 ring-1 ring-primary/20' : ''
                 }`}
               >
@@ -239,19 +311,34 @@ export default function PlanoClient() {
                   </span>
                 )}
                 <div className="font-syne font-bold capitalize mb-1">{p.name}</div>
-                <div className="text-lg font-extrabold tabular-nums mb-3">
-                  {formatPlanPrice(p.priceCents)}
+                <div className="text-lg font-extrabold tabular-nums mb-1">
+                  {formatPlanPrice(displayMonthly)}
                   <span className="text-xs font-normal text-muted">/mês</span>
                 </div>
+                {billingCycle !== 'monthly' && (
+                  <p className="text-xs text-muted mb-2 break-words">
+                    Cobrado {formatPlanPrice(chargeAmount)} por {periodNoun}
+                  </p>
+                )}
+                <p className="text-[11px] text-muted mb-3 break-words">
+                  Equivale a {formatDaily(dailyCents)}/dia
+                </p>
+
+                <ul className="flex flex-col gap-1.5 mb-4 text-xs text-muted flex-1 min-w-0">
+                  {PLAN_FEATURE_LINES[p.slug].map(line => (
+                    <li key={line} className="break-words leading-snug">• {line}</li>
+                  ))}
+                </ul>
+
                 <button
                   type="button"
-                  disabled={isCurrent || !!busy || !data.paymentsConfigured}
+                  disabled={(isCurrent && data.billingCycle === billingCycle) || !!busy || !data.paymentsConfigured}
                   onClick={() => handleUpgrade(p.slug)}
                   className="mt-auto w-full min-h-[44px] px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busy === p.slug ? (
                     <Loader2 size={16} className="animate-spin mx-auto" />
-                  ) : isCurrent ? (
+                  ) : isCurrent && data.billingCycle === billingCycle ? (
                     'Plano atual'
                   ) : (
                     'Fazer upgrade'
