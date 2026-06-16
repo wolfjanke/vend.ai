@@ -11,7 +11,7 @@ import {
   getSubscriptionStatus,
   upgradeSubscription,
 } from '@/lib/payments/subscriptions'
-import { PLAN_PRODUCT_LIMITS, PLANS, PAID_PLAN_SLUGS, type PlanSlug } from '@/lib/plans'
+import { PLAN_PRODUCT_LIMITS, PLANS, PAID_PLAN_SLUGS, getChargeAmountCents, getDisplayMonthlyCents, type PlanSlug, type BillingCycle } from '@/lib/plans'
 import { sendUpgradeEmail } from '@/lib/email/send-upgrade'
 
 export { dynamic } from '@/lib/route-dynamic'
@@ -19,6 +19,7 @@ export { dynamic } from '@/lib/route-dynamic'
 const postSchema = z.object({
   plan: z.enum(['starter', 'pro', 'loja', 'enterprise']),
   action: z.enum(['create', 'upgrade']).optional(),
+  billingCycle: z.enum(['monthly', 'quarterly', 'annual']).default('monthly'),
 })
 
 export async function GET() {
@@ -75,6 +76,13 @@ export async function GET() {
         slug,
         name: PLANS[slug].name,
         priceCents: PLANS[slug].price,
+        billing: (['monthly', 'quarterly', 'annual'] as const).reduce((acc, cycle) => {
+          acc[cycle] = {
+            displayMonthlyCents: getDisplayMonthlyCents(slug, cycle),
+            chargeAmountCents: getChargeAmountCents(slug, cycle),
+          }
+          return acc
+        }, {} as Record<BillingCycle, { displayMonthlyCents: number; chargeAmountCents: number }>),
       })),
       billingHistory: history,
     })
@@ -109,16 +117,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 422 })
   }
 
-  const { plan, action } = parsed.data
+  const { plan, action, billingCycle } = parsed.data
 
   try {
     const before = await getSubscriptionStatus(session.storeId)
     const oldPlan = before.plan
 
     if (action === 'upgrade') {
-      await upgradeSubscription(session.storeId, plan as PlanSlug)
+      await upgradeSubscription(session.storeId, plan as PlanSlug, billingCycle)
     } else {
-      await createSubscription(session.storeId, plan as PlanSlug)
+      await createSubscription(session.storeId, plan as PlanSlug, billingCycle)
     }
     const status = await getSubscriptionStatus(session.storeId)
 
