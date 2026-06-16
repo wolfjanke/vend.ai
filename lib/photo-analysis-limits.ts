@@ -15,6 +15,9 @@ export async function checkPhotoAnalysisLimit(storeId: string, plan: PlanSlug): 
 }> {
   const planDef = getPlan(plan)
   const limit = planDef.photoAnalysisLimit
+  if (limit === 0) {
+    return { allowed: false, used: 0, limit: 0 }
+  }
   if (limit == null) return { allowed: true, used: 0, limit: null }
 
   const rows = await sql`

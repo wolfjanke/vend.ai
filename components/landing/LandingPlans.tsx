@@ -1,46 +1,7 @@
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import ScrollReveal from '@/components/landing/ScrollReveal'
-import { PLANS, PLAN_SLUGS, formatPlanPrice, formatOverageLine, type PlanSlug } from '@/lib/plans'
-
-const FEATURES: Record<PlanSlug, string[]> = {
-  free: [
-    'Até 10 produtos',
-    '1.000 msgs Vi/mês',
-    '10 análises de foto/mês',
-    'Pedidos via WhatsApp',
-    'Temas de identidade visual',
-  ],
-  starter: [
-    'Até 25 produtos',
-    '5.000 msgs Vi/mês',
-    '50 análises de foto/mês',
-    'Checkout com cartão (CNPJ)',
-    'IA no cadastro',
-  ],
-  pro: [
-    'Até 200 produtos',
-    '15.000 msgs Vi/mês',
-    '200 análises de foto/mês',
-    'Checkout + take rate menor',
-    'Vi completa + streaming',
-    'Recuperação de pedido',
-  ],
-  loja: [
-    'Produtos ilimitados',
-    '40.000 msgs Vi/mês',
-    'Checkout + take rate 1,7%',
-    'Vi completa + Mini PDV',
-    'Análises de foto ilimitadas',
-  ],
-  enterprise: [
-    'Produtos ilimitados',
-    '60.000 msgs Vi/mês',
-    'Menor take rate (1,5%)',
-    'Vi completa + suporte prioritário',
-    'Atendimento dedicado',
-  ],
-}
+import { PLANS, PLAN_SLUGS, formatPlanPrice, formatOverageLine, PLAN_FEATURE_LINES, type PlanSlug } from '@/lib/plans'
 
 export default function LandingPlans() {
   return (
@@ -74,7 +35,7 @@ export default function LandingPlans() {
                 <p className="text-[11px] text-muted mb-4 break-words">{overage}</p>
               )}
               <ul className="flex flex-col gap-2 mb-6 flex-1 text-sm min-w-0">
-                {FEATURES[slug].map(f => (
+                {PLAN_FEATURE_LINES[slug].map(f => (
                   <li key={f} className="flex items-start gap-2 min-w-0">
                     <CheckCircle2 size={13} className="text-accent shrink-0 mt-0.5" />
                     <span className="break-words leading-snug">{f}</span>

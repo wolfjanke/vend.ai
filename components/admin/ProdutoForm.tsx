@@ -25,12 +25,15 @@ import { numberToCurrencyInput, parseCurrency } from '@/lib/masks'
 import type { AnalysisAiMeta, MappedVariantDraft } from '@/lib/product-analysis-map'
 import { stockAxisFromProduct } from '@/lib/product-analysis-map'
 import { getAxisLabels, variationKindLabel } from '@/lib/catalog-axes'
+import { canUsePhotoAnalysis, type PlanSlug } from '@/lib/plans'
+import Link from 'next/link'
 
 interface Props {
   storeId:           string
   productId?:       string
   initialProduct?:  Product
   customCategories?: CustomCategory[]
+  plan?:            PlanSlug
 }
 
 interface VariantState {
@@ -195,7 +198,8 @@ function VariantPhotoThumb({ file, onRemove }: { file: File; onRemove: () => voi
   )
 }
 
-export default function ProdutoForm({ storeId: _storeId, productId, initialProduct, customCategories = [] }: Props) {
+export default function ProdutoForm({ storeId: _storeId, productId, initialProduct, customCategories = [], plan = 'free' }: Props) {
+  const photoAiEnabled = canUsePhotoAnalysis(plan)
   const router  = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const isEdit  = Boolean(productId && initialProduct)
@@ -630,6 +634,22 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     await runAnalysis(imgs, filesForRun)
   }
 
+  function continueManualFromIntake() {
+    if (!files.length) return
+    setVariants([{
+      id:          crypto.randomUUID(),
+      color:       'Único',
+      colorHex:    '#888888',
+      photos:      [...files],
+      stock:       Object.fromEntries(stockKeysForAxes(catalogAxes.stockAxis).map(s => [s, 0])),
+      stockPrices: {},
+      stockPromoPrices: {},
+      variantType: 'cor',
+    }])
+    setAnalyzed(true)
+    setStep(4)
+  }
+
   function addVariant() {
     setVariants(prev => [...prev, {
       id:               crypto.randomUUID(),
@@ -931,6 +951,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             )}
           </div>
 
+          {photoAiEnabled ? (
           <div className={`${adminCard} mb-4`}>
             <div className="font-syne font-bold text-base mb-1">Contexto para a IA</div>
             <p className="text-sm text-muted mb-5 break-words">
@@ -1063,17 +1084,32 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               </div>
             </div>
           </div>
+          ) : (
+            <div className={`${adminCard} mb-4 border-primary/30`}>
+              <p className="text-sm text-muted mb-3 break-words">
+                Análise de foto com IA disponível nos planos pagos. No plano grátis, preencha nome, preço e estoque manualmente.
+              </p>
+              <Link
+                href="/admin/plano"
+                className="inline-flex min-h-[44px] items-center px-4 py-2 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10"
+              >
+                Ver planos
+              </Link>
+            </div>
+          )}
 
           <button
             type="button"
-            onClick={startAnalysisFromIntake}
+            onClick={photoAiEnabled ? startAnalysisFromIntake : continueManualFromIntake}
             disabled={!files.length || analyzing || previewsStillLoading}
             className="w-full min-h-[44px] py-3 bg-grad text-bg font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {previewsStillLoading
               ? 'Carregando fotos…'
               : files.length
-                ? 'Continuar com análise da IA'
+                ? photoAiEnabled
+                  ? 'Continuar com análise da IA'
+                  : 'Continuar cadastro manual'
                 : 'Adicione ao menos uma foto'}
           </button>
         </>

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer'
 import { COMPANY, companyCityShort } from '@/lib/company'
+import { formatPlanLabel } from '@/lib/plans'
 
 const styles = StyleSheet.create({
   page: {
@@ -106,14 +107,6 @@ export interface TermsPdfProps {
   termsVersion: string
 }
 
-const PLAN_LABELS: Record<string, string> = {
-  free: 'Grátis — R$0,00/mês',
-  starter: 'Starter — R$49,90/mês',
-  pro: 'Pro — R$99,90/mês',
-  loja: 'Loja — R$199,90/mês',
-  enterprise: 'Enterprise — R$399,90/mês',
-}
-
 export function TermsPdfDocument({
   storeName,
   ownerName,
@@ -141,7 +134,7 @@ export function TermsPdfDocument({
           <Text style={styles.text}>E-mail: {email}</Text>
           <Text style={styles.text}>Loja: {storeName}</Text>
           <Text style={styles.text}>Link da loja: vendai.club/{storeSlug}</Text>
-          <Text style={styles.text}>Plano contratado: {PLAN_LABELS[plan] ?? plan}</Text>
+          <Text style={styles.text}>Plano contratado: {formatPlanLabel(plan)}</Text>
         </View>
 
         <View style={styles.section}>
