@@ -4,16 +4,18 @@ import { sql } from '@/lib/db'
 import AdminPageError from '@/components/admin/AdminPageError'
 import ProdutoForm    from '@/components/admin/ProdutoForm'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
-import type { StoreSettings } from '@/types'
+import type { StoreSettings, PlanSlug } from '@/types'
 
 export default async function NovoProdutoPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
   let settings: StoreSettings
+  let plan: PlanSlug = 'free'
   try {
-    const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const storeRows = await sql`SELECT settings_json, plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
     settings = (storeRows[0]?.settings_json as StoreSettings | null) ?? {}
+    plan = (storeRows[0]?.plan as PlanSlug) ?? 'free'
   } catch (e) {
     console.error('[admin/produtos/novo]', e)
     return (
@@ -31,7 +33,7 @@ export default async function NovoProdutoPage() {
           Selecione as fotos da galeria — a IA identifica variações de cor e preenche tudo automaticamente
         </p>
       </div>
-      <ProdutoForm storeId={session.storeId} customCategories={settings.customCategories ?? []} />
+      <ProdutoForm storeId={session.storeId} customCategories={settings.customCategories ?? []} plan={plan} />
     </div>
   )
 }

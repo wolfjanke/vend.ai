@@ -1,6 +1,6 @@
 # vend.ai
 
-Sistema de vendas para lojas de moda com IA integrada. Catálogo digital + assistente Vi (Gemini) + pedidos no WhatsApp + checkout Asaas.
+Sistema de vendas para lojas de moda com IA integrada. Catálogo digital + assistente Vi (Gemini) + pedidos no WhatsApp. Assinatura dos planos via Asaas (checkout integrado da loja: futuro, flag `CHECKOUT_ENABLED`).
 
 **Produção:** [vendai.club](https://vendai.club)
 
@@ -15,7 +15,7 @@ Sistema de vendas para lojas de moda com IA integrada. Catálogo digital + assis
 | Auth      | NextAuth                            |
 | IA        | Google Gemini (modelos por função)  |
 | Imagens   | Cloudinary (upload assinado)        |
-| Pagamentos| Asaas                               |
+| Pagamentos| Asaas (assinatura dos planos)       |
 | E-mail    | Resend                              |
 | Deploy    | Vercel                              |
 
@@ -23,11 +23,11 @@ Sistema de vendas para lojas de moda com IA integrada. Catálogo digital + assis
 
 | Plano      | Preço/mês | Produtos  | Msgs Vi/mês |
 |-----------|-----------|-----------|-------------|
-| Grátis    | R$ 0      | 10        | 1.000       |
-| Starter   | R$ 49,90  | 25        | 5.000       |
-| Pro       | R$ 99,90  | 200       | 15.000      |
-| Loja      | R$ 199,90 | Ilimitado | 40.000      |
-| Enterprise| R$ 399,90 | Ilimitado | 60.000      |
+| Grátis    | R$ 0      | 10        | 500         |
+| Starter   | R$ 39,90  | 50        | 3.000       |
+| Pro       | R$ 59,90  | 200       | 10.000      |
+| Loja      | R$ 99,90  | Ilimitado | 30.000      |
+| Enterprise| R$ 199,90 | Ilimitado | 60.000      |
 
 Planos pagos incluem excedente de mensagens Vi (ver `lib/plans.ts`). Definição completa em `lib/plans.ts`.
 

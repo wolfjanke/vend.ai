@@ -1,14 +1,7 @@
 import { sendEmail } from './index'
 import { welcomeEmailHtml } from './templates/welcome'
 import { generateTermsPdf } from './pdf/terms-pdf'
-
-const PLAN_LABELS: Record<string, string> = {
-  free: 'Grátis — R$0,00/mês',
-  starter: 'Starter — R$49,90/mês',
-  pro: 'Pro — R$99,90/mês',
-  loja: 'Loja — R$199,90/mês',
-  enterprise: 'Enterprise — R$399,90/mês',
-}
+import { formatPlanLabel } from '@/lib/plans'
 
 export async function sendWelcomeEmail(store: {
   ownerName: string
@@ -28,7 +21,7 @@ export async function sendWelcomeEmail(store: {
     storeName: store.storeName,
     storeSlug: store.storeSlug,
     plan: store.plan,
-    planPrice: PLAN_LABELS[store.plan] ?? store.plan,
+    planPrice: formatPlanLabel(store.plan),
     acceptedAt: store.acceptedAt,
     acceptedIp: store.acceptedIp,
     termsVersion: store.termsVersion,
@@ -39,7 +32,7 @@ export async function sendWelcomeEmail(store: {
     storeName: store.storeName,
     storeSlug: store.storeSlug,
     plan: store.plan,
-    planLabel: PLAN_LABELS[store.plan] ?? store.plan,
+    planLabel: formatPlanLabel(store.plan),
     trialDays: store.trialDays,
     assistantName: store.assistantName,
   })

@@ -58,9 +58,11 @@ export async function POST(req: NextRequest) {
     if (!photoLimit.allowed) {
       return NextResponse.json(
         {
-          error: photoLimit.limit != null
-            ? `Limite de análises por IA atingido este mês (${photoLimit.limit}). Faça upgrade para continuar.`
-            : 'Análise indisponível.',
+          error: photoLimit.limit === 0
+            ? 'Análise de foto com IA disponível nos planos pagos. Faça upgrade para usar.'
+            : photoLimit.limit != null
+              ? `Limite de análises por IA atingido este mês (${photoLimit.limit}). Faça upgrade para continuar.`
+              : 'Análise indisponível.',
         },
         { status: 403 },
       )
