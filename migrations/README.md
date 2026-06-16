@@ -44,6 +44,7 @@ No dashboard do Neon, abra o SQL Editor e cole o conteúdo de cada arquivo **na 
 | **015** `store_tagline.sql` | Slogan opcional da loja (`tagline`, até 60 caracteres) exibido no header da vitrine |
 | **016** `global_config.sql` | Tabela `global_config` (limites, take rates, flags); `stores.last_login_at`, `stores.owner_email` |
 | **017** `order_customer_email.sql` | E-mail do comprador em pedidos de checkout (`orders.customer_email`) |
+| **024** `billing_cycle.sql` | Ciclo de cobrança da assinatura (`stores.billing_cycle`: monthly, quarterly, annual) |
 
 ## Aplicar todas de uma vez
 
