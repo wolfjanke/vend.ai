@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql }            from '@/lib/db'
+import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 import AdminPageError     from '@/components/admin/AdminPageError'
 import type { Product }   from '@/types'
 import PdvClient          from './PdvClient'
@@ -39,7 +40,9 @@ export default async function PdvPage() {
     )
   }
 
-  const storeHasAsaas = store.asaas_onboarding_status === 'APPROVED' && !!store.asaas_wallet_id
+  const storeHasAsaas = isCheckoutLaunchEnabled()
+    && store.asaas_onboarding_status === 'APPROVED'
+    && !!store.asaas_wallet_id
 
   return (
     <div className={adminPage}>

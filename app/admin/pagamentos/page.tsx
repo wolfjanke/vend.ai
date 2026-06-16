@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { CreditCard } from 'lucide-react'
+import { CreditCard, MessageCircle } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { getOnboardingUrl } from '@/lib/asaas/subaccounts'
 import AdminPageError from '@/components/admin/AdminPageError'
+import CheckoutComingSoonBanner from '@/components/admin/CheckoutComingSoonBanner'
 import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
 import { getPlan, isPlanCheckoutEligible } from '@/lib/plans'
 import { getTakeRates, getTakeRateSync, getFixedTransactionFee } from '@/lib/take-rates'
@@ -52,6 +53,35 @@ function EstadoGratis() {
   )
 }
 
+function FormasPagamentoAtivas() {
+  return (
+    <div className="max-w-2xl space-y-4">
+      <CheckoutComingSoonBanner />
+      <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6">
+        <h2 className="font-syne font-bold text-lg sm:text-xl mb-3 break-words flex items-center gap-2">
+          <MessageCircle size={22} className="shrink-0 text-accent" aria-hidden />
+          Pedidos pelo WhatsApp
+        </h2>
+        <p className="text-sm text-muted leading-relaxed break-words mb-4">
+          Seus clientes finalizam pedidos pelo WhatsApp. Você recebe o pagamento direto — PIX, Mercado Pago,
+          PagBank ou como preferir combinar no chat.
+        </p>
+        <ul className="text-sm text-muted space-y-1.5 mb-6 break-words">
+          <li>✓ Configure sua chave PIX na vitrine</li>
+          <li>✓ Adicione links de pagamento (Mercado Pago, PagBank…)</li>
+          <li>✓ A Vi informa as formas de pagamento aos clientes</li>
+        </ul>
+        <Link
+          href="/admin/configuracoes"
+          className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90"
+        >
+          Configurar em Configurações → Venda
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default async function PagamentosPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
@@ -74,10 +104,26 @@ export default async function PagamentosPage() {
   } catch (e) {
     console.error('[admin/pagamentos]', e)
     return (
-      <AdminPageError title="Pagamentos">
-        Não foi possível carregar os dados de pagamento. Execute a migration{' '}
+      <AdminPageError title="Formas de pagamento">
+        Não foi possível carregar os dados. Execute a migration{' '}
         <code className="font-mono text-xs">005_add_asaas_checkout.sql</code> no banco e tente novamente.
       </AdminPageError>
+    )
+  }
+
+  const checkoutLaunchEnabled = isCheckoutLaunchEnabled()
+
+  if (!checkoutLaunchEnabled) {
+    return (
+      <div className={adminPage}>
+        <div className={adminHeader}>
+          <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Formas de pagamento</h1>
+          <p className="text-sm text-muted break-words">
+            Configure como seus clientes pagam — WhatsApp, PIX e links externos.
+          </p>
+        </div>
+        <FormasPagamentoAtivas />
+      </div>
     )
   }
 
@@ -117,7 +163,7 @@ export default async function PagamentosPage() {
   return (
     <div className={adminPage}>
       <div className={adminHeader}>
-        <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Pagamentos</h1>
+        <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Formas de pagamento</h1>
         <p className="text-sm text-muted break-words">
           {checkoutActive
             ? 'Checkout ativo na sua loja'
@@ -126,12 +172,6 @@ export default async function PagamentosPage() {
               : 'Receba pedidos pelo WhatsApp — checkout nos planos pagos'}
         </p>
       </div>
-
-      {!isCheckoutLaunchEnabled() && paidCheckoutPlan && (
-        <div className="mb-4 p-3 rounded-xl border border-warm/30 bg-warm/10 text-xs text-warm break-words">
-          Checkout temporariamente indisponível na plataforma. Tente novamente em breve.
-        </div>
-      )}
 
       {!paidCheckoutPlan ? (
         <EstadoGratis />

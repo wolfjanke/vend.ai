@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { Info, Loader2 } from 'lucide-react'
-import type { Store, AgeGroup, GenderFocus, DeliveryZone } from '@/types'
-import { canUseAssistantFeature, type PlanSlug } from '@/lib/plans'
+import type { Store, AgeGroup, GenderFocus, DeliveryZone, PaymentLink } from '@/types'
+import { canUseAssistantFeature, isPaidPlan, type PlanSlug } from '@/lib/plans'
 import Link from 'next/link'
 import { Lock } from 'lucide-react'
 import { getStoreProfile } from '@/types'
@@ -18,6 +18,7 @@ import CheckoutModeSection from '@/components/admin/CheckoutModeSection'
 import ConfigSectionNav, { type ConfigSectionId } from '@/components/admin/ConfigSectionNav'
 import { adminCard } from '@/lib/admin-ui'
 import { normalizeCheckoutMode } from '@/lib/checkout-availability'
+import { activePaymentLinks, MAX_PAYMENT_LINKS } from '@/lib/payment-links'
 import type { CheckoutMode } from '@/types'
 import {
   LOGO_SIZE_OPTIONS,
@@ -73,12 +74,13 @@ type ViStats = {
 }
 
 interface Props {
-  store:              Store
-  viStats?:           ViStats
-  checkoutEligible:   boolean
+  store:                    Store
+  viStats?:                 ViStats
+  checkoutEligible:         boolean
+  checkoutLaunchEnabled?:   boolean
 }
 
-export default function ConfigForm({ store, viStats, checkoutEligible }: Props) {
+export default function ConfigForm({ store, viStats, checkoutEligible, checkoutLaunchEnabled = false }: Props) {
   const settings = store.settings_json ?? {}
   const initialProfile = getStoreProfile(settings)
   const [genderFocus, setGenderFocus] = useState<GenderFocus>(initialProfile.genderFocus)
@@ -89,6 +91,8 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
   const [logoUrl,       setLogoUrl]       = useState(store.logo_url ?? '')
   const [freteInfo,     setFreteInfo]     = useState(settings.freteInfo ?? '')
   const [pagamentoInfo, setPagamentoInfo] = useState(settings.pagamentoInfo ?? '')
+  const [pixKey, setPixKey] = useState(settings.pixKey ?? '')
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>(settings.paymentLinks ?? [])
   const [cep, setCep] = useState(store.cep ?? '')
   const [logradouro, setLogradouro] = useState(store.logradouro ?? '')
   const [numero, setNumero] = useState(store.numero ?? '')
@@ -286,6 +290,10 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
       logoSize,
       freteInfo:      freteInfo.trim(),
       pagamentoInfo:  pagamentoInfo.trim(),
+      pixKey:         pixKey.trim(),
+      paymentLinks:   isPaidPlan(plan)
+        ? paymentLinks.filter(l => l.label.trim() && l.url.trim())
+        : [],
       genderFocus,
       ageGroup,
       cep,
@@ -762,7 +770,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
           </div>
 
           <div>
-            <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Zonas de entrega (checkout)</p>
+            <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Zonas de entrega</p>
             <p className="text-xs text-muted mb-3 break-words">
               Cadastre cidade e UF com a taxa. Lista vazia = entrega em qualquer lugar com frete R$ 0 (útil só com frete grátis mínimo abaixo). Com zonas, só essas cidades recebem entrega.
             </p>
@@ -847,14 +855,128 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
 
           <SectionHeader title="Pagamento" />
           <div>
-            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Formas de pagamento</label>
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Chave PIX</label>
+            <input
+              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary font-mono break-all min-w-0"
+              value={pixKey}
+              onChange={e => setPixKey(e.target.value.trimStart())}
+              placeholder="E-mail, CPF, CNPJ, telefone ou chave aleatória"
+            />
+            <p className="text-xs text-muted mt-1.5 break-words">
+              Exibida na vitrine para o cliente copiar ao escolher PIX. Opcional.
+            </p>
+          </div>
+
+          {isPaidPlan(plan) ? (
+            <div className="mt-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Links de pagamento</label>
+                {paymentLinks.length < MAX_PAYMENT_LINKS && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentLinks(prev => [
+                      ...prev,
+                      { id: `pl-${Date.now()}`, label: '', url: '', active: true },
+                    ])}
+                    className="text-xs text-primary font-semibold hover:underline min-h-[44px] px-2"
+                  >
+                    + Adicionar
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted mb-3 break-words">
+                Até {MAX_PAYMENT_LINKS} links (Mercado Pago, PagBank, InfinityPay…). URLs devem começar com https://
+              </p>
+              <div className="space-y-3">
+                {paymentLinks.map((link, i) => (
+                  <div
+                    key={link.id}
+                    className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto_auto] gap-2 items-end border border-border/60 rounded-xl p-3 bg-surface2/50"
+                  >
+                    <div className="min-w-0">
+                      <label className="text-[11px] text-muted block mb-1">Nome</label>
+                      <input
+                        className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0"
+                        value={link.label}
+                        onChange={e => {
+                          const next = [...paymentLinks]
+                          next[i] = { ...link, label: e.target.value }
+                          setPaymentLinks(next)
+                        }}
+                        placeholder="Ex: Mercado Pago"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <label className="text-[11px] text-muted block mb-1">URL</label>
+                      <input
+                        type="url"
+                        className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-sm min-w-0 font-mono break-all"
+                        value={link.url}
+                        onChange={e => {
+                          const next = [...paymentLinks]
+                          next[i] = { ...link, url: e.target.value }
+                          setPaymentLinks(next)
+                        }}
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 min-h-[44px] px-2 text-xs text-muted cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-primary"
+                        checked={link.active !== false}
+                        onChange={e => {
+                          const next = [...paymentLinks]
+                          next[i] = { ...link, active: e.target.checked }
+                          setPaymentLinks(next)
+                        }}
+                      />
+                      Ativo
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentLinks(prev => prev.filter((_, j) => j !== i))}
+                      className="min-h-[44px] px-3 border border-warm/30 text-warm text-xs rounded-xl hover:bg-warm/10 shrink-0"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted mt-4 break-words">
+              Links de pagamento na vitrine disponíveis a partir do plano{' '}
+              <Link href="/admin/plano" className="text-primary underline">Starter</Link>.
+            </p>
+          )}
+
+          {(pixKey.trim() || activePaymentLinks(paymentLinks).length > 0) && (
+            <div className="mt-4 p-3 rounded-xl border border-dashed border-border bg-surface2/30">
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Preview na loja</p>
+              <div className="flex flex-wrap gap-2">
+                {pixKey.trim() && (
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-primary/15 text-primary font-semibold">PIX</span>
+                )}
+                {activePaymentLinks(paymentLinks).map(l => (
+                  <span key={l.id} className="text-xs px-2.5 py-1 rounded-full bg-accent/15 text-accent font-semibold break-words">
+                    {l.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Instruções extras</label>
             <textarea
               className="w-full px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary min-h-[80px] resize-y placeholder:text-muted"
               value={pagamentoInfo}
               onChange={e => setPagamentoInfo(stripEmojis(e.target.value))}
-              placeholder="Ex: Parcele em até 3x sem juros."
+              placeholder="Ex: Parcele em até 3x sem juros no WhatsApp."
             />
             <p className="text-xs text-muted mt-1.5">O Assistente IA usa esse texto quando o cliente perguntar sobre pagamento.</p>
+            {checkoutLaunchEnabled && (
             <div className="mt-4">
               <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
                 Parcelamento na vitrine (sem juros)
@@ -873,12 +995,14 @@ export default function ConfigForm({ store, viStats, checkoutEligible }: Props) 
                 Número máximo de parcelas sem juros usado na loja para exibir &quot;Nx R$ …&quot; em cada produto. Deixe em branco para não mostrar essa linha.
               </p>
             </div>
+            )}
           </div>
 
           <CheckoutModeSection
             plan={plan}
             checkoutMode={checkoutMode}
             checkoutEligible={checkoutEligible}
+            checkoutLaunchEnabled={checkoutLaunchEnabled}
           />
         </ConfigCard>
         )}

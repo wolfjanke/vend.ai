@@ -1,5 +1,6 @@
-import type { CartItem, CheckoutChannel, CheckoutPaymentMethod, DeliveryAddress, Store } from '@/types'
+import type { CartItem, CheckoutChannel, CheckoutPaymentMethod, DeliveryAddress, Store, StoreSettings } from '@/types'
 import type { PricingResult } from '@/lib/pricing'
+import { activePaymentLinks } from '@/lib/payment-links'
 
 function paymentMethodLabel(m: CheckoutPaymentMethod | string): string {
   const map: Record<string, string> = {
@@ -23,11 +24,13 @@ interface CheckoutPayload {
   pricing?:         PricingResult & { deliveryFee?: number; grandTotal?: number }
   checkoutChannel?: CheckoutChannel
   paymentMethod?:   CheckoutPaymentMethod | string
+  storeSettings?:   StoreSettings
 }
 
 // ─── Formata a mensagem de pedido para WhatsApp ───────────────────────────────
 export function formatOrderMessage(payload: CheckoutPayload): string {
-  const { store, items, name, phone, cpf, notes, orderNum, deliveryAddress, pricing, checkoutChannel, paymentMethod } = payload
+  const { store, items, name, phone, cpf, notes, orderNum, deliveryAddress, pricing, checkoutChannel, paymentMethod, storeSettings } = payload
+  const settings = storeSettings ?? store.settings_json
 
   const total = items.reduce((sum, item) => sum + item.price * item.qty, 0)
   const now   = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
@@ -84,6 +87,19 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
     lines.push(`*Canal:* Site (combinar pagamento com a loja)`)
   } else if (checkoutChannel === 'whatsapp') {
     lines.push(`*Canal:* WhatsApp`)
+  }
+
+  const pixKey = settings?.pixKey?.trim()
+  if (paymentMethod === 'PIX' && pixKey) {
+    lines.push(`*Chave PIX:* ${pixKey}`)
+  }
+
+  const links = activePaymentLinks(settings?.paymentLinks)
+  if (links.length > 0) {
+    lines.push(`*Links de pagamento:*`)
+    for (const link of links) {
+      lines.push(`• ${link.label}: ${link.url}`)
+    }
   }
 
   if (notes?.trim()) lines.push('', `*Obs:* ${notes.trim()}`)

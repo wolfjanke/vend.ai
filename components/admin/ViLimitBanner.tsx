@@ -14,7 +14,7 @@ export default function ViLimitBanner({ percent }: { percent: number }) {
             Ver uso detalhado
           </Link>
           {' · '}
-          <Link href="/admin/pagamentos" className="text-primary underline">
+          <Link href="/admin/plano" className="text-primary underline">
             Fazer upgrade
           </Link>
         </span>
