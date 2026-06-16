@@ -213,13 +213,13 @@ export const PLAN_FEATURE_LINES: Record<PlanSlug, string[]> = {
     '30.000 msgs Vi/mês',
     'PDV para loja física',
     'Análises de foto ilimitadas',
-    'Vi completa',
+    'Vi completa + streaming',
   ],
   enterprise: [
     'Produtos ilimitados',
     '60.000 msgs Vi/mês',
     'Suporte prioritário',
-    'Vi completa',
+    'Vi completa + streaming',
     'Atendimento dedicado',
   ],
 }

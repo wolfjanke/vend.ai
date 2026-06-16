@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import ScrollReveal from '@/components/landing/ScrollReveal'
-import { PLANS, PLAN_SLUGS, formatPlanPrice, formatOverageLine, PLAN_FEATURE_LINES, type PlanSlug } from '@/lib/plans'
+import { PLANS, PLAN_SLUGS, formatPlanPrice, formatOverageLine, PLAN_FEATURE_LINES, TRIAL_DAYS_BY_PLAN, type PlanSlug } from '@/lib/plans'
 
 export default function LandingPlans() {
   return (
@@ -11,6 +11,7 @@ export default function LandingPlans() {
         const popular = slug === 'pro'
         const overage = formatOverageLine(slug)
         const priceLabel = formatPlanPrice(plan.price)
+        const trialDays = TRIAL_DAYS_BY_PLAN[slug]
 
         return (
           <ScrollReveal key={slug} delay={i * 80}>
@@ -30,6 +31,11 @@ export default function LandingPlans() {
                   {priceLabel}
                 </p>
                 <p className="text-sm text-muted font-medium">por mês</p>
+                {trialDays != null && trialDays > 0 && (
+                  <p className="text-[11px] text-accent mt-1 break-words">
+                    {trialDays} dias grátis para testar
+                  </p>
+                )}
               </div>
               {overage && (
                 <p className="text-[11px] text-muted mb-4 break-words">{overage}</p>

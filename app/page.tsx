@@ -154,7 +154,7 @@ export default function LandingPage() {
             {
               n: '03',
               before: 'Cadastrar produto com foto, nome, tamanho, cor... leva horas.',
-              after: 'Tira uma foto. A IA gera nome, descrição e categoria na hora.',
+              after: 'Nos planos pagos, a IA gera nome, descrição e categoria a partir da foto. No grátis, cadastro manual.',
               label: 'Cadastro',
             },
           ].map((item, i) => (
@@ -280,7 +280,7 @@ export default function LandingPage() {
             {
               n: '02',
               title: 'Adicione produtos com IA',
-              desc: 'Tire uma foto da peça. A IA cria nome, descrição e categoria automaticamente. Em segundos.',
+              desc: 'Nos planos pagos, tire uma foto da peça e a IA cria nome, descrição e categoria. No grátis, cadastre manualmente.',
             },
             {
               n: '03',
@@ -332,7 +332,7 @@ export default function LandingPage() {
             {
               n: '04',
               title: 'IA no cadastro',
-              desc: 'Tire foto do produto e a IA gera nome e descrição na hora. Cadastre 10x mais rápido.',
+              desc: 'Planos pagos: foto do produto vira nome e descrição com IA (20 análises/mês no Starter; ilimitado no Pro+). Grátis: cadastro manual.',
             },
             {
               n: '05',
@@ -342,7 +342,7 @@ export default function LandingPage() {
             {
               n: '06',
               title: 'Recuperação de pedido',
-              desc: 'Nos planos Pro+, veja quem não finalizou e envie mensagem pronta pelo painel.',
+              desc: 'No plano Pro ou superior, veja pedidos não finalizados há 24h e envie mensagem pronta pelo painel.',
             },
           ].map((f, i) => (
             <ScrollReveal key={f.title} delay={i * 80}>
@@ -502,8 +502,8 @@ export default function LandingPage() {
           <ul className="flex flex-col gap-2.5 text-sm text-muted mb-8">
             {[
               'Finalize pedidos pelo WhatsApp — padrão para todas as lojas',
-              'Cadastre sua chave PIX e links no painel admin',
-              'Adicione links do Mercado Pago, PagBank ou InfinityPay',
+              'Cadastre sua chave PIX no painel (todos os planos)',
+              'Nos planos pagos: links do Mercado Pago, PagBank ou InfinityPay na vitrine',
               'Combine pagamento no chat, como você já faz',
             ].map(item => (
               <li key={item} className="flex items-start gap-2">
@@ -528,7 +528,9 @@ export default function LandingPage() {
           <h2 className="font-syne font-extrabold text-xl sm:text-3xl md:text-4xl leading-tight mb-4 max-w-full sm:max-w-2xl break-words">
             Comece grátis.<br />Cresça quando quiser.
           </h2>
-          <p className="text-muted text-sm mb-10 sm:mb-14">Sem fidelidade. Cancele quando quiser.</p>
+          <p className="text-muted text-sm mb-10 sm:mb-14 break-words">
+            Sem fidelidade. Cancele quando quiser. Preços mensais — no painel, opção trimestral (-10%) e anual (-20%).
+          </p>
         </ScrollReveal>
 
         <LandingPlans />
@@ -564,6 +566,18 @@ export default function LandingPage() {
             {
               q: 'Qual o limite de produtos em cada plano?',
               a: 'Grátis: 10 produtos. Starter: 50. Pro: 200. Loja e Enterprise: ilimitado. Cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
+            },
+            {
+              q: 'A análise de foto com IA funciona no plano grátis?',
+              a: 'Não. O plano Grátis permite cadastro manual de produtos. A análise de foto com IA está nos planos pagos: Starter (20 análises/mês), Pro e superiores (ilimitado).',
+            },
+            {
+              q: 'Tem período de teste nos planos pagos?',
+              a: 'Sim. Starter: 7 dias grátis. Pro e Loja: 14 dias. Enterprise: 30 dias. Você só é cobrado após o trial, se mantiver o plano.',
+            },
+            {
+              q: 'Posso pagar trimestral ou anual?',
+              a: 'Sim. No painel, ao fazer upgrade, você escolhe Mensal, Trimestral (-10% no total) ou Anual (-20% no total). O valor exibido nos cards acima é o equivalente mensal base.',
             },
             {
               q: 'Como faço upgrade de plano?',
