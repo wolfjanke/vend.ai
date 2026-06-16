@@ -52,8 +52,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-muted text-base sm:text-lg leading-relaxed mb-8 max-w-md break-words">
-            Catálogo inteligente, assistente com IA e pedidos direto no WhatsApp.
-            Perfeito pra quem está começando — sem precisar de site ou taxa de marketplace.
+            Catálogo inteligente, assistente com IA e pedidos organizados no WhatsApp.
+            Use o pagamento que você já conhece — sem precisar de site ou taxa de marketplace.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
@@ -489,22 +489,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Checkout integrado ─────────────────────────────────── */}
+      {/* ── Formas de pagamento ─────────────────────────────────── */}
       <section className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24 bg-[#0F0F0F]`}>
         <ScrollReveal className="min-w-0 max-w-2xl">
-          <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Checkout</p>
+          <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Pagamento</p>
           <h2 className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl mb-3 leading-tight break-words">
-            Receba por cartão direto na sua loja
+            Você escolhe como receber
           </h2>
           <p className="text-muted text-sm sm:text-base mb-6 break-words">
-            Disponível a partir do plano Starter com CNPJ (MEI também conta).
+            O vend.ai não processa pagamentos dos seus clientes. Você recebe direto, do jeito que já usa hoje.
           </p>
           <ul className="flex flex-col gap-2.5 text-sm text-muted mb-8">
             {[
-              'Parcelamento em até 12x para seu cliente',
-              'Receba em até 2 dias úteis',
-              'Taxas menores conforme seu plano',
-              'Sem precisar de maquininha',
+              'Finalize pedidos pelo WhatsApp — padrão para todas as lojas',
+              'Cadastre sua chave PIX e links no painel admin',
+              'Adicione links do Mercado Pago, PagBank ou InfinityPay',
+              'Combine pagamento no chat, como você já faz',
             ].map(item => (
               <li key={item} className="flex items-start gap-2">
                 <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-accent" />
@@ -518,73 +518,6 @@ export default function LandingPage() {
           >
             Ver planos →
           </Link>
-        </ScrollReveal>
-      </section>
-
-      {/* ── Taxas (checkout) ─────────────────────────────────────── */}
-      <section className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24`}>
-        <ScrollReveal className="min-w-0">
-          <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Taxas</p>
-          <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-3 leading-tight break-words">
-            Transparência nas taxas de checkout
-          </h2>
-          <p className="text-muted text-sm sm:text-base mb-8 sm:mb-10 max-w-2xl break-words">
-            Take rate aplicado nas vendas via checkout. Vendas pelo WhatsApp não têm taxa.
-          </p>
-        </ScrollReveal>
-
-        <ScrollReveal delay={80}>
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[#252525]">
-                  {['Plano', 'Mensalidade', 'Checkout', 'Take rate', 'Taxa fixa'].map(col => (
-                    <th
-                      key={col}
-                      scope="col"
-                      className="text-left py-3 px-3 sm:px-4 text-[11px] font-bold uppercase tracking-wider text-muted whitespace-nowrap first:pl-0"
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { plan: 'Grátis', monthly: 'R$0', checkout: '—', take: '—', fixed: '—', highlight: false, featured: false },
-                  { plan: 'Starter', monthly: 'R$49,90', checkout: '✓', take: '3,5%', fixed: '+R$0,99', highlight: false, featured: false },
-                  { plan: 'Pro', monthly: 'R$99,90', checkout: '✓', take: '2,75%', fixed: '+R$0,99', highlight: true, featured: true },
-                  { plan: 'Loja', monthly: 'R$199,90', checkout: '✓', take: '1,7%', fixed: '+R$0,99', highlight: false, featured: false },
-                  { plan: 'Enterprise', monthly: 'R$399,90', checkout: '✓', take: '1,5%', fixed: '+R$0,99', highlight: false, featured: false },
-                ].map(row => (
-                  <tr
-                    key={row.plan}
-                    className={`border-b border-[#252525] last:border-0 ${
-                      row.highlight
-                        ? 'bg-primary/10 ring-1 ring-inset ring-primary/40'
-                        : 'hover:bg-[#161616]/80'
-                    }`}
-                  >
-                    <td className={`py-3.5 px-3 sm:px-4 font-syne font-bold whitespace-nowrap first:pl-0 ${row.highlight ? 'text-primary' : 'text-foreground'}`}>
-                      <span className="inline-flex items-center gap-1.5">
-                        {row.plan}
-                        {'featured' in row && row.featured && (
-                          <Star size={14} className="fill-accent text-accent shrink-0" aria-label="Plano em destaque" />
-                        )}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3 sm:px-4 text-foreground tabular-nums whitespace-nowrap">{row.monthly}</td>
-                    <td className="py-3.5 px-3 sm:px-4 text-accent font-semibold whitespace-nowrap">{row.checkout}</td>
-                    <td className="py-3.5 px-3 sm:px-4 text-accent font-semibold tabular-nums whitespace-nowrap">{row.take}</td>
-                    <td className="py-3.5 px-3 sm:px-4 text-muted tabular-nums whitespace-nowrap">{row.fixed}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs sm:text-sm text-muted mt-6 max-w-2xl leading-relaxed break-words">
-            Requer CNPJ aprovado no cadastro de recebimento. MEI é aceito.
-          </p>
         </ScrollReveal>
       </section>
 
@@ -626,11 +559,11 @@ export default function LandingPage() {
             },
             {
               q: 'Tem limite de mensagens da Vi?',
-              a: 'Cada plano inclui um volume de mensagens da Vi por mês. No plano Grátis, ao atingir o limite a Vi direciona o cliente para seu WhatsApp. Nos planos pagos, você continua sendo atendido com cobrança proporcional do excedente. Você acompanha o consumo em tempo real no painel.',
+              a: 'Cada plano inclui um volume de mensagens da Vi por mês — no Grátis são 500 mensagens. Ao atingir o limite no plano Grátis, a Vi direciona o cliente para seu WhatsApp. Nos planos pagos, você continua sendo atendido com cobrança proporcional do excedente. Você acompanha o consumo em tempo real no painel.',
             },
             {
               q: 'Qual o limite de produtos em cada plano?',
-              a: 'Grátis: 10 produtos. Starter: 25. Pro: 200. Loja e Enterprise: ilimitado. Cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
+              a: 'Grátis: 10 produtos. Starter: 50. Pro: 200. Loja e Enterprise: ilimitado. Cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
             },
             {
               q: 'Como faço upgrade de plano?',
@@ -645,8 +578,8 @@ export default function LandingPage() {
               a: 'Não. Você pode criar sua loja como pessoa física. Não pedimos CNPJ para começar.',
             },
             {
-              q: 'Posso receber pagamento com cartão na loja?',
-              a: 'Sim! A partir do plano Starter, com CNPJ (MEI também conta), você ativa o checkout integrado e seus clientes pagam com cartão em até 12x diretamente na sua loja. No plano Grátis, os pedidos são combinados pelo WhatsApp.',
+              q: 'O vend.ai processa pagamentos dos meus clientes?',
+              a: 'Não. Você recebe direto no PIX, Mercado Pago, PagBank ou como preferir combinar no WhatsApp. O vend.ai organiza catálogo, pedidos e estoque — o dinheiro vai para a sua conta.',
             },
           ].map((item, i) => (
             <ScrollReveal key={i} delay={i * 50}>

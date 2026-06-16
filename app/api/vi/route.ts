@@ -18,6 +18,7 @@ import {
   viStreamsForPlan,
 } from '@/lib/vi-limits'
 import type { PlanSlug } from '@/lib/plans'
+import { formatPaymentMethodsForVi } from '@/lib/payment-links'
 
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
         storeSlug:       String(store.slug),
         baseUrl,
         plan,
-        paymentMethods:  settings.pagamentoInfo,
+        paymentMethods:  formatPaymentMethodsForVi(settings),
         deliveryInfo:    settings.freteInfo,
         assistantTone:   (store.assistant_tone as AssistantTone) ?? 'friendly',
         assistantGender: (store.assistant_gender as import('@/lib/assistant-gender').AssistantGender) ?? 'feminine',

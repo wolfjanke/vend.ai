@@ -1,5 +1,6 @@
 import type { Product, ProductVariant, StoreSettings } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
+import { formatPaymentMethodsForVi } from '@/lib/payment-links'
 import { resolveSkuUnitPrice } from '@/lib/product-pricing'
 import {
   assistantGenderPromptInstructions,
@@ -114,7 +115,7 @@ export function buildViSystemPrompt(
 ): string {
   const paymentMethods =
     store.paymentMethods?.trim() ||
-    settings?.pagamentoInfo?.trim() ||
+    formatPaymentMethodsForVi(settings) ||
     'Consulte pelo WhatsApp'
   const deliveryInfo =
     store.deliveryInfo?.trim() ||
