@@ -1,5 +1,6 @@
 import { isSandboxMode, getVendaiAsaasKey } from '@/lib/payments/config'
 
+/** Aviso de sandbox para cobrança de assinaturas vend.ai — exibir em /admin/plano, não no layout global. */
 export default function SandboxBanner() {
   if (!isSandboxMode()) return null
 
@@ -10,11 +11,11 @@ export default function SandboxBanner() {
       className="mb-4 rounded-xl border border-yellow-400/40 bg-yellow-400/10 px-4 py-3 text-sm text-yellow-200 break-words"
       role="status"
     >
-      <span className="font-semibold">Pagamentos em modo teste</span>
+      <span className="font-semibold">Assinaturas em modo teste</span>
       {' — '}
       {hasKey
-        ? 'ASAAS_ENV=sandbox. Cobranças não são reais.'
-        : 'Configure VENDAI_ASAAS_KEY e VENDAI_ASAAS_WALLET_ID para ativar cobranças no sandbox.'}
+        ? 'ASAAS_ENV=sandbox. Cobranças de plano não são reais.'
+        : 'Configure VENDAI_ASAAS_KEY e VENDAI_ASAAS_WALLET_ID para testar cobrança de planos no sandbox.'}
     </div>
   )
 }

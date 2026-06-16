@@ -145,7 +145,7 @@ export async function cancelSubscriptionAsaas(subscriptionId: string): Promise<v
 
 export function paymentsNotConfiguredMessage(): string {
   if (isSandboxMode()) {
-    return 'Pagamentos em modo teste — configure VENDAI_ASAAS_KEY e VENDAI_ASAAS_WALLET_ID para ativar cobranças reais no sandbox.'
+    return 'Assinaturas em modo teste — configure VENDAI_ASAAS_KEY e VENDAI_ASAAS_WALLET_ID para cobrança de planos no sandbox.'
   }
-  return 'Pagamentos não configurados. Entre em contato com o suporte.'
+  return 'Cobrança de planos não configurada. Entre em contato com o suporte.'
 }

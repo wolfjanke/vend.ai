@@ -7,6 +7,7 @@ import type { DeliveryAddress, Order, OrderItem, OrderStatus } from '@/types'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types'
 import { updateOrderStatus } from '@/app/admin/actions'
 import { isQuoteOrder, normalizeOrderItems, quoteStatusLabel } from '@/lib/orders'
+import { formatPhoneDisplay, whatsappWaMeDigits } from '@/lib/masks'
 import PedidoQuoteEditor from '@/components/admin/PedidoQuoteEditor'
 
 interface Props {
@@ -176,12 +177,12 @@ export default function PedidoCard({ order }: Props) {
         <>
           <div className="mb-1 font-semibold text-sm break-words">{order.customer_name}</div>
           <a
-            href={`https://wa.me/${order.customer_whatsapp}`}
+            href={`https://wa.me/${whatsappWaMeDigits(order.customer_whatsapp)}`}
             target="_blank"
             rel="noreferrer"
-            className="text-accent text-xs mb-1 block hover:underline break-all"
+            className="text-accent text-xs mb-1 block hover:underline"
           >
-            {order.customer_whatsapp}
+            {formatPhoneDisplay(order.customer_whatsapp)}
           </a>
           {order.customer_cpf_enc && (
             <p className="text-[10px] text-muted mb-3">CPF informado no orçamento</p>

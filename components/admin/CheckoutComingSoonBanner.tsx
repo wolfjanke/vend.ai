@@ -12,7 +12,7 @@ export default function CheckoutComingSoonBanner() {
         Checkout integrado em breve
       </p>
       <p className="text-xs text-muted leading-relaxed">
-        Por enquanto, combine o pagamento com seus clientes pelo WhatsApp. Acompanhe as novidades no painel.
+        Por enquanto, combine o pagamento com seus clientes pelo WhatsApp. Checkout com cartão na loja em breve.
       </p>
     </div>
   )

@@ -5,6 +5,7 @@ import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError, paymentsNotConfiguredMessage } from '@/lib/payments/wolf-hub'
 import { getVendaiAsaasKey } from '@/lib/payments/config'
+import { assertBillingTestAllowed, isBillingTestAllowedForStore } from '@/lib/billing-test-access'
 import {
   cancelSubscription,
   createSubscription,
@@ -65,6 +66,7 @@ export async function GET() {
     return NextResponse.json({
       ...sub,
       paymentsConfigured: !!getVendaiAsaasKey(),
+      billingTestAllowed: await isBillingTestAllowedForStore(session.storeId),
       usage: {
         productCount,
         productLimit,
@@ -120,6 +122,8 @@ export async function POST(req: NextRequest) {
   const { plan, action, billingCycle } = parsed.data
 
   try {
+    await assertBillingTestAllowed(session.storeId)
+
     const before = await getSubscriptionStatus(session.storeId)
     const oldPlan = before.plan
 
@@ -169,6 +173,7 @@ export async function DELETE() {
   }
 
   try {
+    await assertBillingTestAllowed(session.storeId)
     await cancelSubscription(session.storeId)
     const status = await getSubscriptionStatus(session.storeId)
     return NextResponse.json({ ok: true, ...status })

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CreditCard, MessageCircle } from 'lucide-react'
+import { MessageCircle } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
@@ -14,46 +14,10 @@ import OnboardingForm from './OnboardingForm'
 import OnboardingPending from './OnboardingPending'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
-const MEI_URL = 'https://www.gov.br/empresas-e-negocios/pt-br/empreendedor/servicos-para-mei/abertura'
+const PAGE_TITLE = 'Como receber'
+const PAGE_SUBTITLE = 'Configure PIX e links — o pedido fecha no WhatsApp'
 
-function EstadoGratis() {
-  return (
-    <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 max-w-2xl">
-      <p className="text-xs font-bold tracking-wider uppercase text-primary mb-2">Checkout integrado</p>
-      <h2 className="font-syne font-bold text-lg sm:text-xl mb-3 break-words flex items-center gap-2">
-        <CreditCard size={22} className="shrink-0 text-primary" aria-hidden />
-        Aceite cartão na sua loja
-      </h2>
-      <p className="text-sm text-muted leading-relaxed break-words mb-4">
-        Seus clientes poderão pagar com cartão diretamente no site, em até 12x.
-      </p>
-      <p className="text-sm font-semibold text-foreground mb-2">Para ativar o checkout:</p>
-      <ul className="text-sm text-muted space-y-1.5 mb-6 break-words">
-        <li>✓ Faça upgrade para o plano Starter ou superior</li>
-        <li>✓ Cadastre seu CNPJ (MEI conta!)</li>
-        <li>✓ Pronto — checkout ativo em minutos</li>
-      </ul>
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Link
-          href="/admin/plano"
-          className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90"
-        >
-          Fazer upgrade →
-        </Link>
-        <a
-          href={MEI_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 border border-border text-sm font-semibold rounded-xl hover:border-primary hover:text-primary transition-colors"
-        >
-          Abrir MEI grátis no gov.br →
-        </a>
-      </div>
-    </div>
-  )
-}
-
-function FormasPagamentoAtivas() {
+function RecebimentoWhatsApp() {
   return (
     <div className="max-w-2xl space-y-4">
       <CheckoutComingSoonBanner />
@@ -82,9 +46,27 @@ function FormasPagamentoAtivas() {
   )
 }
 
+function RecebimentoPageHeader({ subtitle }: { subtitle?: string }) {
+  return (
+    <div className={adminHeader}>
+      <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">{PAGE_TITLE}</h1>
+      <p className="text-sm text-muted break-words">{subtitle ?? PAGE_SUBTITLE}</p>
+    </div>
+  )
+}
+
 export default async function PagamentosPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
+
+  if (!isCheckoutLaunchEnabled()) {
+    return (
+      <div className={adminPage}>
+        <RecebimentoPageHeader />
+        <RecebimentoWhatsApp />
+      </div>
+    )
+  }
 
   let store: Record<string, unknown>
   try {
@@ -104,26 +86,10 @@ export default async function PagamentosPage() {
   } catch (e) {
     console.error('[admin/pagamentos]', e)
     return (
-      <AdminPageError title="Formas de pagamento">
+      <AdminPageError title={PAGE_TITLE}>
         Não foi possível carregar os dados. Execute a migration{' '}
         <code className="font-mono text-xs">005_add_asaas_checkout.sql</code> no banco e tente novamente.
       </AdminPageError>
-    )
-  }
-
-  const checkoutLaunchEnabled = isCheckoutLaunchEnabled()
-
-  if (!checkoutLaunchEnabled) {
-    return (
-      <div className={adminPage}>
-        <div className={adminHeader}>
-          <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Formas de pagamento</h1>
-          <p className="text-sm text-muted break-words">
-            Configure como seus clientes pagam — WhatsApp, PIX e links externos.
-          </p>
-        </div>
-        <FormasPagamentoAtivas />
-      </div>
     )
   }
 
@@ -162,19 +128,18 @@ export default async function PagamentosPage() {
 
   return (
     <div className={adminPage}>
-      <div className={adminHeader}>
-        <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Formas de pagamento</h1>
-        <p className="text-sm text-muted break-words">
-          {checkoutActive
+      <RecebimentoPageHeader
+        subtitle={
+          checkoutActive
             ? 'Checkout ativo na sua loja'
             : paidCheckoutPlan
               ? 'Configure o recebimento por cartão'
-              : 'Receba pedidos pelo WhatsApp — checkout nos planos pagos'}
-        </p>
-      </div>
+              : PAGE_SUBTITLE
+        }
+      />
 
       {!paidCheckoutPlan ? (
-        <EstadoGratis />
+        <RecebimentoWhatsApp />
       ) : checkoutActive ? (
         <div className="bg-surface border border-accent/30 rounded-2xl p-5 sm:p-6 max-w-2xl">
           <div className="flex items-center gap-2 mb-3">

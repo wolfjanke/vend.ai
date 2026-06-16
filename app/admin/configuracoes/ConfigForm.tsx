@@ -10,7 +10,7 @@ import { getStoreProfile } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
 import CepInput from '@/components/ui/CepInput'
 import { storeSettingsPatchSchema } from '@/lib/validations'
-import { maskPhone } from '@/lib/masks'
+import { maskPhone, formatPhoneDisplay } from '@/lib/masks'
 import { stripEmojis } from '@/lib/strip-emoji'
 import SectionHeader from '@/components/admin/SectionHeader'
 import AdminPrivacySection from '@/components/admin/AdminPrivacySection'
@@ -61,9 +61,7 @@ function viBarColor(percent: number) {
 }
 
 function initialWppDisplay(w: string) {
-  const d = w.replace(/\D/g, '')
-  const local = d.startsWith('55') && d.length > 11 ? d.slice(2) : d
-  return maskPhone(local)
+  return formatPhoneDisplay(w)
 }
 
 type ViStats = {

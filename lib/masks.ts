@@ -14,6 +14,30 @@ export function maskPhone(value: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
+/** Dígitos locais BR (10–11), removendo +55 quando presente. */
+export function brazilPhoneLocalDigits(value: string): string {
+  const d = digitsOnly(value)
+  if (d.startsWith('55') && d.length > 11) return d.slice(2)
+  return d
+}
+
+/** Telefone para exibição na UI: (65) 99988-3143 */
+export function formatPhoneDisplay(value: string): string {
+  if (!value || value === '***') return value
+  const local = brazilPhoneLocalDigits(value)
+  if (local.length < 10) return value
+  return maskPhone(local)
+}
+
+/** Dígitos para link wa.me (com código do país 55). */
+export function whatsappWaMeDigits(value: string): string {
+  const d = digitsOnly(value)
+  if (!d) return d
+  if (d.startsWith('55') && d.length >= 12) return d
+  const local = brazilPhoneLocalDigits(value)
+  return local ? `55${local}` : d
+}
+
 /** CEP 00000-000 */
 export function maskCep(value: string): string {
   const d = digitsOnly(value).slice(0, 8)

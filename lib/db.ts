@@ -6,7 +6,10 @@ function getSql(): ReturnType<typeof neon> {
   if (!_sql) {
     const url = process.env.DATABASE_URL
     if (!url) throw new Error('No database connection string was provided to neon(). Perhaps an environment variable has not been set?')
-    _sql = neon(url)
+    _sql = neon(url, {
+      // Evita que o Next.js tente cachear respostas HTTP do Neon (>2MB derruba o dev server).
+      fetchOptions: { cache: 'no-store' },
+    })
   }
   return _sql
 }

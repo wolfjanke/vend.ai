@@ -1,5 +1,4 @@
 import { cache } from 'react'
-import { unstable_cache } from 'next/cache'
 import { sql } from '@/lib/db'
 import type { Product, ProductVariant } from '@/types'
 
@@ -86,13 +85,17 @@ function fetchActiveProducts(storeId: string): Promise<Product[]> {
   )
 }
 
-/** Cache entre requests na vitrine (Neon + RSC). Invalidar com tag \`store-{slug}\`. */
-export function getCachedActiveProducts(storeId: string, slug: string): Promise<Product[]> {
-  return unstable_cache(
-    () => fetchActiveProducts(storeId),
-    ['store-active-products', storeId],
-    { revalidate: 60, tags: [`store-${slug}`] },
-  )()
+/**
+ * Produtos ativos da vitrine — dedupe por request (React cache).
+ * Não usa unstable_cache: catálogos com variants_json grandes (>2MB) estouram o incremental cache
+ * do Next e derrubam o dev server (unhandledRejection). Invalidar com revalidatePath /{slug}.
+ */
+const getActiveProductsByStoreId = cache(async (storeId: string): Promise<Product[]> => {
+  return fetchActiveProducts(storeId)
+})
+
+export function getCachedActiveProducts(storeId: string, _slug: string): Promise<Product[]> {
+  return getActiveProductsByStoreId(storeId)
 }
 
 /** Query direta para /api/vi — sem unstable_cache (payload grande estoura limite de 2MB do Next). */

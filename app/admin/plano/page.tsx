@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
+import SandboxBanner from '@/components/admin/SandboxBanner'
 import PlanoClient from './PlanoClient'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
@@ -15,6 +16,7 @@ export default async function PlanoPage() {
           Gerencie sua assinatura, período de trial gratuito e limites de uso
         </p>
       </div>
+      <SandboxBanner />
       <PlanoClient />
     </div>
   )

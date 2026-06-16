@@ -1,7 +1,7 @@
 import {
   BarChart2,
   Bot,
-  CreditCard,
+  Wallet,
   Crown,
   LayoutDashboard,
   Megaphone,
@@ -61,7 +61,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     Icon:  Settings2,
     items: [
       { label: 'Configurações', href: '/admin/configuracoes', Icon: Settings,   match: 'exact' },
-      { label: 'Formas de pagamento', href: '/admin/pagamentos', Icon: CreditCard, match: 'prefix' },
+      { label: 'Como receber', href: '/admin/pagamentos', Icon: Wallet, match: 'prefix' },
       { label: 'Plano',         href: '/admin/plano',         Icon: Crown,      match: 'exact' },
     ],
   },

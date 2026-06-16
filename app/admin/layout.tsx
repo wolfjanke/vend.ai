@@ -3,7 +3,6 @@ import { getSessionSafe } from '@/lib/auth'
 import { getAdminShellData } from '@/lib/admin-layout-data'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import MobileNav from '@/components/admin/MobileNav'
-import SandboxBanner from '@/components/admin/SandboxBanner'
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 
@@ -83,7 +82,6 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 md:p-6 xl:p-8 pb-[max(5rem,calc(64px+env(safe-area-inset-bottom,0px)))] md:pb-6">
           <div className="w-full min-w-0">
-            <SandboxBanner />
             {children}
           </div>
         </main>

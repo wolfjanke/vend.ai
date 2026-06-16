@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Smartphone } from 'lucide-react'
 import type { Order } from '@/types'
+import { formatPhoneDisplay, whatsappWaMeDigits } from '@/lib/masks'
 
 const SUGESTOES = [
   { label: 'Parcelar em 2x', texto: 'Olá! Vi que você montou um pedido e não finalizou. Posso parcelar em 2x sem juros para você. Quer que eu reserve?' },
@@ -42,7 +43,7 @@ export default function RecoveryCard({ order }: Props) {
 
   function abrirWhatsApp(texto: string) {
     const msg = encodeURIComponent(texto.trim() || 'Olá! Vi que você deixou itens no carrinho. Posso te ajudar a finalizar o pedido?')
-    window.open(`https://wa.me/${order.customer_whatsapp}?text=${msg}`, '_blank')
+    window.open(`https://wa.me/${whatsappWaMeDigits(order.customer_whatsapp)}?text=${msg}`, '_blank')
     marcarEnviado()
   }
 
@@ -55,9 +56,9 @@ export default function RecoveryCard({ order }: Props) {
         <span className="text-[11px] text-muted">{timeAgo(order.created_at)}</span>
       </div>
       <div className="font-semibold text-sm mb-1">{order.customer_name}</div>
-      <a href={`https://wa.me/${order.customer_whatsapp}`} target="_blank" rel="noreferrer" className="text-accent text-xs mb-3 inline-flex items-center gap-1.5 hover:underline break-all">
+      <a href={`https://wa.me/${whatsappWaMeDigits(order.customer_whatsapp)}`} target="_blank" rel="noreferrer" className="text-accent text-xs mb-3 inline-flex items-center gap-1.5 hover:underline">
         <Smartphone size={13} className="shrink-0" aria-hidden />
-        {order.customer_whatsapp}
+        {formatPhoneDisplay(order.customer_whatsapp)}
       </a>
       <div className="text-muted text-xs mb-3 leading-relaxed">
         {order.items_json.map((item, i) => (

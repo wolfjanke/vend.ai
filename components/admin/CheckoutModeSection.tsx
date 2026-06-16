@@ -85,7 +85,7 @@ export default function CheckoutModeSection({
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm break-words">
             <p className="font-semibold text-foreground mb-1">Pedidos pelo WhatsApp</p>
             <p className="text-muted text-xs leading-relaxed">
-              Todos os pedidos são finalizados pelo WhatsApp. Configure chave PIX e links de pagamento na seção Pagamento acima.
+              Todos os pedidos são finalizados pelo WhatsApp. Configure chave PIX e links de pagamento em Configurações → Venda.
             </p>
           </div>
           <CheckoutComingSoonBanner />
@@ -139,7 +139,7 @@ export default function CheckoutModeSection({
                       <span className="text-xs text-muted block break-words">{opt.description}</span>
                       {disabled && (
                         <span className="text-[11px] text-warm block mt-1">
-                          Configure seu CNPJ em Formas de pagamento para ativar.
+                          Configure seu CNPJ em Como receber para ativar.
                         </span>
                       )}
                     </span>

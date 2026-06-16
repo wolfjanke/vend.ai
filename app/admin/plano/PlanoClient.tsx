@@ -43,6 +43,7 @@ interface SubscriptionData {
   trialDaysRemaining: number | null
   billingCycle: BillingCycle
   paymentsConfigured: boolean
+  billingTestAllowed: boolean
   usage: {
     productCount: number
     productLimit: number | null
@@ -93,7 +94,10 @@ export default function PlanoClient() {
         return
       }
       const json = await res.json() as SubscriptionData
-      setData(json)
+      setData({
+        ...json,
+        billingTestAllowed: json.billingTestAllowed ?? true,
+      })
       setBillingCycle(json.billingCycle ?? 'monthly')
     } catch {
       setError('Erro de conexão')
@@ -332,7 +336,7 @@ export default function PlanoClient() {
 
                 <button
                   type="button"
-                  disabled={(isCurrent && data.billingCycle === billingCycle) || !!busy || !data.paymentsConfigured}
+                  disabled={(isCurrent && data.billingCycle === billingCycle) || !!busy || !data.paymentsConfigured || !data.billingTestAllowed}
                   onClick={() => handleUpgrade(p.slug)}
                   className="mt-auto w-full min-h-[44px] px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -351,6 +355,16 @@ export default function PlanoClient() {
         {!data.paymentsConfigured && (
           <p className="text-xs text-muted mt-3 break-words">
             Configure as chaves do Asaas no ambiente para ativar upgrades e cobranças.
+          </p>
+        )}
+        {data.paymentsConfigured && !data.billingTestAllowed && (
+          <p className="text-xs text-warm mt-3 break-words">
+            Seu e-mail ainda não está na lista de teste do sandbox (BILLING_TEST_EMAILS).
+          </p>
+        )}
+        {data.paymentsConfigured && data.billingTestAllowed && (
+          <p className="text-xs text-accent mt-3 break-words">
+            Conta liberada para teste de assinatura no sandbox.
           </p>
         )}
       </div>

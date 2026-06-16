@@ -1,10 +1,20 @@
 import type { PlanSlug } from '@/lib/plans'
-import { isPlanCheckoutEligible } from '@/lib/plans'
+import { isPlanCheckoutEligible, PLAN_SLUGS, PLANS } from '@/lib/plans'
 
-/** Kill switch global — override de emergência. Produção: CHECKOUT_ENABLED=true */
-export function isCheckoutLaunchEnabled(): boolean {
+/** Flag de ambiente — só liga checkout se algum plano tiver `checkoutEnabled: true`. */
+export function isCheckoutEnvEnabled(): boolean {
   const v = process.env.CHECKOUT_ENABLED?.trim().toLowerCase()
   return v === 'true' || v === '1'
+}
+
+/** Algum plano com checkout integrado habilitado na definição de planos. */
+export function hasCheckoutEligiblePlans(): boolean {
+  return PLAN_SLUGS.some(slug => PLANS[slug].checkoutEnabled)
+}
+
+/** Checkout integrado da loja disponível no produto (env + planos). */
+export function isCheckoutLaunchEnabled(): boolean {
+  return isCheckoutEnvEnabled() && hasCheckoutEligiblePlans()
 }
 
 export type CheckoutStoreInput = {
