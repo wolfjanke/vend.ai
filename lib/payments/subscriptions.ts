@@ -1,5 +1,13 @@
 import { sql } from '@/lib/db'
-import { getPlan, TRIAL_DAYS_BY_PLAN, isPaidPlan, type PlanSlug } from '@/lib/plans'
+import {
+  getPlan,
+  TRIAL_DAYS_BY_PLAN,
+  isPaidPlan,
+  getChargeAmountCents,
+  getBillingPeriodDays,
+  type PlanSlug,
+  type BillingCycle,
+} from '@/lib/plans'
 import { getVendaiAsaasKey, assertPaymentsConfigured } from './config'
 import {
   createCustomer,
@@ -8,6 +16,12 @@ import {
   cancelSubscriptionAsaas,
 } from './wolf-hub'
 import type { SubscriptionStatus } from '@/types'
+
+const ASAAS_CYCLE = {
+  monthly:   'MONTHLY',
+  quarterly: 'QUARTERLY',
+  annual:    'YEARLY',
+} as const
 
 function formatDateYmd(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -29,6 +43,7 @@ async function loadStoreBilling(storeId: string) {
       s.subscription_started_at,
       s.subscription_ends_at,
       s.trial_ends_at,
+      s.billing_cycle,
       s.vi_overage_messages,
       u.email AS owner_email
     FROM stores s
@@ -46,6 +61,7 @@ async function loadStoreBilling(storeId: string) {
     subscription_started_at: string | null
     subscription_ends_at: string | null
     trial_ends_at: string | null
+    billing_cycle: string | null
     vi_overage_messages: number
     owner_email: string | null
   } | undefined
@@ -83,11 +99,13 @@ export interface SubscriptionStatusResult {
   trialEndsAt: string | null
   asaasSubscriptionId: string | null
   trialDaysRemaining: number | null
+  billingCycle: BillingCycle
 }
 
 export async function getSubscriptionStatus(storeId: string): Promise<SubscriptionStatusResult> {
   const store = await loadStoreBilling(storeId)
   const plan = (store?.plan ?? 'free') as PlanSlug
+  const billingCycle = (store?.billing_cycle ?? 'monthly') as BillingCycle
   const trialEnds = store?.trial_ends_at ?? null
   let trialDaysRemaining: number | null = null
   if (trialEnds && store?.subscription_status === 'TRIAL') {
@@ -103,10 +121,15 @@ export async function getSubscriptionStatus(storeId: string): Promise<Subscripti
     trialEndsAt: trialEnds,
     asaasSubscriptionId: store?.asaas_subscription_id ?? null,
     trialDaysRemaining,
+    billingCycle,
   }
 }
 
-export async function createSubscription(storeId: string, planSlug: PlanSlug): Promise<void> {
+export async function createSubscription(
+  storeId: string,
+  planSlug: PlanSlug,
+  billingCycle: BillingCycle = 'monthly',
+): Promise<void> {
   if (!isPaidPlan(planSlug)) {
     throw new Error('Plano inválido para assinatura')
   }
@@ -126,7 +149,8 @@ export async function createSubscription(storeId: string, planSlug: PlanSlug): P
 
   const customerId = await ensureBillingCustomer(storeId)
   const planDef = getPlan(planSlug)
-  const valueReais = planDef.price / 100
+  const chargeCents = getChargeAmountCents(planSlug, billingCycle)
+  const valueReais = chargeCents / 100
   const trialDays = TRIAL_DAYS_BY_PLAN[planSlug] ?? 0
   const now = new Date()
   const trialEnds = trialDays > 0 ? addDays(now, trialDays) : null
@@ -137,17 +161,18 @@ export async function createSubscription(storeId: string, planSlug: PlanSlug): P
     billingType: 'UNDEFINED',
     value: valueReais,
     nextDueDate,
-    cycle: 'MONTHLY',
-    description: `Assinatura ${planDef.name} — vend.ai`,
+    cycle: ASAAS_CYCLE[billingCycle],
+    description: `Assinatura ${planDef.name} (${billingCycle}) — vend.ai`,
     externalReference: storeId,
   })
 
   const status: SubscriptionStatus = trialDays > 0 ? 'TRIAL' : 'ACTIVE'
-  const endsAt = addDays(now, 30)
+  const endsAt = addDays(now, getBillingPeriodDays(billingCycle))
 
   await sql`
     UPDATE stores SET
       plan = ${planSlug},
+      billing_cycle = ${billingCycle},
       asaas_subscription_id = ${sub.id},
       subscription_status = ${status},
       subscription_started_at = NOW(),
@@ -162,8 +187,8 @@ export async function createSubscription(storeId: string, planSlug: PlanSlug): P
       ${storeId},
       'SUBSCRIPTION_CREATED',
       ${planSlug},
-      ${planDef.price},
-      ${`Assinatura ${planDef.name} criada`}
+      ${chargeCents},
+      ${`Assinatura ${planDef.name} criada (${billingCycle})`}
     )
   `
 }
@@ -183,6 +208,7 @@ export async function cancelSubscription(storeId: string): Promise<void> {
   await sql`
     UPDATE stores SET
       plan = 'free',
+      billing_cycle = 'monthly',
       asaas_subscription_id = NULL,
       subscription_status = 'CANCELLED',
       subscription_ends_at = NULL,
@@ -191,8 +217,12 @@ export async function cancelSubscription(storeId: string): Promise<void> {
   `
 }
 
-export async function upgradeSubscription(storeId: string, newPlan: PlanSlug): Promise<void> {
-  await createSubscription(storeId, newPlan)
+export async function upgradeSubscription(
+  storeId: string,
+  newPlan: PlanSlug,
+  billingCycle: BillingCycle = 'monthly',
+): Promise<void> {
+  await createSubscription(storeId, newPlan, billingCycle)
 }
 
 /** Cobrança avulsa do excedente de mensagens Vi no mês. */
