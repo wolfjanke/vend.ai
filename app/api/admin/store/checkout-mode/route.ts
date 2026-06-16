@@ -4,7 +4,7 @@ import { sql } from '@/lib/db'
 import { requireSession } from '@/lib/require-session'
 import type { PlanSlug } from '@/lib/plans'
 import { isPlanCheckoutEligible } from '@/lib/plans'
-import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
+import { isCheckoutEnabledForStore, isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 import {
   checkoutChannelsFromMode,
   checkoutModeIncludesSite,
@@ -63,6 +63,12 @@ export async function PUT(req: NextRequest) {
   }
 
   if (checkoutModeIncludesSite(mode)) {
+    if (!isCheckoutLaunchEnabled()) {
+      return NextResponse.json(
+        { error: 'Checkout integrado temporariamente indisponível.' },
+        { status: 403 },
+      )
+    }
     const eligible = isCheckoutEnabledForStore({
       plan,
       asaas_onboarding_status: store.asaas_onboarding_status,

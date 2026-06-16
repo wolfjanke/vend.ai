@@ -3,7 +3,6 @@ import {
   Bot,
   CreditCard,
   Crown,
-  DollarSign,
   LayoutDashboard,
   Megaphone,
   Monitor,
@@ -52,7 +51,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { label: 'Dashboard',   href: '/admin/dashboard',    Icon: LayoutDashboard, match: 'exact' },
       { label: 'Pedidos',     href: '/admin/pedidos',      Icon: ShoppingBag,     match: 'prefix' },
-      { label: 'Financeiro',  href: '/admin/financeiro',   Icon: DollarSign,    match: 'prefix' },
       { label: 'PDV',         href: '/admin/pdv',          Icon: Monitor,         match: 'prefix', planOnly: 'loja' },
       { label: 'Assistente IA este mês', href: '/admin/dashboard#vi', Icon: Bot, match: 'exact' },
     ],
@@ -63,7 +61,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     Icon:  Settings2,
     items: [
       { label: 'Configurações', href: '/admin/configuracoes', Icon: Settings,   match: 'exact' },
-      { label: 'Pagamentos',    href: '/admin/pagamentos',    Icon: CreditCard, match: 'prefix' },
+      { label: 'Formas de pagamento', href: '/admin/pagamentos', Icon: CreditCard, match: 'prefix' },
       { label: 'Plano',         href: '/admin/plano',         Icon: Crown,      match: 'exact' },
     ],
   },

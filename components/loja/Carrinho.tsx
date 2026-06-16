@@ -16,6 +16,8 @@ import { calculateCheckoutPricing } from '@/lib/pricing'
 import { quoteDelivery } from '@/lib/delivery'
 import { isDeliveryAddressEmpty } from '@/lib/validations'
 import { digitsOnly, isValidCpf } from '@/lib/masks'
+import PaymentOptionsPanel from '@/components/loja/PaymentOptionsPanel'
+import { activePaymentLinks } from '@/lib/payment-links'
 
 type Step = 'cart' | 'delivery' | 'channel' | 'payment'
 
@@ -539,6 +541,12 @@ export default function Carrinho({
                   onChange={e => setCouponCode(e.target.value.toUpperCase())}
                 />
               </div>
+              {(paymentMethod === 'PIX' && storeSettings?.pixKey?.trim()) || activePaymentLinks(storeSettings?.paymentLinks).length > 0 ? (
+                <PaymentOptionsPanel
+                  pixKey={paymentMethod === 'PIX' ? storeSettings?.pixKey : undefined}
+                  paymentLinks={storeSettings?.paymentLinks}
+                />
+              ) : null}
               <label className="flex gap-2.5 items-start text-xs text-muted cursor-pointer min-w-0">
                 <input
                   type="checkbox"

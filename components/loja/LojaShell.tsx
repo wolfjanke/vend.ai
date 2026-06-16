@@ -309,6 +309,7 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
         pricing: data.pricing,
         checkoutChannel: meta.checkoutChannel,
         paymentMethod,
+        storeSettings: store.settings_json,
       })
       window.open(buildWhatsAppUrl(store.whatsapp, msg), '_blank')
       setCart([])

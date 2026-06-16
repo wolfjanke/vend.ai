@@ -3,8 +3,9 @@ import { sql } from '@/lib/db'
 import { storeSettingsPatchSchema } from '@/lib/validations'
 import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
-import type { PlanSlug } from '@/lib/plans'
+import { isPaidPlan, type PlanSlug } from '@/lib/plans'
 import { canUseAssistantFeature } from '@/lib/plans'
+import { sanitizePaymentLinks } from '@/lib/payment-links'
 import { normalizeLogoSize } from '@/lib/store-logo'
 import { normalizeAssistantGender } from '@/lib/assistant-gender'
 export { dynamic } from '@/lib/route-dynamic'
@@ -41,6 +42,8 @@ export async function PATCH(req: NextRequest) {
       logo_url,
       freteInfo,
       pagamentoInfo,
+      pixKey,
+      paymentLinks,
       pixDiscountPercent,
       couponRules,
       bannerMessages,
@@ -90,6 +93,13 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
+    if (paymentLinks !== undefined && paymentLinks.length > 0 && !isPaidPlan(plan)) {
+      return NextResponse.json(
+        { error: 'Links de pagamento disponíveis a partir do plano Starter.' },
+        { status: 403 },
+      )
+    }
+
     const assistantName =
       assistant_name !== undefined
         ? assistant_name.trim() || 'Vi'
@@ -111,6 +121,8 @@ export async function PATCH(req: NextRequest) {
       ...current,
       ...(freteInfo !== undefined && { freteInfo: freteInfo ?? '' }),
       ...(pagamentoInfo !== undefined && { pagamentoInfo: pagamentoInfo ?? '' }),
+      ...(pixKey !== undefined && { pixKey: pixKey?.trim() || '' }),
+      ...(paymentLinks !== undefined && { paymentLinks: sanitizePaymentLinks(paymentLinks) }),
       ...(pixDiscountPercent !== undefined && { pixDiscountPercent }),
       ...(couponRules !== undefined && { couponRules: Array.isArray(couponRules) ? couponRules : (current.couponRules ?? []) }),
       ...(bannerMessages !== undefined && {

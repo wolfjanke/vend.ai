@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { digitsOnly, isValidBrazilPhoneDigits, isValidCpf } from '@/lib/masks'
+import { MAX_PAYMENT_LINKS } from '@/lib/payment-links'
 import { stripEmojis } from '@/lib/strip-emoji'
 
 const phoneDigits = z
@@ -65,6 +66,13 @@ export const storeSettingsPatchSchema = z.object({
   logoSize:       z.enum(['sm', 'md', 'lg']).optional(),
   freteInfo:      noEmojiOptional(2000),
   pagamentoInfo:  noEmojiOptional(2000),
+  pixKey:         z.string().max(77).optional().transform(s => s?.trim() || ''),
+  paymentLinks: z.array(z.object({
+    id:     z.string(),
+    label:  z.string().min(2).max(40).transform(stripEmojis).pipe(z.string().min(2).max(40)),
+    url:    z.string().url('URL inválida — use https://').refine(u => u.startsWith('https://'), 'Use URL com https://'),
+    active: z.boolean().optional(),
+  })).max(MAX_PAYMENT_LINKS).optional(),
   pixDiscountPercent: z.number().min(0).max(100).optional(),
   couponRules: z.array(z.object({
     id:               z.string(),

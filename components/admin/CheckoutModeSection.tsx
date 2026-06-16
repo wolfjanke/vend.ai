@@ -6,11 +6,13 @@ import type { CheckoutMode } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
 import { isPlanCheckoutEligible } from '@/lib/plans'
 import SectionHeader from '@/components/admin/SectionHeader'
+import CheckoutComingSoonBanner from '@/components/admin/CheckoutComingSoonBanner'
 
 interface Props {
-  plan:              PlanSlug
-  checkoutMode:      CheckoutMode
-  checkoutEligible:  boolean
+  plan:                    PlanSlug
+  checkoutMode:            CheckoutMode
+  checkoutEligible:        boolean
+  checkoutLaunchEnabled?:  boolean
 }
 
 const OPTIONS: {
@@ -39,7 +41,12 @@ const OPTIONS: {
   },
 ]
 
-export default function CheckoutModeSection({ plan, checkoutMode, checkoutEligible }: Props) {
+export default function CheckoutModeSection({
+  plan,
+  checkoutMode,
+  checkoutEligible,
+  checkoutLaunchEnabled = false,
+}: Props) {
   const [mode, setMode] = useState<CheckoutMode>(checkoutMode)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -70,6 +77,23 @@ export default function CheckoutModeSection({ plan, checkoutMode, checkoutEligib
     }
   }
 
+  if (!checkoutLaunchEnabled) {
+    return (
+      <>
+        <SectionHeader title="Pedidos e pagamentos" description="Como seus clientes finalizam compras na loja." />
+        <div className="space-y-3">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm break-words">
+            <p className="font-semibold text-foreground mb-1">Pedidos pelo WhatsApp</p>
+            <p className="text-muted text-xs leading-relaxed">
+              Todos os pedidos são finalizados pelo WhatsApp. Configure chave PIX e links de pagamento na seção Pagamento acima.
+            </p>
+          </div>
+          <CheckoutComingSoonBanner />
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <SectionHeader title="Pedidos e pagamentos" description="Como seus clientes finalizam compras na loja." />
@@ -78,7 +102,7 @@ export default function CheckoutModeSection({ plan, checkoutMode, checkoutEligib
           <div className="rounded-xl border border-border bg-surface2 p-4 text-sm break-words">
             <p className="font-semibold text-foreground mb-1">Só WhatsApp</p>
             <p className="text-muted text-xs leading-relaxed mb-3">
-              No plano Grátis, pedidos são combinados pelo WhatsApp. Upgrade para Starter para ativar checkout com cartão.
+              No plano Grátis, pedidos são combinados pelo WhatsApp.
             </p>
             <Link
               href="/admin/plano"
@@ -115,7 +139,7 @@ export default function CheckoutModeSection({ plan, checkoutMode, checkoutEligib
                       <span className="text-xs text-muted block break-words">{opt.description}</span>
                       {disabled && (
                         <span className="text-[11px] text-warm block mt-1">
-                          Configure seu CNPJ em Pagamentos para ativar.
+                          Configure seu CNPJ em Formas de pagamento para ativar.
                         </span>
                       )}
                     </span>

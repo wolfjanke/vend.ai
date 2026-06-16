@@ -138,13 +138,13 @@ export default function MarketingForm({ store }: Props) {
       <div className={adminCard}>
       <SectionHeader
         title="Desconto PIX"
-        description="Percentual automático quando o cliente escolhe PIX no checkout."
+        description="Percentual automático quando o cliente escolhe PIX no carrinho ou WhatsApp."
       />
       <div className="flex items-start gap-2 mb-2">
         <label className="text-xs font-bold text-muted uppercase tracking-wider flex-1">Desconto PIX (%)</label>
         <span
           className="text-muted shrink-0"
-          title="O desconto é aplicado automaticamente no checkout quando o cliente escolhe PIX. Ex: 5 = 5% de desconto."
+          title="O desconto é aplicado no carrinho quando o cliente escolhe PIX. Ex: 5 = 5% de desconto."
         >
           <Info size={16} aria-hidden />
         </span>
@@ -160,7 +160,7 @@ export default function MarketingForm({ store }: Props) {
         placeholder="Ex: 5"
       />
       <p className="text-xs text-muted mt-1.5 mb-6">
-        Aplicado automaticamente no checkout quando o cliente selecionar PIX.
+        Aplicado automaticamente no carrinho quando o cliente selecionar PIX.
       </p>
 
       </div>
