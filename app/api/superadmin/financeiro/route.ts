@@ -26,7 +26,7 @@ export async function GET() {
     }))
 
     const overdue = await sql`
-      SELECT s.name, s.slug, s.plan,
+      SELECT s.id, s.name, s.slug, s.plan,
         COALESCE(s.owner_email, u.email) AS owner_email,
         s.subscription_ends_at
       FROM stores s

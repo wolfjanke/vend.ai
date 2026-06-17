@@ -10,7 +10,6 @@ import type {
   VariantType,
   ProductAnalysisHints,
   ProductAudienceHint,
-  ProductAnalysisMode,
   ProductAudience,
   ProductAudienceConfidence,
   CatalogAxes,
@@ -26,6 +25,12 @@ import type { AnalysisAiMeta, MappedVariantDraft } from '@/lib/product-analysis-
 import { stockAxisFromProduct } from '@/lib/product-analysis-map'
 import { getAxisLabels, variationKindLabel } from '@/lib/catalog-axes'
 import { canUsePhotoAnalysis, type PlanSlug } from '@/lib/plans'
+import {
+  MAX_PRODUCT_BLOCKS,
+  MAX_PHOTOS_TOTAL,
+  MAX_PHOTOS_PER_BLOCK,
+  fileFingerprint,
+} from '@/lib/product-photo-blocks'
 import Link from 'next/link'
 
 interface Props {
@@ -46,6 +51,30 @@ interface VariantState {
   stockPrices?:      Record<string, number>
   stockPromoPrices?: Record<string, number>
   variantType:       VariantType
+}
+
+type ProductBlockState = {
+  id:             string
+  files:          File[]
+  previews:       string[]
+  piece:          string
+  audience:       ProductAudienceHint
+  colors:         string
+  note:           string
+  photoVariation: PhotoVariationHint | 'unspecified'
+}
+
+function createEmptyBlock(): ProductBlockState {
+  return {
+    id:             crypto.randomUUID(),
+    files:          [],
+    previews:       [],
+    piece:          '',
+    audience:       '',
+    colors:         '',
+    note:           '',
+    photoVariation: 'unspecified',
+  }
 }
 
 type BatchProductDraft = {
@@ -113,16 +142,25 @@ function BatchDraftThumb({ file }: { file: File }) {
   )
 }
 
-function hintModeCardClass(selected: boolean): string {
-  const base = `${adminCard} p-5 min-h-[5.5rem] w-full text-left transition-colors`
-  return selected
-    ? `${base} border-primary bg-primary/10 text-primary`
-    : `${base} bg-surface2 hover:border-primary/40`
+function BlockPhotoThumb({ src, onRemove }: { src: string; onRemove: () => void }) {
+  return (
+    <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-border shrink-0 group/thumb">
+      <img src={src} alt="" className="w-full h-full object-cover" />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute inset-0 flex items-center justify-center bg-bg/70 text-warm text-xs font-bold opacity-0 group-hover/thumb:opacity-100 focus:opacity-100 transition-opacity min-h-[44px]"
+        aria-label="Remover foto"
+      >
+        ✕
+      </button>
+    </div>
+  )
 }
 
 function WizardStepIndicator({ step }: { step: CadastroStep }) {
   const items: Array<{ n: CadastroStep; label: string }> = [
-    { n: 1, label: 'Fotos' },
+    { n: 1, label: 'Produtos' },
     { n: 2, label: 'IA' },
     { n: 3, label: 'Revisar' },
     { n: 4, label: 'Publicar' },
@@ -202,23 +240,16 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const photoAiEnabled = canUsePhotoAnalysis(plan)
   const router  = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
+  const [pickingBlockId, setPickingBlockId] = useState<string | null>(null)
   const isEdit  = Boolean(productId && initialProduct)
 
-  const [files,     setFiles]     = useState<File[]>([])
-  const [previews,  setPreviews]  = useState<string[]>([])
+  const [productBlocks, setProductBlocks] = useState<ProductBlockState[]>(() => [createEmptyBlock()])
   const [step, setStep] = useState<CadastroStep>(1)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiStatus,  setAiStatus]  = useState('')
   const [analyzed,  setAnalyzed]  = useState(!!initialProduct)
   const [saving,    setSaving]    = useState(false)
   const [savedAnalysisImages, setSavedAnalysisImages] = useState<string[]>([])
-  const [hintMode, setHintMode]           = useState<ProductAnalysisMode>('single')
-  const [hintQuantity, setHintQuantity]   = useState(1)
-  const [hintPiece, setHintPiece]       = useState('')
-  const [hintAudience, setHintAudience] = useState<ProductAudienceHint>('')
-  const [hintColors, setHintColors]     = useState('')
-  const [hintNote, setHintNote]         = useState('')
-  const [hintPhotoVariation, setHintPhotoVariation] = useState<PhotoVariationHint | 'unspecified'>('unspecified')
   const [catalogAxes, setCatalogAxes] = useState<CatalogAxes>({ primaryAxis: 'color', stockAxis: 'clothing' })
   const [aiMeta, setAiMeta] = useState<AnalysisAiMeta | null>(null)
   const [customStockKey, setCustomStockKey] = useState('')
@@ -273,58 +304,155 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     )
   }, [initialProduct])
 
-  useEffect(() => {
-    if (hintMode === 'single') setHintQuantity(1)
-  }, [hintMode])
+  const totalBlockPhotos = productBlocks.reduce((sum, b) => sum + b.files.length, 0)
+  const blocksStillLoading = productBlocks.some(b => b.files.length > b.previews.length)
+  const blocksWithPhotos = productBlocks.filter(b => b.files.length > 0)
 
-  useEffect(() => {
-    if (hintMode === 'multi' && files.length >= 2 && files.length > hintQuantity) {
-      setHintQuantity(files.length)
+  function updateBlock(blockId: string, patch: Partial<ProductBlockState>) {
+    setProductBlocks(prev => prev.map(b => (b.id === blockId ? { ...b, ...patch } : b)))
+  }
+
+  function isDuplicateAcrossBlocks(file: File, blocks: ProductBlockState[], excludeBlockId: string): boolean {
+    const fp = fileFingerprint(file)
+    for (const b of blocks) {
+      if (b.id === excludeBlockId) continue
+      if (b.files.some(f => fileFingerprint(f) === fp)) return true
     }
-  }, [hintMode, files.length, hintQuantity])
+    return false
+  }
 
-  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files?.length) return
-    const newFiles = Array.from(e.target.files)
-    setFiles(prev => [...prev, ...newFiles])
+  function openBlockGallery(blockId: string) {
+    setPickingBlockId(blockId)
+    fileRef.current?.click()
+  }
+
+  function handleBlockFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const blockId = pickingBlockId
+    if (!blockId || !e.target.files?.length) {
+      e.target.value = ''
+      return
+    }
+
+    const block = productBlocks.find(b => b.id === blockId)
+    if (!block) {
+      e.target.value = ''
+      return
+    }
+
+    const incoming = Array.from(e.target.files)
+    const accepted: File[] = []
+    let remainingTotal = MAX_PHOTOS_TOTAL - totalBlockPhotos
+    let remainingBlock = MAX_PHOTOS_PER_BLOCK - block.files.length
+
+    for (const file of incoming) {
+      if (remainingTotal <= 0 || remainingBlock <= 0) break
+      const fp = fileFingerprint(file)
+      if (block.files.some(f => fileFingerprint(f) === fp)) continue
+      if (isDuplicateAcrossBlocks(file, productBlocks, blockId)) {
+        alert(`"${file.name}" já está em outro produto. Use fotos diferentes em cada bloco.`)
+        continue
+      }
+      accepted.push(file)
+      remainingTotal--
+      remainingBlock--
+    }
+
+    if (!accepted.length) {
+      e.target.value = ''
+      return
+    }
+
+    setProductBlocks(prev =>
+      prev.map(b => {
+        if (b.id !== blockId) return b
+        return { ...b, files: [...b.files, ...accepted] }
+      }),
+    )
     setPostAiPhotoNote('')
-    newFiles.forEach(f => {
+
+    accepted.forEach(file => {
       const reader = new FileReader()
       reader.onload = ev => {
         const dataUrl = ev.target?.result
-        if (typeof dataUrl === 'string') {
-          setPreviews(prev => [...prev, dataUrl])
-        }
+        if (typeof dataUrl !== 'string') return
+        setProductBlocks(prev =>
+          prev.map(b => {
+            if (b.id !== blockId) return b
+            return { ...b, previews: [...b.previews, dataUrl] }
+          }),
+        )
       }
-      reader.readAsDataURL(f)
+      reader.readAsDataURL(file)
     })
+
     e.target.value = ''
   }
 
-  const previewsStillLoading = files.length > previews.length
+  function removeBlockPhoto(blockId: string, photoIndex: number) {
+    setProductBlocks(prev =>
+      prev.map(b => {
+        if (b.id !== blockId) return b
+        return {
+          ...b,
+          files:    b.files.filter((_, i) => i !== photoIndex),
+          previews: b.previews.filter((_, i) => i !== photoIndex),
+        }
+      }),
+    )
+  }
 
-  /** Restaura miniaturas ao voltar da etapa 3 (após análise, previews globais são limpos). */
-  function returnToIntakeStep() {
-    if (savedAnalysisImages.length > 0) {
-      setPreviews([...savedAnalysisImages])
-      const variantFiles = variants.flatMap(v => v.photos)
-      if (variantFiles.length > 0) setFiles(variantFiles)
+  function addProductBlock() {
+    if (productBlocks.length >= MAX_PRODUCT_BLOCKS) {
+      alert(`Máximo de ${MAX_PRODUCT_BLOCKS} produtos por vez. Publique estes e cadastre o restante depois.`)
+      return
     }
+    setProductBlocks(prev => [...prev, createEmptyBlock()])
+  }
+
+  function removeProductBlock(blockId: string) {
+    if (productBlocks.length <= 1) return
+    setProductBlocks(prev => prev.filter(b => b.id !== blockId))
+  }
+
+  function flattenBlocks(blocks: ProductBlockState[]) {
+    const files: File[] = []
+    const previews: string[] = []
+    for (const b of blocks) {
+      files.push(...b.files)
+      previews.push(...b.previews)
+    }
+    return { files, previews }
+  }
+
+  /** Restaura miniaturas ao voltar da etapa 3 (após análise). */
+  function returnToIntakeStep() {
     setStep(1)
   }
 
   function buildAnalysisHints(): ProductAnalysisHints {
+    const ready = productBlocks.filter(b => b.files.length > 0)
+    let offset = 0
+    const groups = ready.map(b => {
+      const imageIndices = b.files.map((_, i) => offset + i)
+      offset += b.files.length
+      const blockHints: NonNullable<ProductAnalysisHints['groups']>[number]['hints'] = {}
+      if (b.piece.trim()) blockHints.pieceType = b.piece.trim()
+      if (b.audience) blockHints.audience = b.audience
+      if (b.colors.trim()) blockHints.colorsNote = b.colors.trim()
+      if (b.note.trim()) blockHints.freeText = b.note.trim()
+      if (b.photoVariation !== 'unspecified') blockHints.photoVariation = b.photoVariation
+      return {
+        imageIndices,
+        hints: Object.keys(blockHints).length ? blockHints : undefined,
+      }
+    })
     const hints: ProductAnalysisHints = {
-      mode:         hintMode,
-      productCount: hintMode === 'single' ? 1 : hintQuantity,
+      mode:         'blocks',
+      productCount: ready.length,
+      groups,
     }
-    if (hintPiece.trim()) hints.pieceType = hintPiece.trim()
-    if (hintAudience) hints.audience = hintAudience
-    if (hintMode === 'single' && hintColors.trim()) hints.colorsNote = hintColors.trim()
-    if (hintNote.trim()) hints.freeText = hintNote.trim()
-    if (hintMode === 'single' && hintPhotoVariation !== 'unspecified') {
-      hints.photoVariation = hintPhotoVariation
-    }
+    const firstPiece = ready.find(b => b.piece.trim())?.piece.trim()
+    if (firstPiece) hints.pieceType = firstPiece
     return hints
   }
 
@@ -504,7 +632,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     }
     setPostAiPhotoNote(
       queue.length > 1
-        ? 'Revise cada produto abaixo e publique um por vez na etapa final.'
+        ? 'Revise cada produto e suas variações — publique um por vez na etapa final.'
         : '',
     )
     setAiStatus(`✓ ${queue.length} produto${queue.length > 1 ? 's' : ''} identificado${queue.length > 1 ? 's' : ''}`)
@@ -523,13 +651,13 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       variantDrafts?: MappedVariantDraft[]
       fotoIndice?: number
     }>,
-    filesSnapshot: File[],
+    blocksSnapshot: ProductBlockState[],
   ) {
+    const ready = blocksSnapshot.filter(b => b.files.length > 0)
     const queue: BatchProductDraft[] = produtos
       .map((p, i) => {
-        const idx = typeof p.fotoIndice === 'number' ? p.fotoIndice : i
-        const file = filesSnapshot[idx] ?? filesSnapshot[i]
-        if (!file) return null
+        const photoFiles = ready[i]?.files ?? []
+        if (!photoFiles.length) return null
         return {
           nome:               p.nome ?? `Produto ${i + 1}`,
           descricao:          p.descricao ?? '',
@@ -540,7 +668,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           aiMeta:             p.aiMeta,
           variantDrafts:      p.variantDrafts,
           variantes:          p.variantes?.length ? p.variantes : [{ cor: 'Único', corHex: '#888888' }],
-          file,
+          file:               photoFiles[0],
+          photoFiles,
         }
       })
       .filter(Boolean) as BatchProductDraft[]
@@ -568,7 +697,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          images: imageList.slice(0, 10),
+          images: imageList.slice(0, MAX_PHOTOS_TOTAL),
           hints:  buildAnalysisHints(),
         }),
       })
@@ -579,14 +708,14 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       }
 
       if (data.batch && Array.isArray(data.produtos)) {
-        applyBatchAnalysis(data.produtos, filesSnapshot)
+        applyBatchAnalysis(data.produtos, productBlocks.filter(b => b.files.length > 0))
       } else {
-        applySingleAnalysis(data, filesSnapshot)
+        const ready = productBlocks.filter(b => b.files.length > 0)
+        const { files } = flattenBlocks(ready)
+        applySingleAnalysis(data, files)
       }
 
       setAnalyzed(true)
-      setFiles([])
-      setPreviews([])
       if (!isEdit) setStep(3)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro na análise — preencha manualmente'
@@ -612,35 +741,45 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   }
 
   async function startAnalysisFromIntake() {
-    if (previewsStillLoading) {
+    if (blocksStillLoading) {
       alert('Aguarde o carregamento das fotos na tela.')
       return
     }
-    if (!previews.length) return
-    if (hintMode === 'multi') {
-      if (hintQuantity < 2) {
-        alert('Informe ao menos 2 produtos no modo "Vários produtos".')
-        return
-      }
-      if (files.length !== hintQuantity) {
-        alert(`Adicione exatamente ${hintQuantity} foto${hintQuantity > 1 ? 's' : ''} (1 por produto). Você selecionou ${files.length}.`)
-        return
-      }
+    const ready = productBlocks.filter(b => b.files.length > 0)
+    if (!ready.length) {
+      alert('Adicione fotos em ao menos um produto.')
+      return
     }
-    const imgs = previews.slice(0, 10)
-    const filesForRun = [...files].slice(0, imgs.length)
-    setSavedAnalysisImages(imgs)
+    if (ready.length > MAX_PRODUCT_BLOCKS) {
+      alert(`Máximo de ${MAX_PRODUCT_BLOCKS} produtos por análise.`)
+      return
+    }
+    if (totalBlockPhotos > MAX_PHOTOS_TOTAL) {
+      alert(`Máximo de ${MAX_PHOTOS_TOTAL} fotos no total.`)
+      return
+    }
+    const { files, previews } = flattenBlocks(ready)
+    if (previews.length !== files.length) {
+      alert('Aguarde o carregamento das fotos na tela.')
+      return
+    }
+    setSavedAnalysisImages(previews)
     if (!isEdit) setStep(2)
-    await runAnalysis(imgs, filesForRun)
+    await runAnalysis(previews, files)
   }
 
   function continueManualFromIntake() {
-    if (!files.length) return
+    const ready = productBlocks.filter(b => b.files.length > 0)
+    if (!ready.length) return
+    if (ready.length > 1) {
+      alert('No plano grátis, cadastre um produto por vez. Deixe apenas um bloco com fotos.')
+      return
+    }
     setVariants([{
       id:          crypto.randomUUID(),
       color:       'Único',
       colorHex:    '#888888',
-      photos:      [...files],
+      photos:      [...ready[0].files],
       stock:       Object.fromEntries(stockKeysForAxes(catalogAxes.stockAxis).map(s => [s, 0])),
       stockPrices: {},
       stockPromoPrices: {},
@@ -909,185 +1048,180 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     <div className="min-w-0">
       {!isEdit && <WizardStepIndicator step={step} />}
 
-      {/* Etapa 1 — fotos + contexto */}
+      {/* Etapa 1 — blocos de produto */}
       {!isEdit && step === 1 && (
         <>
-          <div
-            className={`${adminCard} border-2 border-dashed mb-4 transition-all cursor-pointer ${
-              files.length ? 'border-border' : 'border-border hover:border-primary hover:bg-primary/5'
-            }`}
-            onClick={() => !files.length && fileRef.current?.click()}
-          >
-            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
-            {files.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <ImagePlus size={28} strokeWidth={1.75} aria-hidden />
-                </div>
-                <div className="font-syne font-semibold text-base mb-1">Fotos do produto</div>
-                <div className="text-sm text-muted mb-4 break-words max-w-md">
-                  Roupas, perfumes ou outros — uma foto por cor ou volume ajuda a IA. Depois você revisa tudo.
-                </div>
-                <div className="px-5 py-2.5 min-h-[44px] flex items-center bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold">
-                  Abrir galeria
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2.5 p-4 cursor-default" onClick={e => e.stopPropagation()}>
-                {previews.map((src, i) => (
-                  <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-border shrink-0">
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="w-20 h-20 min-h-[44px] rounded-xl border-2 border-dashed border-border text-muted text-xl hover:border-primary hover:text-primary transition-colors shrink-0"
-                  aria-label="Adicionar fotos"
-                >
-                  +
-                </button>
-              </div>
-            )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleBlockFiles}
+          />
+
+          <div className={`${adminCard} mb-4 border-primary/20 bg-primary/5`}>
+            <div className="font-syne font-bold text-base mb-2">Como funciona</div>
+            <ol className="text-sm text-muted space-y-2 list-decimal list-inside break-words">
+              <li>Cada <strong className="text-foreground font-medium">bloco</strong> é um produto que você vai cadastrar.</li>
+              <li>As fotos do bloco são as <strong className="text-foreground font-medium">variações</strong> — cores, estampas ou volumes do mesmo modelo.</li>
+              <li>Uma foto só também vale: produto sem variação de cor.</li>
+              <li>Depois a IA analisa todos os blocos de uma vez; você revisa e publica um por um.</li>
+            </ol>
+            <p className="text-[11px] text-muted mt-3 break-words">
+              Até {MAX_PRODUCT_BLOCKS} produtos por vez · {MAX_PHOTOS_TOTAL} fotos no total · não repita a mesma foto em blocos diferentes.
+            </p>
           </div>
 
-          {photoAiEnabled ? (
-          <div className={`${adminCard} mb-4`}>
-            <div className="font-syne font-bold text-base mb-1">Contexto para a IA</div>
-            <p className="text-sm text-muted mb-5 break-words">
-              A IA gera nome, descrição, categoria e público a partir das fotos — moda, perfumaria ou misto.
-              Informe o tipo de produto quando souber (ex.: Perfumes, Vestido).
-            </p>
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-3">Como são essas fotos?</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setHintMode('single'); setHintQuantity(1) }}
-                    className={hintModeCardClass(hintMode === 'single')}
-                  >
-                    <div className="font-syne font-semibold text-base mb-1">Um produto</div>
-                    <div className={`text-sm break-words ${hintMode === 'single' ? 'text-primary/90' : 'text-muted'}`}>
-                      Várias fotos = cores ou volumes do mesmo item
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHintMode('multi')
-                      setHintQuantity(Math.max(2, files.length))
-                    }}
-                    className={hintModeCardClass(hintMode === 'multi')}
-                  >
-                    <div className="font-syne font-semibold text-base mb-1">Vários produtos</div>
-                    <div className={`text-sm break-words ${hintMode === 'multi' ? 'text-primary/90' : 'text-muted'}`}>
-                      1 foto ≈ 1 peça diferente
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="min-w-0">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Quantidade</label>
-                  {hintMode === 'single' ? (
-                    <div className="min-h-[44px] flex items-center px-3.5 bg-surface2 border border-border rounded-xl text-sm text-muted">
-                      1 produto
-                    </div>
-                  ) : (
-                    <>
-                      <select
-                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
-                        value={hintQuantity}
-                        onChange={e => setHintQuantity(Number(e.target.value))}
-                      >
-                        {Array.from({ length: 9 }, (_, i) => i + 2).map(n => (
-                          <option key={n} value={n}>{n} produtos</option>
-                        ))}
-                      </select>
-                      <p className="text-[11px] text-muted mt-1.5 break-words">
-                        {files.length > 0 && files.length !== hintQuantity
-                          ? `Selecione ${hintQuantity} foto${hintQuantity > 1 ? 's' : ''} — hoje ${files.length}.`
-                          : `Envie ${hintQuantity} foto${hintQuantity > 1 ? 's' : ''} (1 por produto).`}
-                      </p>
-                    </>
+          <div className="flex flex-col gap-4 mb-4">
+            {productBlocks.map((block, blockIndex) => (
+              <div key={block.id} className={`${adminCard} min-w-0`}>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0">
+                    <div className="font-syne font-bold text-base">Produto {blockIndex + 1}</div>
+                    <p className="text-xs text-muted break-words mt-0.5">
+                      {block.files.length === 0
+                        ? 'Selecione as fotos deste modelo'
+                        : block.files.length === 1
+                          ? '1 foto — sem variação de cor'
+                          : `${block.files.length} fotos — variações do mesmo modelo`}
+                    </p>
+                  </div>
+                  {productBlocks.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeProductBlock(block.id)}
+                      className="shrink-0 min-h-[44px] px-3 text-xs text-warm border border-border rounded-xl hover:bg-warm/10"
+                    >
+                      Remover
+                    </button>
                   )}
                 </div>
-                <div className="min-w-0">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Tipo de produto</label>
-                  <select
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
-                    value={hintPiece}
-                    onChange={e => setHintPiece(e.target.value)}
-                  >
-                    <option value="">Não informar</option>
-                    {PRODUCT_CATEGORIES.map(c => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                    {customCategories.map(c => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
+
+                <div
+                  className={`border-2 border-dashed rounded-xl mb-4 transition-colors ${
+                    block.files.length ? 'border-border p-3' : 'border-border hover:border-primary hover:bg-primary/5 p-2'
+                  }`}
+                >
+                  {block.files.length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => openBlockGallery(block.id)}
+                      className="w-full flex flex-col items-center justify-center py-8 px-4 text-center min-h-[44px]"
+                    >
+                      <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                        <ImagePlus size={24} strokeWidth={1.75} aria-hidden />
+                      </div>
+                      <span className="font-syne font-semibold text-sm text-primary">Abrir galeria deste produto</span>
+                      <span className="text-xs text-muted mt-1 break-words">Ex.: 3 cores do mesmo polo</span>
+                    </button>
+                  ) : (
+                    <div className="flex flex-wrap gap-2.5">
+                      {block.previews.map((src, i) => (
+                        <BlockPhotoThumb
+                          key={`${block.id}-${i}`}
+                          src={src}
+                          onRemove={() => removeBlockPhoto(block.id, i)}
+                        />
+                      ))}
+                      {block.files.length < MAX_PHOTOS_PER_BLOCK && totalBlockPhotos < MAX_PHOTOS_TOTAL && (
+                        <button
+                          type="button"
+                          onClick={() => openBlockGallery(block.id)}
+                          className="w-20 h-20 min-h-[44px] rounded-xl border-2 border-dashed border-border text-muted text-xl hover:border-primary hover:text-primary transition-colors shrink-0"
+                          aria-label="Adicionar fotos a este produto"
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="min-w-0">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Público</label>
-                  <select
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
-                    value={hintAudience}
-                    onChange={e => setHintAudience(e.target.value as ProductAudienceHint)}
-                  >
-                    {AUDIENCE_HINT_OPTIONS.map(o => (
-                      <option key={o.value || 'none'} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
+
+                {photoAiEnabled && block.files.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border">
+                    <div className="min-w-0 sm:col-span-2">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Tipo de produto</label>
+                      <select
+                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                        value={block.piece}
+                        onChange={e => updateBlock(block.id, { piece: e.target.value })}
+                      >
+                        <option value="">Não informar</option>
+                        {PRODUCT_CATEGORIES.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                        {customCategories.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="min-w-0">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Público</label>
+                      <select
+                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                        value={block.audience}
+                        onChange={e => updateBlock(block.id, { audience: e.target.value as ProductAudienceHint })}
+                      >
+                        {AUDIENCE_HINT_OPTIONS.map(o => (
+                          <option key={o.value || 'none'} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="min-w-0">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">O que muda entre as fotos?</label>
+                      <select
+                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
+                        value={block.photoVariation}
+                        onChange={e => updateBlock(block.id, { photoVariation: e.target.value as PhotoVariationHint | 'unspecified' })}
+                      >
+                        {PHOTO_VARIATION_OPTIONS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {block.files.length > 1 && (
+                      <div className="min-w-0 sm:col-span-2">
+                        <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Cores ou volumes</label>
+                        <input
+                          className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+                          placeholder="Ex.: preto, off-white — ou 50ml, 100ml"
+                          value={block.colors}
+                          onChange={e => updateBlock(block.id, { colors: e.target.value })}
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0 sm:col-span-2">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+                        Observação <span className="normal-case font-normal text-muted">(opcional)</span>
+                      </label>
+                      <textarea
+                        className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[56px] resize-y break-words"
+                        placeholder="Só se algo importante não aparecer na foto"
+                        value={block.note}
+                        onChange={e => updateBlock(block.id, { note: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {hintMode === 'single' && (
-                <div className="min-w-0">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">O que muda entre as fotos?</label>
-                  <select
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
-                    value={hintPhotoVariation}
-                    onChange={e => setHintPhotoVariation(e.target.value as PhotoVariationHint | 'unspecified')}
-                  >
-                    {PHOTO_VARIATION_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {hintMode === 'single' && (
-                <div>
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Cores ou volumes</label>
-                  <input
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
-                    placeholder="Ex.: preto, off-white — ou 50ml, 100ml"
-                    value={hintColors}
-                    onChange={e => setHintColors(e.target.value)}
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-                  Observação <span className="normal-case font-normal text-muted">(opcional)</span>
-                </label>
-                <textarea
-                  className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[56px] resize-y break-words"
-                  placeholder="Só se algo importante não aparecer na foto"
-                  value={hintNote}
-                  onChange={e => setHintNote(e.target.value)}
-                />
-              </div>
-            </div>
+            ))}
           </div>
-          ) : (
+
+          {productBlocks.length < MAX_PRODUCT_BLOCKS && totalBlockPhotos < MAX_PHOTOS_TOTAL && (
+            <button
+              type="button"
+              onClick={addProductBlock}
+              className="w-full min-h-[44px] mb-4 py-3 border-2 border-dashed border-border rounded-xl text-sm font-semibold text-muted hover:border-primary hover:text-primary transition-colors"
+            >
+              + Adicionar outro produto
+            </button>
+          )}
+
+          {!photoAiEnabled && (
             <div className={`${adminCard} mb-4 border-primary/30`}>
               <p className="text-sm text-muted mb-3 break-words">
-                Análise de foto com IA disponível nos planos pagos. No plano grátis, preencha nome, preço e estoque manualmente.
+                Análise de foto com IA disponível nos planos pagos. No plano grátis, use um bloco por vez e preencha manualmente.
               </p>
               <Link
                 href="/admin/plano"
@@ -1098,19 +1232,25 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             </div>
           )}
 
+          <p className="text-xs text-muted text-center mb-3 tabular-nums">
+            {totalBlockPhotos}/{MAX_PHOTOS_TOTAL} fotos · {blocksWithPhotos.length} produto{blocksWithPhotos.length !== 1 ? 's' : ''} pronto{blocksWithPhotos.length !== 1 ? 's' : ''}
+          </p>
+
           <button
             type="button"
             onClick={photoAiEnabled ? startAnalysisFromIntake : continueManualFromIntake}
-            disabled={!files.length || analyzing || previewsStillLoading}
+            disabled={!blocksWithPhotos.length || analyzing || blocksStillLoading}
             className="w-full min-h-[44px] py-3 bg-grad text-bg font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {previewsStillLoading
+            {blocksStillLoading
               ? 'Carregando fotos…'
-              : files.length
+              : blocksWithPhotos.length
                 ? photoAiEnabled
-                  ? 'Continuar com análise da IA'
+                  ? blocksWithPhotos.length > 1
+                    ? `Analisar ${blocksWithPhotos.length} produtos com IA`
+                    : 'Continuar com análise da IA'
                   : 'Continuar cadastro manual'
-                : 'Adicione ao menos uma foto'}
+                : 'Adicione fotos em ao menos um produto'}
           </button>
         </>
       )}
@@ -1153,7 +1293,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 )}
               </div>
               <p className="text-sm text-muted mb-4 break-words">
-                A IA separou cada foto em um produto. Toque em um card para revisar nome, descrição e categoria antes de publicar.
+                A IA analisou cada bloco separadamente. Toque em um card para revisar nome, variações e categoria antes de publicar.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {batchQueue.map((item, i) => {

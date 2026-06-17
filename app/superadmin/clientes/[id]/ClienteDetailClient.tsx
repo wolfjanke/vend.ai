@@ -6,6 +6,7 @@ import Link from 'next/link'
 import SuperadminPageHeader from '@/components/superadmin/SuperadminPageHeader'
 import StatusBadge from '@/components/superadmin/StatusBadge'
 import { PLAN_SLUGS } from '@/lib/plans'
+import { superadminBtnOutline, superadminBtnPrimary } from '@/lib/superadmin-ui'
 
 type Props = { id: string }
 
@@ -60,7 +61,7 @@ export default function ClienteDetailClient({ id }: Props) {
   }
 
   if (loading) return <p className="text-muted text-sm">Carregando…</p>
-  if (!data) return <p className="text-[#FF6B6B] text-sm">Loja não encontrada.</p>
+  if (!data) return <p className="text-warm text-sm">Loja não encontrada.</p>
 
   const s = data.store
   const slug = String(s.slug ?? '')
@@ -165,7 +166,7 @@ export default function ClienteDetailClient({ id }: Props) {
             href={`/${slug}`}
             target="_blank"
             rel="noreferrer"
-            className="min-h-[44px] px-4 rounded-xl border border-[#FF6B6B]/40 text-[#FF6B6B] text-sm inline-flex items-center justify-center"
+            className={superadminBtnOutline}
           >
             Acessar loja
           </a>
@@ -173,7 +174,7 @@ export default function ClienteDetailClient({ id }: Props) {
             type="button"
             disabled={busy}
             onClick={impersonate}
-            className="min-h-[44px] px-4 rounded-xl bg-[#FF6B6B] text-white text-sm font-medium"
+            className={superadminBtnPrimary}
           >
             Ver no admin como lojista
           </button>

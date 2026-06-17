@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
   LayoutDashboard,
   Users,
@@ -8,14 +9,18 @@ import {
   UserMinus,
   Timer,
   AlertTriangle,
+  TrendingUp,
 } from 'lucide-react'
 import SuperadminMetricCard from '@/components/superadmin/SuperadminMetricCard'
 import SuperadminPageHeader from '@/components/superadmin/SuperadminPageHeader'
 import StatusBadge from '@/components/superadmin/StatusBadge'
 import SuperadminDashboardCharts from '@/components/superadmin/SuperadminDashboardCharts'
+import EditDemoStoreButton from '@/components/superadmin/EditDemoStoreButton'
+import { superadminCard, superadminLink } from '@/lib/superadmin-ui'
 
 type DashboardData = {
   mrrFormatted: string
+  arrFormatted: string
   newThisMonth: number
   churnThisMonth: number
   activeTrials: number
@@ -64,7 +69,7 @@ export default function SuperadminDashboardClient() {
     return <p className="text-muted text-sm animate-pulse">Carregando métricas…</p>
   }
   if (err || !data) {
-    return <p className="text-[#FF6B6B] text-sm break-words">{err || 'Erro'}</p>
+    return <p className="text-warm text-sm break-words">{err || 'Erro'}</p>
   }
 
   const chartMap = new Map<string, { label: string; signups: number; revenue: number }>()
@@ -86,11 +91,22 @@ export default function SuperadminDashboardClient() {
         description="Visão geral do negócio vendai.club"
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="mb-6">
+        <EditDemoStoreButton variant="card" />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         <SuperadminMetricCard
-          icon={<LayoutDashboard size={22} style={{ color: '#FF6B6B' }} />}
+          icon={<LayoutDashboard size={22} className="text-warm" />}
           value={data.mrrFormatted}
           label="MRR atual"
+          href="/superadmin/financeiro"
+        />
+        <SuperadminMetricCard
+          icon={<TrendingUp size={22} className="text-warm" />}
+          value={data.arrFormatted}
+          label="ARR"
+          href="/superadmin/financeiro"
         />
         <SuperadminMetricCard
           icon={<UserPlus size={22} className="text-primary" />}
@@ -102,34 +118,42 @@ export default function SuperadminDashboardClient() {
           value={data.churnThisMonth}
           label="Churn este mês"
         />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         <SuperadminMetricCard
           icon={<Users size={22} className="text-foreground" />}
           value={data.totalActive}
           label="Lojistas ativos"
-          sublabel={`${data.activeTrials} trials · ${data.inactive7d} inativos 7d+`}
+          href="/superadmin/clientes?status=ACTIVE"
+        />
+        <SuperadminMetricCard
+          icon={<Timer size={22} className="text-yellow-400" />}
+          value={data.activeTrials}
+          label="Trials ativos"
+          href="/superadmin/trials"
+        />
+        <SuperadminMetricCard
+          icon={<AlertTriangle size={22} className="text-warm" />}
+          value={data.inactive7d}
+          label="Inativos 7+ dias"
+          href="/superadmin/engajamento?segment=risk"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-2xl p-4 min-w-0">
-          <h2 className="font-syne font-bold text-sm mb-3">Crescimento (6 meses)</h2>
-          <SuperadminDashboardCharts data={chartData} />
-        </div>
-        <div className="bg-surface border border-border rounded-2xl p-4 flex flex-col gap-3 min-w-0">
-          <div className="flex items-center gap-2">
-            <Timer size={18} className="text-yellow-400" />
-            <span className="text-sm">Trials ativos: <strong>{data.activeTrials}</strong></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={18} className="text-warm" />
-            <span className="text-sm break-words">Inativos 7+ dias: <strong>{data.inactive7d}</strong></span>
-          </div>
-        </div>
+      <div className={`${superadminCard} mb-6 min-w-0`}>
+        <h2 className="font-syne font-bold text-sm mb-3">Crescimento (6 meses)</h2>
+        <SuperadminDashboardCharts data={chartData} />
       </div>
 
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden min-w-0">
-        <h2 className="font-syne font-bold text-sm p-4 border-b border-border">Últimos clientes</h2>
-        <div className="overflow-x-auto">
+      <div className={`${superadminCard} overflow-hidden min-w-0 p-0`}>
+        <div className="flex items-center justify-between gap-2 p-4 border-b border-border">
+          <h2 className="font-syne font-bold text-sm">Últimos clientes</h2>
+          <Link href="/superadmin/clientes" className={`text-xs font-medium ${superadminLink}`}>
+            Ver todos →
+          </Link>
+        </div>
+        <div className="overflow-x-auto hidden sm:block">
           <table className="w-full text-sm min-w-[520px]">
             <thead>
               <tr className="text-left text-muted border-b border-border">
@@ -144,9 +168,9 @@ export default function SuperadminDashboardClient() {
               {data.recentStores.map(s => (
                 <tr key={s.id} className="border-b border-border/50 hover:bg-surface2/50">
                   <td className="p-3 min-w-0">
-                    <a href={`/superadmin/clientes/${s.id}`} className="font-medium hover:text-[#FF6B6B] break-words">
+                    <Link href={`/superadmin/clientes/${s.id}`} className={`font-medium ${superadminLink} break-words`}>
                       {s.name}
-                    </a>
+                    </Link>
                     <div className="text-xs text-muted truncate" title={s.slug}>{s.slug}</div>
                   </td>
                   <td className="p-3 capitalize">{s.plan ?? 'free'}</td>
@@ -164,6 +188,20 @@ export default function SuperadminDashboardClient() {
             </tbody>
           </table>
         </div>
+        <ul className="sm:hidden divide-y divide-border">
+          {data.recentStores.map(s => (
+            <li key={s.id} className="p-4 min-w-0">
+              <Link href={`/superadmin/clientes/${s.id}`} className="block min-w-0">
+                <div className="font-medium break-words">{s.name}</div>
+                <div className="text-xs text-muted truncate mt-0.5" title={s.slug}>{s.slug}</div>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="text-xs capitalize text-muted">{s.plan ?? 'free'}</span>
+                  <StatusBadge status={s.subscription_status} />
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )

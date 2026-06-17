@@ -6,11 +6,16 @@ import { analyzeProductPhoto, buildProductAnalysisPrompt, GEMINI_MODELS } from '
 import { parseProductAnalysisRaw, type ProductAnalysisItem } from '@/lib/product-analysis'
 import { mapAnalysisToVariantDraft } from '@/lib/product-analysis-map'
 import { inferCatalogMode, type CatalogMode } from '@/lib/product-catalog'
-import type { StoreSettings, ProductAnalysisHints } from '@/types'
+import type { StoreSettings, ProductAnalysisHints, ProductBlockHint } from '@/types'
 import { getStoreProfile, normalizeProductCategory } from '@/types'
 import { logServerError } from '@/lib/logger'
 import type { PlanSlug } from '@/lib/plans'
 import { checkPhotoAnalysisLimit, incrementPhotoAnalysis } from '@/lib/photo-analysis-limits'
+import {
+  MAX_PRODUCT_BLOCKS,
+  MAX_PHOTOS_TOTAL,
+  countBlockPhotos,
+} from '@/lib/product-photo-blocks'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -39,6 +44,48 @@ function enrichAnalysisItem(
     aiMeta:      mapped.aiMeta,
     variantDrafts: mapped.variants,
   }
+}
+
+function blockHintsToAnalysisHints(
+  blockHints?: ProductBlockHint | null,
+): ProductAnalysisHints | null {
+  if (!blockHints) return null
+  return {
+    mode:           'single',
+    pieceType:      blockHints.pieceType,
+    audience:       blockHints.audience,
+    colorsNote:     blockHints.colorsNote,
+    freeText:       blockHints.freeText,
+    photoVariation: blockHints.photoVariation,
+  }
+}
+
+function validateBlockGroups(
+  groups: ProductAnalysisHints['groups'],
+  imageCount: number,
+): string | null {
+  if (!groups?.length) return 'Informe ao menos um bloco de produto.'
+  if (groups.length > MAX_PRODUCT_BLOCKS) {
+    return `Máximo de ${MAX_PRODUCT_BLOCKS} produtos por análise. Cadastre o restante em outra leva.`
+  }
+  const total = countBlockPhotos(groups)
+  if (total !== imageCount) {
+    return 'Os blocos não batem com o número de imagens enviadas.'
+  }
+  if (total > MAX_PHOTOS_TOTAL) {
+    return `Máximo de ${MAX_PHOTOS_TOTAL} imagens por análise.`
+  }
+  const seen = new Set<number>()
+  for (const g of groups) {
+    if (!g.imageIndices.length) return 'Cada produto precisa de ao menos uma foto.'
+    for (const idx of g.imageIndices) {
+      if (idx < 0 || idx >= imageCount) return 'Índice de imagem inválido nos blocos.'
+      if (seen.has(idx)) return 'A mesma foto não pode aparecer em dois produtos.'
+      seen.add(idx)
+    }
+  }
+  if (seen.size !== imageCount) return 'Todas as imagens devem estar em algum bloco.'
+  return null
 }
 
 export async function POST(req: NextRequest) {
@@ -78,11 +125,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'images required' }, { status: 400 })
     }
 
-    if (images.length > 10) {
-      return NextResponse.json({ error: 'Máximo de 10 imagens por análise' }, { status: 400 })
+    if (images.length > MAX_PHOTOS_TOTAL) {
+      return NextResponse.json({ error: `Máximo de ${MAX_PHOTOS_TOTAL} imagens por análise` }, { status: 400 })
     }
 
     const mode = hints?.mode ?? 'single'
+
+    if (mode === 'blocks') {
+      const groupError = validateBlockGroups(hints?.groups, images.length)
+      if (groupError) {
+        return NextResponse.json({ error: groupError }, { status: 400 })
+      }
+    }
+
     const catalogMode = inferCatalogMode(hints, customCats)
     const productPrompt = buildProductAnalysisPrompt(profile, customCats, hints, images.length)
 
@@ -91,11 +146,30 @@ export async function POST(req: NextRequest) {
 
     await incrementPhotoAnalysis(session.storeId)
 
+    if (mode === 'blocks' && hints?.groups?.length) {
+      const products =
+        parsed.mode === 'batch' ? parsed.products : [parsed.product]
+      const produtos = hints.groups.map((group, i) => {
+        const item = products[i] ?? products[products.length - 1]
+        const perBlockHints = blockHintsToAnalysisHints(group.hints)
+        const catalogForBlock = inferCatalogMode(perBlockHints ?? hints, customCats)
+        return enrichAnalysisItem(
+          item,
+          customSlugs,
+          catalogForBlock,
+          perBlockHints,
+          group.imageIndices.length,
+        )
+      })
+      return NextResponse.json({ batch: true, produtos, mode: 'blocks' })
+    }
+
     if (parsed.mode === 'batch') {
+      const photosPerProduct = Math.max(1, hints?.photosPerProduct ?? 1)
       const produtos = parsed.products.map((p, i) =>
-        enrichAnalysisItem(p, customSlugs, catalogMode, hints, 1),
+        enrichAnalysisItem(p, customSlugs, catalogMode, hints, photosPerProduct > 1 ? photosPerProduct : 1),
       )
-      return NextResponse.json({ batch: true, produtos })
+      return NextResponse.json({ batch: true, produtos, photosPerProduct })
     }
 
     const product = enrichAnalysisItem(parsed.product, customSlugs, catalogMode, hints, images.length)
@@ -120,7 +194,7 @@ export async function POST(req: NextRequest) {
     }
     if (msg.includes('JSON') || msg.includes('JSON válido')) {
       return NextResponse.json(
-        { error: 'A IA retornou um formato inválido. Tente de novo ou ajuste o modo (um produto vs vários).' },
+        { error: 'A IA retornou um formato inválido. Tente de novo ou ajuste os blocos de produto.' },
         { status: 502 },
       )
     }

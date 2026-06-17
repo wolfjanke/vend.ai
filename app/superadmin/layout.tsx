@@ -4,6 +4,7 @@ import SuperadminSidebar from '@/components/superadmin/SuperadminSidebar'
 import SuperadminMobileNav from '@/components/superadmin/SuperadminMobileNav'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 import BrandLogo from '@/components/BrandLogo'
+import EditDemoStoreButton from '@/components/superadmin/EditDemoStoreButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,22 +19,26 @@ export default async function SuperadminLayout({ children }: { children: React.R
   return (
     <AuthSessionProvider>
       <div className="relative z-10 min-h-screen">
-        <header className="sticky top-0 z-40 glass border-b border-border h-16 flex items-center justify-between px-4 sm:px-6 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
+        <header className="sticky top-0 z-50 glass border-b border-border h-16 flex items-center justify-between px-4 sm:px-6 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <BrandLogo size="md" href="/" />
-            <span className="shrink-0 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full bg-[#FF6B6B]/15 text-[#FF6B6B] border border-[#FF6B6B]/30">
-              Wolf Hub Admin
+            <span className="hidden sm:block text-xs text-muted">|</span>
+            <span className="hidden sm:block font-syne text-xs font-semibold text-muted uppercase tracking-widest">
+              Painel do negócio
             </span>
           </div>
-          <form action="/api/auth/signout-redirect" method="POST" className="shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <EditDemoStoreButton />
+            <form action="/api/auth/signout-redirect" method="POST">
             <input type="hidden" name="callbackUrl" value="/superadmin/login" />
             <button
               type="submit"
-              className="text-sm text-muted hover:text-foreground min-h-[44px] px-3"
+              className="px-3 py-1.5 text-xs text-muted border border-border rounded-lg hover:border-warm hover:text-warm transition-all min-h-[44px]"
             >
               Sair
             </button>
-          </form>
+            </form>
+          </div>
         </header>
 
         <div className="flex min-w-0">
@@ -42,7 +47,9 @@ export default async function SuperadminLayout({ children }: { children: React.R
             {children}
           </main>
         </div>
-        <SuperadminMobileNav />
+        <div className="md:hidden">
+          <SuperadminMobileNav />
+        </div>
       </div>
     </AuthSessionProvider>
   )

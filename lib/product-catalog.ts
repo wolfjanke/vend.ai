@@ -57,8 +57,11 @@ export function getCatalogModeLabel(mode: CatalogMode): string {
   return 'moda e vestuário'
 }
 
-function expertIntro(mode: CatalogMode, imageCount: number, multi: boolean): string {
+function expertIntro(mode: CatalogMode, imageCount: number, multi: boolean, photosPerProduct = 1): string {
   const domain = getCatalogModeLabel(mode)
+  if (multi && photosPerProduct > 1) {
+    return `Você é especialista em cadastro de produtos para e-commerce (${domain}). Analise as ${imageCount} imagem(ns) agrupadas em vários PRODUTOS DIFERENTES — cada grupo de ${photosPerProduct} fotos consecutivas é um produto com variações (cores ou volumes). Use apenas a imagem e seu conhecimento prévio do modelo — NÃO invente busca na internet.`
+  }
   if (multi) {
     return `Você é especialista em cadastro de produtos para e-commerce (${domain}). Analise as ${imageCount} imagem(ns) — cada uma é um PRODUTO DIFERENTE. Use apenas a imagem e seu conhecimento prévio do modelo — NÃO invente busca na internet.`
   }
@@ -153,10 +156,11 @@ export function buildCatalogPromptBlocks(
   mode: CatalogMode,
   imageCount: number,
   multi: boolean,
+  photosPerProduct = 1,
 ): CatalogPromptBlocks {
   return {
     mode,
-    expertIntro:      expertIntro(mode, imageCount, multi),
+    expertIntro:      expertIntro(mode, imageCount, multi, photosPerProduct),
     namingRules:        rulesFor(mode, 'naming'),
     descriptionRules:   rulesFor(mode, 'desc'),
     variantRules:       rulesFor(mode, 'variants'),

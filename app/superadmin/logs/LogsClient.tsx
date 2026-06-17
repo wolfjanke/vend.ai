@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import SuperadminPageHeader from '@/components/superadmin/SuperadminPageHeader'
+import { superadminCard, superadminChipActive, superadminChipInactive } from '@/lib/superadmin-ui'
 
 type Event = { id: string; type: string; title: string; at: string; meta?: string }
 
@@ -29,7 +30,7 @@ export default function LogsClient() {
             type="button"
             onClick={() => setType(t)}
             className={`px-3 py-1.5 rounded-lg text-xs min-h-[36px] ${
-              type === t ? 'bg-[#FF6B6B]/20 border border-[#FF6B6B]/40' : 'bg-surface2 border border-border'
+              type === t ? superadminChipActive : superadminChipInactive
             }`}
           >
             {t === 'all' ? 'Todos' : t}
@@ -41,7 +42,7 @@ export default function LogsClient() {
             type="button"
             onClick={() => setWindow(w)}
             className={`px-3 py-1.5 rounded-lg text-xs min-h-[36px] ${
-              window === w ? 'bg-[#FF6B6B]/20 border border-[#FF6B6B]/40' : 'bg-surface2 border border-border'
+              window === w ? superadminChipActive : superadminChipInactive
             }`}
           >
             {w}
@@ -49,7 +50,7 @@ export default function LogsClient() {
         ))}
       </div>
 
-      <ul className="bg-surface border border-border rounded-2xl divide-y divide-border max-h-[70vh] overflow-y-auto">
+      <ul className={`${superadminCard} divide-y divide-border max-h-[70vh] overflow-y-auto p-0`}>
         {events.length === 0 ? (
           <li className="p-6 text-sm text-muted text-center">Nenhum evento</li>
         ) : events.map(e => (

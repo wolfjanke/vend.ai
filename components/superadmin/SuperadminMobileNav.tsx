@@ -1,66 +1,66 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
-import { SUPERADMIN_NAV, isSuperadminNavActive } from './superadmin-nav-items'
+import SuperadminNavBottomSheet from './SuperadminNavBottomSheet'
+import {
+  type SuperadminNavGroup,
+  SUPERADMIN_NAV_GROUPS,
+  isSuperadminNavGroupActive,
+} from './superadmin-nav-groups'
 
 export default function SuperadminMobileNav() {
   const pathname = usePathname() ?? ''
-  const [open, setOpen] = useState(false)
+  const [openGroup, setOpenGroup] = useState<SuperadminNavGroup | null>(null)
+
+  function openSheet(group: SuperadminNavGroup) {
+    setOpenGroup(prev => (prev?.id === group.id ? null : group))
+  }
+
+  function closeSheet() {
+    setOpenGroup(null)
+  }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="md:hidden fixed bottom-4 right-4 z-50 min-h-[44px] min-w-[44px] rounded-full bg-[#FF6B6B] text-white shadow-lg flex items-center justify-center"
-        aria-label="Abrir menu"
-      >
-        <Menu size={22} />
-      </button>
-
-      {open && (
-        <div
-          className="md:hidden fixed inset-0 z-[60] bg-black/60 max-w-[100vw]"
-          onClick={() => setOpen(false)}
-          role="presentation"
-        />
-      )}
-
       <nav
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-surface border-t border-border rounded-t-2xl p-4 max-w-[100vw] transition-transform ${
-          open ? 'translate-y-0' : 'translate-y-full pointer-events-none'
-        }`}
-        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        aria-label="Menu superadmin"
+        className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border grid grid-cols-3 max-w-[100vw]"
+        style={{
+          height:        '64px',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+        aria-label="Navegação superadmin"
       >
-        <div className="flex items-center justify-between mb-3">
-          <span className="font-syne font-bold text-sm">Wolf Hub Admin</span>
-          <button type="button" onClick={() => setOpen(false)} className="min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Fechar">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto">
-          {SUPERADMIN_NAV.map(({ href, label, Icon }) => {
-            const active = isSuperadminNavActive(pathname, href)
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                className={`flex items-center gap-2 px-3 py-3 rounded-xl text-sm min-h-[44px] min-w-0 ${
-                  active ? 'bg-[#FF6B6B]/15 border border-[#FF6B6B]/40' : 'bg-surface2 border border-border'
-                }`}
-              >
-                <Icon size={16} className="shrink-0" aria-hidden />
-                <span className="truncate">{label}</span>
-              </Link>
-            )
-          })}
-        </div>
+        {SUPERADMIN_NAV_GROUPS.map(group => {
+          const active = isSuperadminNavGroupActive(pathname, group)
+          const isSheetOpen = openGroup?.id === group.id
+          const GroupIcon = group.Icon
+
+          return (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => openSheet(group)}
+              aria-expanded={isSheetOpen}
+              aria-controls="superadmin-nav-sheet-title"
+              className={`relative flex flex-col items-center justify-center gap-1 min-h-[64px] w-full transition-colors border-t-2 ${
+                active || isSheetOpen
+                  ? 'text-warm border-warm'
+                  : 'text-muted border-transparent'
+              }`}
+            >
+              <GroupIcon size={24} className="shrink-0" aria-hidden />
+              <span className="text-[11px] font-medium leading-none">{group.label}</span>
+            </button>
+          )
+        })}
       </nav>
+
+      <SuperadminNavBottomSheet
+        group={openGroup}
+        isOpen={openGroup != null}
+        onClose={closeSheet}
+      />
     </>
   )
 }

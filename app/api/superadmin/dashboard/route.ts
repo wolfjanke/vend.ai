@@ -42,7 +42,7 @@ export async function GET() {
       FROM stores s
       LEFT JOIN admin_users u ON u.store_id = s.id
       ORDER BY s.created_at DESC
-      LIMIT 10
+      LIMIT 5
     `
 
     const signupsByMonth = await sql`
@@ -74,6 +74,7 @@ export async function GET() {
     return NextResponse.json({
       mrrCents,
       mrrFormatted: formatBrl(mrrCents),
+      arrFormatted: formatBrl(mrrCents * 12),
       newThisMonth: Number(newRow?.c ?? 0),
       churnThisMonth: Number(churnRow?.c ?? 0),
       activeTrials: Number(trialsRow?.c ?? 0),

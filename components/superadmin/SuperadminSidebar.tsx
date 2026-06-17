@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { SUPERADMIN_NAV, isSuperadminNavActive } from './superadmin-nav-items'
+import { superadminActive, superadminInactive } from '@/lib/superadmin-ui'
 
 export default function SuperadminSidebar() {
   const pathname = usePathname() ?? ''
@@ -16,12 +17,10 @@ export default function SuperadminSidebar() {
             key={href}
             href={href}
             className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all min-w-0 min-h-[44px] ${
-              active
-                ? 'bg-[#FF6B6B]/15 text-foreground border border-[#FF6B6B]/40'
-                : 'text-muted hover:text-foreground hover:bg-surface2 border border-transparent'
+              active ? superadminActive : superadminInactive
             }`}
           >
-            <Icon size={18} className="shrink-0" style={{ color: active ? '#FF6B6B' : undefined }} aria-hidden />
+            <Icon size={18} className={`shrink-0 ${active ? 'text-warm' : ''}`} aria-hidden />
             <span className="truncate flex-1">{label}</span>
           </Link>
         )

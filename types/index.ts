@@ -442,17 +442,34 @@ export interface StoreContext {
 /** Dicas opcionais no cadastro guiado (fotos + texto → IA). */
 export type ProductAudienceHint = '' | GenderFocus | 'kids'
 
-/** single = várias fotos do mesmo produto (cores); multi = 1 foto ≈ 1 produto */
-export type ProductAnalysisMode = 'single' | 'multi'
+/** single = legado; multi = legado; blocks = blocos explícitos por produto */
+export type ProductAnalysisMode = 'single' | 'multi' | 'blocks'
+
+/** Dicas opcionais por bloco/produto no cadastro guiado. */
+export interface ProductBlockHint {
+  pieceType?:      string
+  audience?:       ProductAudienceHint
+  colorsNote?:     string
+  freeText?:       string
+  photoVariation?: PhotoVariationHint
+}
+
+export interface ProductAnalysisGroup {
+  imageIndices: number[]
+  hints?:       ProductBlockHint
+}
 
 export interface ProductAnalysisHints {
   mode?:            ProductAnalysisMode
   productCount?:    number
+  /** Legado: fotos por produto no modo multi. */
+  photosPerProduct?: number
+  /** Blocos explícitos — índices nas imagens enviadas (ordem flatten dos blocos). */
+  groups?:          ProductAnalysisGroup[]
   pieceType?:       string
   audience?:        ProductAudienceHint
   colorsNote?:      string
   freeText?:        string
-  /** O que muda entre fotos no modo single. */
   photoVariation?:  PhotoVariationHint
 }
 

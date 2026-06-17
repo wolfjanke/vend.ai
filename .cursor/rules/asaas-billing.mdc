@@ -1,0 +1,36 @@
+---
+description: Asaas produção, webhooks e checkout — contexto de cobrança vend.ai
+alwaysApply: false
+globs: lib/payments/**,lib/asaas/**,app/api/webhooks/**,app/api/admin/subscription/**,app/admin/plano/**
+---
+
+# Asaas — assinatura de planos vs checkout loja
+
+## Dois fluxos distintos
+
+1. **Assinatura vend.ai (lojista paga o plano)** — conta mãe Asaas (`VENDAI_ASAAS_KEY`, `VENDAI_ASAAS_WALLET_ID`). Endpoint admin: `/admin/plano` → `POST /api/admin/subscription`.
+2. **Checkout integrado da vitrine (cliente paga o lojista)** — ainda **desligado**: `CHECKOUT_ENABLED` ausente/false e `checkoutEnabled: false` em todos os planos (`lib/plans.ts`). Pedidos seguem via WhatsApp.
+
+## Produção Asaas (variáveis)
+
+- `ASAAS_ENV=production`
+- **Não** definir `ASAAS_BASE_URL` em Production (usa `https://api.asaas.com/v3` automaticamente).
+- `BILLING_TEST_EMAILS` só no sandbox local/preview — ignorada quando `ASAAS_ENV=production`.
+- `.env.local` é só dev local; **vendai.club** usa Vercel Production.
+
+## Webhook único
+
+- URL: `https://vendai.club/api/webhooks/asaas`
+- Header: `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN`
+- **Mínimo para planos:** `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `SUBSCRIPTION_CREATED`, `SUBSCRIPTION_DELETED`, `SUBSCRIPTION_RENEWED` (se listado).
+- Eventos não tratados retornam 200 e são ignorados (`default` no switch).
+- **Futuro checkout:** adicionar `ACCOUNT_STATUS`, `PAYMENT_REFUNDED`, `SPLIT_CONFIRMED`, `PAYMENT_SPLIT_DONE`, `SPLIT_CANCELLED`, `PAYMENT_SPLIT_DIVERGENCE_BLOCK`, `PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED`.
+- `SUBSCRIPTION_INACTIVATED` ainda **não** mapeado no código (só `SUBSCRIPTION_DELETED` / `SUBSCRIPTION_CANCELLED`).
+
+## Pagamento do plano
+
+Upgrade no admin cria assinatura Asaas com trial; cobrança real ocorre no Asaas (link/fatura por e-mail), não há tela de cartão/PIX dentro do painel vend.ai.
+
+## Não alterar
+
+`SUBACCOUNT_ENCRYPTION_KEY` — mesma chave em local e Vercel; trocar quebra subcontas já cadastradas.

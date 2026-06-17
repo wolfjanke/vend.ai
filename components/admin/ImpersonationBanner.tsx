@@ -10,21 +10,21 @@ export default function ImpersonationBanner() {
 
   async function stop() {
     await update({ stopImpersonation: true })
-    window.location.href = '/superadmin/clientes'
+    window.location.href = '/superadmin/dashboard'
   }
 
   return (
-    <div className="bg-[#FF6B6B]/15 border-b border-[#FF6B6B]/40 px-4 py-2 flex items-center justify-between gap-2 min-w-0 max-w-[100vw]">
+    <div className="bg-warm/15 border-b border-warm/40 px-4 py-2 flex items-center justify-between gap-2 min-w-0 max-w-[100vw]">
       <p className="text-sm break-words min-w-0">
-        Modo suporte: você está vendo o painel desta loja como lojista.
+        Modo edição: você está no painel desta loja. Alterações aparecem na vitrine pública.
       </p>
       <button
         type="button"
         onClick={stop}
-        className="shrink-0 flex items-center gap-1 text-sm font-medium min-h-[44px] px-3 rounded-lg hover:bg-[#FF6B6B]/20"
+        className="shrink-0 flex items-center gap-1 text-sm font-medium min-h-[44px] px-3 rounded-lg hover:bg-warm/20"
       >
         <X size={16} aria-hidden />
-        Sair da loja
+        Voltar ao superadmin
       </button>
     </div>
   )

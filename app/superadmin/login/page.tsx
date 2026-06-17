@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { signIn, signOut } from 'next-auth/react'
 import BrandLogo from '@/components/BrandLogo'
+import { superadminBtnPrimary } from '@/lib/superadmin-ui'
 
 export default function SuperadminLoginPage() {
   const [email,   setEmail]   = useState('')
@@ -33,7 +34,7 @@ export default function SuperadminLoginPage() {
     const me = await fetch('/api/superadmin/me')
     if (!me.ok) {
       await signOut({ redirect: false })
-      setError('Este e-mail não tem acesso ao painel Wolf Hub.')
+      setError('Este e-mail não tem acesso ao painel.')
       setLoading(false)
       return
     }
@@ -47,13 +48,13 @@ export default function SuperadminLoginPage() {
         <div className="flex justify-center mb-2">
           <BrandLogo size="xl" />
         </div>
-        <p className="text-center text-sm text-[#FF6B6B] font-medium mb-6">Wolf Hub — vendai.club</p>
+        <p className="text-center text-sm text-warm font-medium mb-6">Painel interno — vendai.club</p>
 
         <h2 className="font-syne font-bold text-lg sm:text-xl mb-1">Painel do negócio</h2>
         <p className="text-sm text-muted mb-6">Acesso restrito ao dono do SaaS</p>
 
         {error && (
-          <div className="mb-4 px-4 py-3 bg-[#FF6B6B]/10 border border-[#FF6B6B]/30 rounded-xl text-[#FF6B6B] text-sm break-words">
+          <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm break-words">
             {error}
           </div>
         )}
@@ -61,7 +62,7 @@ export default function SuperadminLoginPage() {
         <div className="flex flex-col gap-3 mb-5">
           <input
             type="email"
-            className="w-full px-4 py-3.5 min-h-[44px] bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-[#FF6B6B] transition-all placeholder:text-muted"
+            className="w-full px-4 py-3.5 min-h-[44px] bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-warm transition-all placeholder:text-muted"
             placeholder="E-mail"
             value={email}
             onChange={e => setEmail(e.target.value)}
@@ -69,7 +70,7 @@ export default function SuperadminLoginPage() {
           />
           <input
             type="password"
-            className="w-full px-4 py-3.5 min-h-[44px] bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-[#FF6B6B] transition-all placeholder:text-muted"
+            className="w-full px-4 py-3.5 min-h-[44px] bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-warm transition-all placeholder:text-muted"
             placeholder="Senha"
             value={pass}
             onChange={e => setPass(e.target.value)}
@@ -81,7 +82,7 @@ export default function SuperadminLoginPage() {
           type="button"
           onClick={handleLogin}
           disabled={loading}
-          className="w-full py-3.5 min-h-[44px] rounded-[14px] bg-[#FF6B6B] text-white font-syne font-bold text-base hover:opacity-90 transition-all disabled:opacity-60"
+          className={`w-full py-3.5 font-syne font-bold text-base ${superadminBtnPrimary}`}
         >
           {loading ? 'Entrando…' : 'Entrar'}
         </button>

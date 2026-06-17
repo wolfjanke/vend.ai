@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const rows = await sql`
       SELECT
-        s.id, s.name, s.slug, s.plan, s.subscription_status,
+        s.id, s.name, s.slug, s.plan, s.subscription_status, s.is_demo,
         s.created_at, s.last_login_at, s.trial_ends_at,
         s.theme_logo_url, s.vi_messages_used,
         COALESCE(s.owner_email, u.email) AS owner_email,

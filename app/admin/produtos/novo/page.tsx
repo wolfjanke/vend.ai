@@ -29,8 +29,8 @@ export default async function NovoProdutoPage() {
     <div className={adminPage}>
       <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Novo produto</h1>
-        <p className="text-sm text-muted">
-          Selecione as fotos da galeria — a IA identifica variações de cor e preenche tudo automaticamente
+        <p className="text-sm text-muted break-words">
+          Monte um bloco por produto — as fotos do bloco são as variações (cores, volumes). A IA analisa tudo e você revisa antes de publicar.
         </p>
       </div>
       <ProdutoForm storeId={session.storeId} customCategories={settings.customCategories ?? []} plan={plan} />

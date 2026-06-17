@@ -1,9 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import type {
+  StoreProfile,
+  CustomCategory,
+  ViMessage,
+  ProductAnalysisHints,
+  ProductBlockHint,
+} from '@/types'
 import {
-  type StoreProfile,
-  type CustomCategory,
-  type ViMessage,
-  type ProductAnalysisHints,
   PRODUCT_CATEGORY_SLUGS,
   getCategoryDisplayLabel,
   getSegmentLabel,
@@ -89,12 +92,59 @@ const JSON_VARIANT_BLOCK = `  "variationKind": "color | volume | bottle | single
     }
   ]`
 
+const GROUPED_JSON_VARIANT_BLOCK = `  "variationKind": "color | volume | bottle | single | concentration",
+  "attributes": {
+    "brand": "marca se legível ou omitir",
+    "line": "linha se legível ou omitir",
+    "concentration": "EDT | EDP | Parfum | Colônia se visível ou omitir",
+    "volumeMl": número em ml se legível ou null
+  },
+  "variantes": [
+    {
+      "label": "cor ou volume",
+      "kind": "color | volume | bottle | model",
+      "corHex": "#RRGGBB",
+      "fotoIndice": 0
+    }
+  ]`
+
 const AUDIENCE_HINT_LABELS: Record<string, string> = {
   feminine:  'feminino',
   masculine: 'masculino',
   unisex:    'unissex',
   mixed:     'misto (feminino e masculino)',
   kids:      'infantil',
+}
+
+function formatBlockHintsBlock(
+  blockHints?: ProductBlockHint | null,
+  customCategories?: CustomCategory[] | null,
+): string {
+  if (!blockHints) return ''
+  const lines: string[] = []
+  const piece = blockHints.pieceType?.trim()
+  if (piece) {
+    lines.push(`tipo: ${piece} (${getCategoryDisplayLabel(piece, customCategories)})`)
+  }
+  const aud = blockHints.audience?.trim()
+  if (aud && AUDIENCE_HINT_LABELS[aud]) {
+    lines.push(`público: ${AUDIENCE_HINT_LABELS[aud]}`)
+  }
+  const colors = blockHints.colorsNote?.trim()
+  if (colors) lines.push(`cores/volumes: ${colors}`)
+  const photoVar = blockHints.photoVariation
+  if (photoVar && photoVar !== 'unspecified') {
+    const labels: Record<string, string> = {
+      colors:         'cores diferentes',
+      volumes:        'volumes diferentes',
+      concentrations: 'concentrações diferentes',
+    }
+    lines.push(`o que muda: ${labels[photoVar] ?? photoVar}`)
+  }
+  const note = blockHints.freeText?.trim()
+  if (note) lines.push(`obs: ${note}`)
+  if (!lines.length) return ''
+  return ` (${lines.join('; ')})`
 }
 
 function formatProductHintsBlock(
@@ -108,9 +158,17 @@ function formatProductHintsBlock(
   const count = hints.productCount ?? imageCount
 
   if (mode === 'multi') {
-    lines.push(`- Quantidade informada: ${count} produto(s) diferentes`)
-    lines.push(`- Fotos enviadas: ${imageCount} (1 foto por produto, mesma ordem)`)
-    lines.push('- Não agrupe fotos diferentes como variações do mesmo item')
+    const perProduct = Math.max(1, hints?.photosPerProduct ?? 1)
+    if (perProduct > 1) {
+      lines.push(`- Quantidade informada: ${count} produto(s) diferentes`)
+      lines.push(`- ${perProduct} foto(s) por produto (${imageCount} fotos no total, em blocos consecutivos)`)
+      lines.push('- Cada bloco de fotos = um produto; fotos do mesmo bloco = variações (cor, estampa ou volume)')
+      lines.push('- Agrupe por modelo/peça — não misture produtos diferentes no mesmo bloco')
+    } else {
+      lines.push(`- Quantidade informada: ${count} produto(s) diferentes`)
+      lines.push(`- Fotos enviadas: ${imageCount} (1 foto por produto, mesma ordem)`)
+      lines.push('- Não agrupe fotos diferentes como variações do mesmo item')
+    }
   } else {
     lines.push('- Quantidade: 1 produto (fotos extras = variações de cor ou volume/tamanho)')
   }
@@ -167,12 +225,114 @@ export function buildProductAnalysisPrompt(
   const mode = hints?.mode ?? 'single'
   const hintsBlock = formatProductHintsBlock(hints, customCategories, imageCount)
   const catalogMode = inferCatalogMode(hints, customCategories)
-  const blocks = buildCatalogPromptBlocks(catalogMode, imageCount, mode === 'multi')
+  const photosPerProduct = Math.max(1, hints?.photosPerProduct ?? 1)
+  const blocks = buildCatalogPromptBlocks(
+    catalogMode,
+    imageCount,
+    mode === 'multi' || mode === 'blocks',
+    mode === 'blocks' ? 2 : photosPerProduct,
+  )
   const rulesBlock = buildAnalysisRulesBlock(blocks)
   const segmentBlock = segmentInstructions(profile, catalogMode)
 
+  if (mode === 'blocks' && hints?.groups?.length) {
+    const groups = hints.groups
+    const n = groups.length
+    const blocksDesc = groups
+      .map((g, i) => {
+        const idx = g.imageIndices.join(', ')
+        const extra = formatBlockHintsBlock(g.hints, customCategories)
+        return `- Produto ${i + 1}: imagens globais [${idx}]${extra}`
+      })
+      .join('\n')
+
+    return `${blocks.expertIntro}
+O lojista separou ${n} produto(s). Cada grupo de imagens é UM produto; fotos do mesmo grupo são variações (cor, estampa, volume etc.).
+
+Agrupamento (índices globais das ${imageCount} imagens, ordem de envio):
+${blocksDesc}
+
+Retorne JSON com exatamente ${n} item(ns) em "produtos", na mesma ordem dos grupos acima:
+
+{
+  "produtos": [
+    {
+      "fotoIndice": 0,
+      "nome": "nome comercial",
+      "descricao": "2-3 frases",
+      "categoria": "slug: ${cats}",
+      "audience": "feminine | masculine | unisex | kids",
+      "audienceConfidence": "alta | media | baixa",
+${GROUPED_JSON_VARIANT_BLOCK}
+    }
+  ]
+}
+
+Regras:
+- Um item em "produtos" por grupo — não misture grupos
+- fotoIndice no produto = primeira imagem GLOBAL daquele grupo
+- Cada variante deve ter fotoIndice LOCAL (0 = 1ª foto do grupo, 1 = 2ª…) apontando para fotos DENTRO do grupo
+- Uma variante por foto quando forem cores/volumes diferentes; 1 foto = 1 variante "Único" se não houver variação visível
+- variationKind coerente com o tipo de variação
+- Use as dicas do lojista por produto quando fornecidas
+- categoria: slug da lista (${cats}); "outro" só se nada encaixar
+${rulesBlock}
+
+Contexto da loja:
+${getSegmentLabel(profile)}
+
+Instruções por segmento:
+${segmentBlock}
+
+Retorne APENAS o JSON, sem markdown, sem explicação extra.`
+  }
+
   if (mode === 'multi') {
     const n = hints?.productCount ?? imageCount
+    const perProduct = Math.max(1, hints?.photosPerProduct ?? 1)
+
+    if (perProduct > 1) {
+      const blocksDesc = Array.from({ length: n }, (_, i) => {
+        const start = i * perProduct
+        const end = start + perProduct - 1
+        return `produto ${i + 1} = fotos ${start} a ${end}`
+      }).join('; ')
+
+      return `${blocks.expertIntro}
+Retorne JSON com exatamente ${n} item(ns) em "produtos". As ${imageCount} fotos estão em blocos de ${perProduct} (${blocksDesc}):
+
+{
+  "produtos": [
+    {
+      "fotoIndice": 0,
+      "nome": "nome comercial",
+      "descricao": "2-3 frases",
+      "categoria": "slug: ${cats}",
+      "audience": "feminine | masculine | unisex | kids",
+      "audienceConfidence": "alta | media | baixa",
+${GROUPED_JSON_VARIANT_BLOCK}
+    }
+  ]
+}
+
+Regras:
+- fotoIndice no produto = índice da PRIMEIRA foto do bloco (0, ${perProduct}, ${perProduct * 2}…)
+- Cada produto deve ter ${perProduct} variante(s) — uma por foto do bloco, na mesma ordem
+- fotoIndice em cada variante = índice LOCAL dentro do produto (0 a ${perProduct - 1}), NÃO o índice global
+- variationKind: color para roupas com cores diferentes; volume para frascos de tamanhos diferentes
+- Não misture fotos de produtos diferentes no mesmo item
+- categoria: um slug da lista (${cats}); use categoria customizada da loja para perfumes/beleza quando aplicável; "outro" só se nada encaixar
+${rulesBlock}
+
+Contexto da loja:
+${getSegmentLabel(profile)}
+
+Instruções por segmento:
+${segmentBlock}${hintsBlock}
+
+Retorne APENAS o JSON, sem markdown, sem explicação extra.`
+    }
+
     return `${blocks.expertIntro}
 Retorne JSON com exatamente ${n} item(ns) em "produtos" (ordem = ordem das imagens):
 
