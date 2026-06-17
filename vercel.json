@@ -18,6 +18,18 @@
       "has": [{ "type": "host", "value": "www.vendai.club" }],
       "destination": "https://vendai.club/:path*",
       "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "vend.ai" }],
+      "destination": "https://vendai.club/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.vend.ai" }],
+      "destination": "https://vendai.club/:path*",
+      "permanent": true
     }
   ]
 }

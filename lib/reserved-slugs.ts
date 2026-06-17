@@ -9,6 +9,7 @@ const RESERVED_STORE_SLUGS = new Set([
   'icon.png',
   'icon.svg',
   'robots.txt',
+  'llms.txt',
   'sitemap.xml',
   'sitemap_index.xml',
   'manifest.json',

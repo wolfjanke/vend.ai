@@ -36,7 +36,7 @@ export default function LandingHeroMobile() {
               Olá! Posso te ajudar? ✦
             </div>
             <div className="bg-primary/20 border border-primary/30 text-[10px] px-2 py-1 rounded-lg self-end max-w-[85%] break-words">
-              Tem desconto no PIX?
+              Tem no P?
             </div>
           </div>
           <div className="bg-accent text-bg text-[10px] font-bold text-center py-2 rounded-lg font-syne">

@@ -19,7 +19,7 @@ import LandingStickyCta from '@/components/landing/LandingStickyCta'
 import LandingJsonLd from '@/components/landing/LandingJsonLd'
 import { LandingEditorialCard, LandingPainLines } from '@/components/landing/LandingEditorialCard'
 import { SITE_DESCRIPTION, SITE_TITLE, siteUrl } from '@/lib/site-seo'
-import { BRAND } from '@/lib/brand'
+import { LANDING_FAQ_ITEMS } from '@/lib/landing-faq'
 
 export const metadata = {
   title:       SITE_TITLE,
@@ -53,18 +53,17 @@ export default function LandingPage() {
           {/* badge */}
           <div className="relative inline-flex flex-wrap items-center justify-center gap-2 px-3 py-2 sm:px-4 rounded-full border border-primary/40 bg-primary/10 text-primary text-[11px] sm:text-xs font-bold mb-6 sm:mb-7 ring-pulse max-w-full text-center">
             <Zap size={12} className="fill-primary shrink-0" />
-            <span className="break-words text-balance">Vitrine online com IA para quem vende moda</span>
+            <span className="break-words text-balance">Vitrine + Vi — para quem vende moda no Instagram e WhatsApp</span>
           </div>
 
-          <h1 className="font-syne font-extrabold text-[1.65rem] min-[400px]:text-[1.85rem] sm:text-4xl md:text-5xl lg:text-6xl leading-[1.12] sm:leading-[1.1] mb-5 break-words hyphens-auto max-w-full">
-            Sua vitrine de moda<br />
-            no ar{' '}
-            <span className="text-grad">em minutos.</span>
+          <h1 className="font-syne font-extrabold text-[1.5rem] min-[360px]:text-[1.65rem] min-[400px]:text-[1.85rem] sm:text-4xl md:text-5xl lg:text-[3.25rem] leading-[1.15] sm:leading-[1.1] mb-5 break-words text-balance max-w-full">
+            Sua vitrine de moda no ar —<br />
+            com IA que responde o{' '}
+            <span className="text-grad">Direct</span> por você
           </h1>
 
           <p className="text-muted text-base sm:text-lg leading-relaxed mb-8 max-w-md break-words">
-            Vitrine inteligente, assistente com IA e pedidos organizados no WhatsApp.
-            Sem marketplace, sem complicação — use o pagamento que você já conhece.
+            Catálogo no ar em minutos. A Vi responde com seu estoque e manda o pedido formatado no WhatsApp — sem marketplace, sem complicação.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
@@ -116,10 +115,10 @@ export default function LandingPage() {
       <section className={`${sectionX} py-14 border-t border-border bg-surface/40`}>
         <ScrollReveal className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto min-w-0">
           {[
+            '✓ Vi atendendo 24h',
             '✓ Vitrine no ar em minutos',
             '✓ Sem cartão de crédito',
             '✓ Cancele quando quiser',
-            '✓ Vi atendendo 24h',
           ].map(line => (
             <div
               key={line}
@@ -562,64 +561,7 @@ export default function LandingPage() {
         </ScrollReveal>
 
         <div className="max-w-2xl space-y-2 min-w-0 mx-auto sm:mx-0">
-          {[
-            {
-              q: 'Qual a diferença de vitrine e loja online?',
-              a: 'A vitrine é seu catálogo com link próprio — o cliente navega, fala com a Vi e finaliza pelo WhatsApp. Não é um e-commerce com checkout complexo; é o que funciona para quem já vende no Direct.',
-            },
-            {
-              q: 'Preciso saber de tecnologia para usar?',
-              a: 'Não. O vendai.club foi feito pra quem nunca criou um site. Se você consegue usar o WhatsApp, consegue usar o vendai.club.',
-            },
-            {
-              q: 'Posso cancelar quando quiser?',
-              a: 'Sim. Nos planos pagos você pode cancelar a qualquer momento. Não há fidelidade nem multa.',
-            },
-            {
-              q: 'O que a Vi faz exatamente?',
-              a: 'A Vi é uma assistente com IA que atende seus clientes na loja: sugere produtos por estilo, cor ou tamanho, responde dúvidas e indica como finalizar o pedido pelo WhatsApp.',
-            },
-            {
-              q: 'Tem limite de mensagens da Vi?',
-              a: 'Cada plano inclui um volume de mensagens da Vi por mês — no Grátis são 500 mensagens. Ao atingir o limite no plano Grátis, a Vi direciona o cliente para seu WhatsApp. Nos planos pagos, você continua sendo atendido com cobrança proporcional do excedente. Você acompanha o consumo em tempo real no painel.',
-            },
-            {
-              q: 'Qual o limite de produtos em cada plano?',
-              a: 'Grátis: 10 produtos. Starter: 50. Pro: 200. Loja e Enterprise: ilimitado. Cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
-            },
-            {
-              q: 'Como funcionam os alertas de estoque?',
-              a: 'Em Produtos, você ativa os alertas e define quando avisar (ex.: ≤ 3 peças por tamanho ou cor). Os avisos aparecem no dashboard e na lista de produtos — só dentro do painel, sem e-mail.',
-            },
-            {
-              q: 'A análise de foto com IA funciona no plano grátis?',
-              a: 'Não. O plano Grátis permite cadastro manual de produtos. A análise de foto com IA está nos planos pagos: Starter (20 análises/mês), Pro e superiores (ilimitado).',
-            },
-            {
-              q: 'Tem período de teste nos planos pagos?',
-              a: 'Sim. Starter: 7 dias grátis. Pro e Loja: 14 dias. Enterprise: 30 dias. Você só é cobrado após o trial, se mantiver o plano.',
-            },
-            {
-              q: 'Posso pagar trimestral ou anual?',
-              a: 'Sim. No painel, ao fazer upgrade, você escolhe Mensal, Trimestral (-10% no total) ou Anual (-20% no total). O valor exibido nos cards acima é o equivalente mensal base.',
-            },
-            {
-              q: 'Como faço upgrade de plano?',
-              a: 'Você começa criando sua loja grátis. Quando precisar de mais produtos e recursos, faça upgrade para Starter, Pro, Loja ou Enterprise no painel.',
-            },
-            {
-              q: 'Onde ficam meus dados? Vocês vendem meus dados?',
-              a: `Jamais. Seus dados e os da sua loja são armazenados de forma segura em servidores confiáveis. Não vendemos, compartilhamos ou usamos seus dados para fins comerciais. Trabalhamos em total conformidade com a LGPD (Lei 13.709/2018). Você pode solicitar exclusão dos seus dados a qualquer momento pelo e-mail ${BRAND.privacyEmail}.`,
-            },
-            {
-              q: 'Preciso de CNPJ para usar?',
-              a: 'Não. Você pode criar sua loja como pessoa física. Não pedimos CNPJ para começar.',
-            },
-            {
-              q: 'O vendai.club processa pagamentos dos meus clientes?',
-              a: 'Não. Você recebe direto no PIX, Mercado Pago, PagBank ou como preferir combinar no WhatsApp. O vendai.club organiza catálogo, pedidos e estoque — o dinheiro vai para a sua conta.',
-            },
-          ].map((item, i) => (
+          {LANDING_FAQ_ITEMS.map((item, i) => (
             <ScrollReveal key={i} delay={i * 50}>
               <details className="bg-[#161616] border border-[#252525] rounded-[2px] overflow-hidden group">
                 <summary className="px-4 sm:px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between gap-3 hover:text-primary transition-colors min-w-0">
@@ -643,8 +585,8 @@ export default function LandingPage() {
             <Zap size={12} className="fill-accent" />
             Grátis para começar
           </div>
-          <h2 className="font-syne font-extrabold text-3xl sm:text-4xl md:text-5xl mb-5 leading-tight">
-            Sua vitrine de moda online.<br />
+          <h2 className="font-syne font-extrabold text-2xl min-[400px]:text-3xl sm:text-4xl md:text-5xl mb-5 leading-tight break-words text-balance">
+            Sua vitrine de moda com IA no WhatsApp.<br />
             <span className="text-grad">Grátis para começar.</span>
           </h2>
           <p className="text-muted text-base sm:text-lg mb-10 max-w-md mx-auto leading-relaxed">

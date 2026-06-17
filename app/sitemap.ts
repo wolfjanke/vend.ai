@@ -1,7 +1,10 @@
 import type { MetadataRoute } from 'next'
+import { getPublicStoreSitemapEntries } from '@/lib/sitemap-stores'
 import { siteUrl } from '@/lib/site-seo'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 3600
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
   const pages = [
     { path: '', priority: 1 },
@@ -13,10 +16,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/privacidade', priority: 0.3 },
   ] as const
 
-  return pages.map(({ path, priority }) => ({
+  const staticEntries: MetadataRoute.Sitemap = pages.map(({ path, priority }) => ({
     url:             siteUrl(path),
     lastModified:    now,
     changeFrequency: path === '' ? 'weekly' : 'monthly',
     priority,
   }))
+
+  let storeEntries: MetadataRoute.Sitemap = []
+  try {
+    if (process.env.DATABASE_URL) {
+      const stores = await getPublicStoreSitemapEntries()
+      storeEntries = stores.map(({ slug, lastModified }) => ({
+        url:             siteUrl(`/${slug}`),
+        lastModified,
+        changeFrequency: 'weekly' as const,
+        priority:        0.6,
+      }))
+    }
+  } catch (e) {
+    console.error('[sitemap] lojas públicas', e)
+  }
+
+  return [...staticEntries, ...storeEntries]
 }

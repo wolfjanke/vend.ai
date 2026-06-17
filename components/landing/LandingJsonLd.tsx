@@ -1,8 +1,23 @@
 import { SITE_DESCRIPTION, SITE_ENTITY, siteUrl } from '@/lib/site-seo'
 import { COMPANY } from '@/lib/company'
 import { BRAND, BRAND_LOGO } from '@/lib/brand'
+import { LANDING_FAQ_ITEMS } from '@/lib/landing-faq'
+
 /** Schema.org para buscadores e crawlers de IA. */
 export default function LandingJsonLd() {
+  const faqPage = {
+    '@type':      'FAQPage',
+    '@id':        `${siteUrl()}/#faq`,
+    mainEntity:   LANDING_FAQ_ITEMS.map((item) => ({
+      '@type':          'Question',
+      name:             item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text:    item.a,
+      },
+    })),
+  }
+
   const data = {
     '@context': 'https://schema.org',
     '@graph':   [
@@ -54,6 +69,7 @@ export default function LandingJsonLd() {
           'Alertas de estoque no painel',
         ],
       },
+      faqPage,
     ],
   }
 

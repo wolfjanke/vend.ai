@@ -16,7 +16,7 @@ export const SITE_ENTITY = {
   domain:        BRAND.domain,
   canonicalUrl:  SITE_ORIGIN,
   category:      'Vitrine online com IA para quem vende moda no Instagram e WhatsApp',
-  tagline:       'Vitrine inteligente, assistente Vi (IA) e pedidos formatados no WhatsApp.',
+  tagline:       'Catálogo em minutos. A Vi responde com seu estoque e manda o pedido formatado no WhatsApp.',
   audience:      'Lojistas de moda, brechós, revendedoras e pequenas marcas no Brasil',
   notToConfuse:  BRAND.notToConfuse,
   demoStorePath: '/urban-mix',
@@ -24,7 +24,7 @@ export const SITE_ENTITY = {
 } as const
 
 export const SITE_DESCRIPTION =
-  'vendai.club é vitrine online com IA para lojas de moda: catálogo, assistente Vi, estoque por SKU e pedidos no WhatsApp. Plano grátis. Produto da Wolf Hub, Brasil.'
+  'vendai.club: vitrine de moda com IA que responde no Direct e manda pedido formatado no WhatsApp. Catálogo, assistente Vi, estoque por SKU. Plano grátis. Wolf Hub, Brasil.'
 
 export const SITE_KEYWORDS = [
   'vendai.club',
@@ -35,6 +35,8 @@ export const SITE_KEYWORDS = [
   'catálogo digital moda',
   'brechó online',
   'revenda moda Instagram',
+  'vitrine moda Instagram',
+  'assistente Direct moda',
 ] as const
 
 export const SITE_TITLE = `${BRAND.displayName} — Vitrine online com IA para moda`
