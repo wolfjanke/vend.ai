@@ -143,6 +143,11 @@ function formatBlockHintsBlock(
   }
   const note = blockHints.freeText?.trim()
   if (note) lines.push(`obs: ${note}`)
+  if (blockHints.includeBrand) {
+    lines.push('marca: lojista autorizou — inclua em attributes.brand se legível; pode citar no nome')
+  } else {
+    lines.push('marca: NÃO incluir no nome nem em attributes.brand — use nome genérico')
+  }
   if (!lines.length) return ''
   return ` (${lines.join('; ')})`
 }

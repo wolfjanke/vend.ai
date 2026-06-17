@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     const products = await sql`
-      SELECT id, name, slug, description, category, audience, price, promo_price,
+      SELECT id, name, slug, brand, description, category, audience, price, promo_price,
              variants_json, catalog_axes, active, created_at
       FROM products
       WHERE store_id = ${session.storeId}

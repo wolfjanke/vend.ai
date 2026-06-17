@@ -258,7 +258,7 @@ export interface Store extends StoreAddress {
 
 // ─── Product ──────────────────────────────────────────────────────────────────
 export type PrimaryAxis = 'color' | 'model' | 'none'
-export type StockAxis = 'clothing' | 'volume' | 'unique'
+export type StockAxis = 'clothing' | 'volume' | 'unique' | 'numeric'
 
 export interface CatalogAxes {
   primaryAxis: PrimaryAxis
@@ -311,6 +311,7 @@ export interface Product {
   store_id:      string
   name:          string
   slug?:         string
+  brand?:        string | null
   description:   string
   category:      string
   audience?:     ProductAudience | null
@@ -452,6 +453,8 @@ export interface ProductBlockHint {
   colorsNote?:     string
   freeText?:       string
   photoVariation?: PhotoVariationHint
+  /** Lojista autoriza citar marca legível na peça (default: false). */
+  includeBrand?:   boolean
 }
 
 export interface ProductAnalysisGroup {
@@ -524,9 +527,12 @@ export const CLOTHING_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'Único']
 /** Alias legado — preferir CLOTHING_SIZES. */
 export const SIZES = CLOTHING_SIZES
 
+export const NUMERIC_SIZES = ['36', '38', '40', '42', '44', '46', '48']
+
 export const VOLUME_PRESETS = ['5ml', '10ml', '30ml', '50ml', '100ml', '200ml', 'Único']
 
 const VOLUME_KEY_PATTERN = /\d+\s*ml/i
+const NUMERIC_KEY_PATTERN = /^\d{2}$/
 
 /** Chaves de stock para o grid admin conforme eixo. Preserva chaves extras existentes. */
 export function stockKeysForAxes(
@@ -536,6 +542,7 @@ export function stockKeysForAxes(
   const preset =
     stockAxis === 'volume' ? VOLUME_PRESETS
     : stockAxis === 'unique' ? ['Único']
+    : stockAxis === 'numeric' ? NUMERIC_SIZES
     : CLOTHING_SIZES
   const extra = Object.keys(existingStock ?? {}).filter(k => !preset.includes(k))
   return [...preset, ...extra]
@@ -543,6 +550,10 @@ export function stockKeysForAxes(
 
 export function isVolumeStockKey(key: string): boolean {
   return VOLUME_KEY_PATTERN.test(String(key ?? '').trim())
+}
+
+export function isNumericStockKey(key: string): boolean {
+  return NUMERIC_KEY_PATTERN.test(String(key ?? '').trim())
 }
 
 // ─── Payments / Asaas ─────────────────────────────────────────────────────────

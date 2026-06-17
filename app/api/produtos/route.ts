@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 400 })
     }
 
-    const { name, description, category, audience, price, promo_price, variants_json, catalog_axes, active } = parsed.data
+    const { name, description, category, audience, brand, price, promo_price, variants_json, catalog_axes, active } = parsed.data
 
     const storeRows = await sql`SELECT plan, is_demo, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
     const planCtx = getStorePlanContext(storeRows[0] ?? {})
@@ -46,11 +46,12 @@ export async function POST(req: NextRequest) {
     const productSlug = await resolveProductSlugForStore(session.storeId, name)
 
     const [product] = await sql`
-      INSERT INTO products (store_id, name, slug, description, category, audience, price, promo_price, variants_json, catalog_axes, active)
+      INSERT INTO products (store_id, name, slug, brand, description, category, audience, price, promo_price, variants_json, catalog_axes, active)
       VALUES (
         ${session.storeId},
         ${name},
         ${productSlug},
+        ${brand ?? null},
         ${description ?? ''},
         ${category ?? 'outro'},
         ${audience ?? null},

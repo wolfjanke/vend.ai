@@ -52,13 +52,14 @@ export async function PUT(
     )
   }
 
-  const { name, description, category, audience, price, promo_price, variants_json, catalog_axes, active } = parsed.data
+  const { name, description, category, audience, brand, price, promo_price, variants_json, catalog_axes, active } = parsed.data
   const productSlug = await resolveProductSlugForStore(session.storeId, name, id)
 
   await sql`
     UPDATE products SET
       name = ${name},
       slug = ${productSlug},
+      brand = ${brand ?? null},
       description = ${description ?? ''},
       category = ${category ?? 'outro'},
       audience = ${audience ?? null},

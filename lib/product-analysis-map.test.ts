@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapAnalysisToVariantDraft, normalizeVolumeLabel } from '@/lib/product-analysis-map'
+import { mapAnalysisToVariantDraft, normalizeVolumeLabel, sanitizeBrandFromAnalysis } from '@/lib/product-analysis-map'
 import type { ProductAnalysisItem } from '@/lib/product-analysis'
 
 describe('normalizeVolumeLabel', () => {
@@ -79,5 +79,38 @@ describe('mapAnalysisToVariantDraft', () => {
     const mapped = mapAnalysisToVariantDraft(item, 'fashion', null, 2)
     expect(mapped.variants.length).toBe(2)
     expect(mapped.aiMeta.variationKind).toBe('color')
+  })
+})
+
+describe('sanitizeBrandFromAnalysis', () => {
+  it('remove marca do nome quando includeBrand é false', () => {
+    const item: ProductAnalysisItem = {
+      nome: 'Nike Bermuda Azul',
+      descricao: 'Jeans.',
+      categoria: 'bermuda',
+      audience: 'masculine',
+      audienceConfidence: 'alta',
+      attributes: { brand: 'Nike' },
+      variantes: [{ cor: 'Azul', corHex: '#0000ff' }],
+    }
+    const { item: cleaned, brand } = sanitizeBrandFromAnalysis(item, false)
+    expect(brand).toBeNull()
+    expect(cleaned.nome).toBe('Bermuda Azul')
+    expect(cleaned.attributes?.brand).toBeUndefined()
+  })
+
+  it('preserva marca quando includeBrand é true', () => {
+    const item: ProductAnalysisItem = {
+      nome: 'Nike Bermuda Azul',
+      descricao: 'Jeans.',
+      categoria: 'bermuda',
+      audience: 'masculine',
+      audienceConfidence: 'alta',
+      attributes: { brand: 'Nike' },
+      variantes: [{ cor: 'Azul', corHex: '#0000ff' }],
+    }
+    const { item: kept, brand } = sanitizeBrandFromAnalysis(item, true)
+    expect(brand).toBe('Nike')
+    expect(kept.nome).toBe('Nike Bermuda Azul')
   })
 })

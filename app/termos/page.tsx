@@ -110,8 +110,12 @@ export default function TermosPage() {
           <li>Usar scripts, bots ou automações não autorizadas para acessar a plataforma</li>
           <li>Revender o serviço ou criar contas em nome de terceiros sem autorização</li>
           <li>Publicar conteúdo que viole direitos autorais, marcas registradas ou direitos de terceiros</li>
+          <li>Informar marca de terceiros em produtos que não sejam originais ou para os quais você não tenha autorização</li>
           <li>Usar a plataforma para atividades ilegais, fraudulentas ou que prejudiquem terceiros</li>
         </ul>
+        <p>
+          Você é integralmente responsável pela veracidade das informações publicadas na sua loja — incluindo marca, descrição e fotos dos produtos. Ativar a opção &quot;Informar marca&quot; no cadastro não transfere essa responsabilidade legal para a plataforma.
+        </p>
         <p>
           O descumprimento dessas regras pode resultar na suspensão ou exclusão permanente da conta, sem direito a reembolso.
         </p>

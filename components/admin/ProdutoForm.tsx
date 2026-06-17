@@ -52,16 +52,18 @@ interface VariantState {
 }
 
 type ProductBlockState = {
-  id:       string
-  files:    File[]
-  previews: string[]
+  id:           string
+  files:        File[]
+  previews:     string[]
+  includeBrand?: boolean
 }
 
 function createEmptyBlock(): ProductBlockState {
   return {
-    id:       crypto.randomUUID(),
-    files:    [],
-    previews: [],
+    id:           crypto.randomUUID(),
+    files:        [],
+    previews:     [],
+    includeBrand: false,
   }
 }
 
@@ -71,6 +73,9 @@ type BatchProductDraft = {
   categoria:            string
   audience:             ProductAudience | null
   audienceConfidence:   ProductAudienceConfidence | null
+  brand?:               string | null
+  includeBrand?:        boolean
+  brandSuppressed?:     boolean
   variantes:            Array<{ cor: string; corHex: string }>
   catalogAxes?:         CatalogAxes
   aiMeta?:              AnalysisAiMeta | null
@@ -91,9 +96,33 @@ type CadastroStep = 1 | 2 | 3 | 4
 
 const STOCK_AXIS_OPTIONS: Array<{ value: StockAxis; label: string }> = [
   { value: 'clothing', label: 'Tamanho de roupa (P, M, G…)' },
+  { value: 'numeric',  label: 'Tamanho numérico (36, 38, 40…)' },
   { value: 'volume',   label: 'Volume (ml)' },
   { value: 'unique',   label: 'Único (sem variação de tamanho)' },
 ]
+
+function StockAxisGradePreview({ stockAxis }: { stockAxis: StockAxis }) {
+  if (stockAxis === 'volume' || stockAxis === 'unique') return null
+  const keys = stockKeysForAxes(stockAxis).filter(k => k !== 'Único')
+  if (!keys.length) return null
+  return (
+    <div className="mt-2 min-w-0">
+      <p className="text-[11px] text-muted mb-1.5 break-words">
+        Na próxima etapa você informa a quantidade em estoque de cada tamanho, por cor.
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {keys.map(k => (
+          <span
+            key={k}
+            className="px-2 py-1 rounded-lg bg-surface2 border border-border text-xs text-muted"
+          >
+            {k}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function BatchDraftThumb({ file }: { file: File }) {
   const [url, setUrl] = useState<string | null>(null)
@@ -250,6 +279,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const [postAiPhotoNote, setPostAiPhotoNote] = useState('')
 
   const [prodName,  setProdName]  = useState('')
+  const [prodBrand, setProdBrand] = useState('')
   const [prodDesc,  setProdDesc]  = useState('')
   const [prodCat,   setProdCat]   = useState('')
   const [prodAudience, setProdAudience] = useState<ProductAudience | ''>('')
@@ -257,12 +287,15 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const [prodPromo, setProdPromo] = useState('')
   const [variants,  setVariants]  = useState<VariantState[]>([])
 
-  const [aiBadges, setAiBadges] = useState({ name: false, desc: false, cat: false, audience: false })
+  const [aiBadges, setAiBadges] = useState({ name: false, desc: false, cat: false, audience: false, brand: false })
   const [aiAudienceConfidence, setAiAudienceConfidence] = useState<ProductAudienceConfidence | null>(null)
+  const [currentIncludeBrand, setCurrentIncludeBrand] = useState(false)
+  const [brandSuppressedNote, setBrandSuppressedNote] = useState(false)
 
   useEffect(() => {
     if (!initialProduct) return
     setProdName(initialProduct.name)
+    setProdBrand(initialProduct.brand ?? '')
     setProdDesc(initialProduct.description ?? '')
     setProdCat(initialProduct.category ?? 'outro')
     setProdAudience(initialProduct.audience ?? '')
@@ -401,6 +434,12 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     setProductBlocks(prev => prev.filter(b => b.id !== blockId))
   }
 
+  function setBlockIncludeBrand(blockId: string, includeBrand: boolean) {
+    setProductBlocks(prev =>
+      prev.map(b => (b.id === blockId ? { ...b, includeBrand } : b)),
+    )
+  }
+
   function flattenBlocks(blocks: ProductBlockState[]) {
     const files: File[] = []
     const previews: string[] = []
@@ -422,7 +461,10 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     const groups = ready.map(b => {
       const imageIndices = b.files.map((_, i) => offset + i)
       offset += b.files.length
-      return { imageIndices }
+      return {
+        imageIndices,
+        hints: { includeBrand: b.includeBrand ?? false },
+      }
     })
     return {
       mode:         'blocks',
@@ -478,21 +520,34 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       categoria?: string
       audience?: ProductAudience | null
       audienceConfidence?: ProductAudienceConfidence | null
+      brand?: string | null
+      brandSuppressed?: boolean
       variantes?: Array<{ cor: string; corHex: string }>
       catalogAxes?: CatalogAxes
       aiMeta?: AnalysisAiMeta
       variantDrafts?: MappedVariantDraft[]
     },
     filesSnapshot: File[],
+    includeBrand = false,
   ) {
     setBatchQueue([])
     setBatchIndex(0)
+    setCurrentIncludeBrand(includeBrand)
     setProdName(stripEmojis(data.nome ?? ''))
+    setProdBrand(stripEmojis(data.brand ?? ''))
     setProdDesc(stripEmojis(data.descricao ?? ''))
     setProdCat(data.categoria ?? '')
     setProdAudience(data.audience ?? '')
     setAiAudienceConfidence(data.audienceConfidence ?? null)
-    setAiBadges({ name: true, desc: true, cat: true, audience: Boolean(data.audience) })
+    const hadBrandInMeta = Boolean(data.aiMeta?.attributes?.brand?.trim())
+    setBrandSuppressedNote(Boolean(data.brandSuppressed) || (!includeBrand && hadBrandInMeta && !data.brand))
+    setAiBadges({
+      name: true,
+      desc: true,
+      cat: true,
+      audience: Boolean(data.audience),
+      brand: Boolean(data.brand),
+    })
 
     if (data.catalogAxes) setCatalogAxes(data.catalogAxes)
     if (data.aiMeta) setAiMeta(data.aiMeta)
@@ -572,8 +627,11 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         ...item,
         nome:      prodName,
         descricao: prodDesc,
+        brand:     prodBrand.trim() || null,
         categoria: prodCat,
         audience:  prodAudience || null,
+        includeBrand: currentIncludeBrand,
+        brandSuppressed: brandSuppressedNote,
         catalogAxes,
         aiMeta,
         variantDrafts: variants.map(v => ({
@@ -606,13 +664,22 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     const item = queue[index]
     if (!item) return
     setProdName(stripEmojis(item.nome))
+    setProdBrand(stripEmojis(item.brand ?? ''))
     setProdDesc(stripEmojis(item.descricao))
     setProdCat(item.categoria)
     setProdAudience(item.audience ?? '')
     setAiAudienceConfidence(item.audienceConfidence ?? null)
+    setCurrentIncludeBrand(item.includeBrand ?? false)
+    setBrandSuppressedNote(item.brandSuppressed ?? false)
     setProdPrice('')
     setProdPromo('')
-    setAiBadges({ name: true, desc: true, cat: true, audience: Boolean(item.audience) })
+    setAiBadges({
+      name: true,
+      desc: true,
+      cat: true,
+      audience: Boolean(item.audience),
+      brand: Boolean(item.brand),
+    })
     if (item.catalogAxes) setCatalogAxes(item.catalogAxes)
     if (item.aiMeta) setAiMeta(item.aiMeta)
 
@@ -653,6 +720,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       categoria?: string
       audience?: ProductAudience | null
       audienceConfidence?: ProductAudienceConfidence | null
+      brand?:            string | null
+      brandSuppressed?:  boolean
       variantes?: Array<{ cor: string; corHex: string }>
       catalogAxes?: CatalogAxes
       aiMeta?: AnalysisAiMeta
@@ -669,9 +738,12 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
         return {
           nome:               p.nome ?? `Produto ${i + 1}`,
           descricao:          p.descricao ?? '',
+          brand:              p.brand ?? null,
+          brandSuppressed:    p.brandSuppressed ?? false,
           categoria:          p.categoria ?? 'outro',
           audience:           p.audience ?? null,
           audienceConfidence: p.audienceConfidence ?? null,
+          includeBrand:       ready[i]?.includeBrand ?? false,
           catalogAxes:        p.catalogAxes,
           aiMeta:             p.aiMeta,
           variantDrafts:      p.variantDrafts,
@@ -720,7 +792,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       } else {
         const ready = productBlocks.filter(b => b.files.length > 0)
         const { files } = flattenBlocks(ready)
-        applySingleAnalysis(data, files)
+        const blockIncludeBrand = ready[0]?.includeBrand ?? false
+        applySingleAnalysis(data, files, blockIncludeBrand)
       }
 
       setAnalyzed(true)
@@ -793,6 +866,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       stockPromoPrices: {},
       variantType: 'cor',
     }])
+    setCurrentIncludeBrand(ready[0].includeBrand ?? false)
     setAnalyzed(true)
     setStep(4)
   }
@@ -957,6 +1031,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       const promoNum = prodPromo.trim() ? parseCurrency(prodPromo) : 0
       const payload = {
         name:          prodName.trim(),
+        brand:         prodBrand.trim() || null,
         description:   prodDesc.trim(),
         category:      prodCat,
         audience:      prodAudience || null,
@@ -1003,6 +1078,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const axisLabels = getAxisLabels(catalogAxes)
   const showSkuPrices = catalogAxes.stockAxis === 'volume'
     || variants.some(v => Object.keys(v.stockPrices ?? {}).length > 0)
+  const showBrandField = isEdit || currentIncludeBrand || Boolean(prodBrand.trim()) || brandSuppressedNote
 
   const categorySelect = (
     <select
@@ -1147,6 +1223,21 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                     </div>
                   )}
                 </div>
+
+                <label className="flex items-start gap-3 min-h-[44px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 shrink-0 w-5 h-5 min-w-[20px] accent-primary"
+                    checked={block.includeBrand ?? false}
+                    onChange={e => setBlockIncludeBrand(block.id, e.target.checked)}
+                  />
+                  <span className="min-w-0">
+                    <span className="text-sm font-medium text-foreground block">Informar marca neste produto</span>
+                    <span className="text-xs text-muted break-words block mt-0.5">
+                      Só ative se a peça for original e você tiver direito de usar a marca. Você é responsável pelo conteúdo publicado.
+                    </span>
+                  </span>
+                </label>
               </div>
             ))}
           </div>
@@ -1313,6 +1404,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
+                <StockAxisGradePreview stockAxis={catalogAxes.stockAxis} />
               </div>
             </div>
             <div className="flex flex-col gap-3">
@@ -1325,6 +1417,23 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 />
                 {aiBadges.name && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
+              {showBrandField && (
+                <div>
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Marca</label>
+                  <input
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+                    value={prodBrand}
+                    onChange={e => { setProdBrand(stripEmojis(e.target.value)); setAiBadges(p => ({ ...p, brand: false })) }}
+                    placeholder="Ex.: Nike, Adidas…"
+                  />
+                  {aiBadges.brand && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
+                  {brandSuppressedNote && (
+                    <p className="text-[11px] text-muted mt-1 break-words">
+                      Marca não incluída no nome — ative &quot;Informar marca&quot; na próxima vez se for peça original.
+                    </p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Descrição</label>
                 <textarea
@@ -1489,7 +1598,26 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   value={prodName}
                   onChange={e => { setProdName(stripEmojis(e.target.value)); setAiBadges(p => ({ ...p, name: false })) }}
                 />
+                {aiBadges.name && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
               </div>
+
+              {showBrandField && (
+                <div>
+                  <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Marca</label>
+                  <input
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all"
+                    value={prodBrand}
+                    onChange={e => { setProdBrand(stripEmojis(e.target.value)); setAiBadges(p => ({ ...p, brand: false })) }}
+                    placeholder="Ex.: Nike, Adidas…"
+                  />
+                  {aiBadges.brand && <span className="text-[11px] text-primary mt-1 block">✦ Sugerido pela IA</span>}
+                  {brandSuppressedNote && (
+                    <p className="text-[11px] text-muted mt-1 break-words">
+                      Marca não incluída no nome — ative &quot;Informar marca&quot; na próxima vez se for peça original.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1.5">Descrição</label>
@@ -1578,6 +1706,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
+              <StockAxisGradePreview stockAxis={catalogAxes.stockAxis} />
             </div>
 
             {variants.map(v => {
@@ -1712,7 +1841,11 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 <div className="flex gap-2 items-center min-w-0">
                   <input
                     className="flex-1 min-w-0 min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary"
-                    placeholder={catalogAxes.stockAxis === 'volume' ? 'Ex: 15ml' : 'Ex: XG'}
+                    placeholder={
+                      catalogAxes.stockAxis === 'volume' ? 'Ex: 15ml'
+                      : catalogAxes.stockAxis === 'numeric' || catalogAxes.stockAxis === 'clothing' ? 'Ex: 34 ou XG'
+                      : 'Ex: XG'
+                    }
                     value={customStockKey}
                     onChange={e => setCustomStockKey(e.target.value)}
                   />

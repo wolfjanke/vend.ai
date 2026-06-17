@@ -164,11 +164,12 @@ const variantSchema = z.object({
 
 const catalogAxesSchema = z.object({
   primaryAxis: z.enum(['color', 'model', 'none']),
-  stockAxis:   z.enum(['clothing', 'volume', 'unique']),
+  stockAxis:   z.enum(['clothing', 'volume', 'unique', 'numeric']),
 }).nullable().optional()
 
 export const productBodySchema = z.object({
   name:          noEmoji(1, 500),
+  brand:         noEmojiNullable(120),
   description:   z.string().max(20_000).transform(stripEmojis).optional().default(''),
   category:      z.string().max(50).optional().transform(s => (s && String(s).trim()) ? String(s).trim() : 'outro'),
   audience:      z.enum(['feminine', 'masculine', 'unisex', 'kids']).nullable().optional(),

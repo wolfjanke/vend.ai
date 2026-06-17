@@ -196,9 +196,10 @@ export function TermsPdfDocument({
           </Text>
           <Text style={styles.text}>
             São responsabilidades do CONTRATANTE: conteúdo publicado na loja,
-            veracidade dos produtos e preços, atendimento aos clientes finais,
-            cumprimento das obrigações fiscais e tributárias, e conformidade com
-            o Código de Defesa do Consumidor.
+            veracidade dos produtos e preços, uso correto de marcas de terceiros
+            (somente em produtos originais e com direito de uso), atendimento aos
+            clientes finais, cumprimento das obrigações fiscais e tributárias, e
+            conformidade com o Código de Defesa do Consumidor.
           </Text>
         </View>
 

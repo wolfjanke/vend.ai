@@ -9,7 +9,7 @@ import type {
   VariantType,
   StockAxis,
 } from '@/types'
-import { CLOTHING_SIZES, isVolumeStockKey, stockKeysForAxes, VOLUME_PRESETS } from '@/types'
+import { CLOTHING_SIZES, isNumericStockKey, isVolumeStockKey, stockKeysForAxes, VOLUME_PRESETS } from '@/types'
 
 export type MappedVariantDraft = {
   id:            string
@@ -205,6 +205,40 @@ export function mapAnalysisToVariantDraft(
   }
 }
 
+/** Remove marca do nome/atributos quando o lojista não autorizou. */
+export function sanitizeBrandFromAnalysis(
+  item: ProductAnalysisItem,
+  includeBrand: boolean,
+): { item: ProductAnalysisItem; brand: string | null } {
+  const rawBrand = item.attributes?.brand?.trim() || null
+  if (includeBrand) {
+    return { item, brand: rawBrand }
+  }
+
+  let nome = item.nome
+  if (rawBrand) {
+    const escaped = rawBrand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const prefix = new RegExp(`^${escaped}\\s*[-–—]?\\s*`, 'i')
+    if (prefix.test(nome)) {
+      nome = nome.replace(prefix, '').trim()
+    }
+  }
+
+  if (!item.attributes?.brand) {
+    return { item: { ...item, nome }, brand: null }
+  }
+
+  const { brand: _removed, ...restAttrs } = item.attributes
+  const attributes = Object.keys(restAttrs).length
+    ? (restAttrs as ProductAnalysisAttributes)
+    : undefined
+
+  return {
+    item: { ...item, nome, attributes },
+    brand: null,
+  }
+}
+
 /** Reconstrói stock keys ao editar produto existente. */
 export function stockAxisFromProduct(
   catalogAxes?: CatalogAxes | null,
@@ -213,6 +247,7 @@ export function stockAxisFromProduct(
   if (catalogAxes?.stockAxis) return catalogAxes.stockAxis
   const keys = variants?.flatMap(v => Object.keys(v.stock ?? {})) ?? []
   if (keys.some(isVolumeStockKey)) return 'volume'
+  if (keys.some(isNumericStockKey)) return 'numeric'
   if (keys.length === 1 && keys[0] === 'Único') return 'unique'
   return 'clothing'
 }

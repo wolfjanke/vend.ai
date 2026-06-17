@@ -1,6 +1,6 @@
 import { isBeautyCategory } from '@/lib/product-catalog'
 import type { CatalogAxes, Product, PrimaryAxis, StockAxis } from '@/types'
-import { CLOTHING_SIZES, isVolumeStockKey } from '@/types'
+import { CLOTHING_SIZES, isNumericStockKey, isVolumeStockKey } from '@/types'
 
 const DEFAULT_AXES: CatalogAxes = { primaryAxis: 'color', stockAxis: 'clothing' }
 
@@ -13,7 +13,15 @@ export function inferCatalogAxes(product: Product): CatalogAxes {
   const allKeys = variants.flatMap(v => Object.keys(v.stock ?? {}))
   const hasVolumeKeys = allKeys.some(isVolumeStockKey)
   const hasClothingKeys = allKeys.some(k => CLOTHING_SIZES.includes(k) && k !== 'Único')
+  const hasNumericKeys = allKeys.some(isNumericStockKey)
   const onlyUnique = allKeys.length > 0 && allKeys.every(k => k === 'Único')
+
+  if (hasNumericKeys && !hasVolumeKeys && !hasClothingKeys) {
+    return {
+      primaryAxis: variants.length > 1 ? 'color' : DEFAULT_AXES.primaryAxis,
+      stockAxis:   'numeric',
+    }
+  }
 
   if (hasVolumeKeys || (isBeautyCategory(product.category) && variants.length === 1 && !hasClothingKeys)) {
     if (hasVolumeKeys || variants.some(v => Object.keys(v.stockPrices ?? {}).length > 0)) {
@@ -48,6 +56,7 @@ export function getAxisLabels(axes: CatalogAxes): {
   const secondary =
     axes.stockAxis === 'volume' ? 'Volume'
     : axes.stockAxis === 'unique' ? 'Unidade'
+    : axes.stockAxis === 'numeric' ? 'Tamanho'
     : 'Tamanho'
 
   const primary =

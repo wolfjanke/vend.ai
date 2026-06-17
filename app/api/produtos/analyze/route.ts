@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { analyzeProductPhoto, buildProductAnalysisPrompt, GEMINI_MODELS } from '@/lib/gemini'
 import { parseProductAnalysisRaw, type ProductAnalysisItem } from '@/lib/product-analysis'
-import { mapAnalysisToVariantDraft } from '@/lib/product-analysis-map'
+import { mapAnalysisToVariantDraft, sanitizeBrandFromAnalysis } from '@/lib/product-analysis-map'
 import { inferCatalogMode, type CatalogMode } from '@/lib/product-catalog'
 import type { StoreSettings, ProductAnalysisHints, ProductBlockHint } from '@/types'
 import { getStoreProfile, normalizeProductCategory } from '@/types'
@@ -35,11 +35,16 @@ function enrichAnalysisItem(
   catalogMode: CatalogMode,
   hints?: ProductAnalysisHints | null,
   imageCount = 1,
+  includeBrand = false,
 ) {
   const normalized = normalizeItem(item, customSlugs)
-  const mapped = mapAnalysisToVariantDraft(normalized, catalogMode, hints, imageCount)
+  const rawBrand = normalized.attributes?.brand?.trim() || null
+  const { item: sanitized, brand } = sanitizeBrandFromAnalysis(normalized, includeBrand)
+  const mapped = mapAnalysisToVariantDraft(sanitized, catalogMode, hints, imageCount)
   return {
-    ...normalized,
+    ...sanitized,
+    brand,
+    brandSuppressed: !includeBrand && Boolean(rawBrand),
     catalogAxes: mapped.catalogAxes,
     aiMeta:      mapped.aiMeta,
     variantDrafts: mapped.variants,
@@ -159,6 +164,7 @@ export async function POST(req: NextRequest) {
           catalogForBlock,
           perBlockHints,
           group.imageIndices.length,
+          group.hints?.includeBrand ?? false,
         )
       })
       return NextResponse.json({ batch: true, produtos, mode: 'blocks' })

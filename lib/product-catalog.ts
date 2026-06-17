@@ -68,8 +68,10 @@ function expertIntro(mode: CatalogMode, imageCount: number, multi: boolean, phot
   return `Você é especialista em cadastro de produtos para e-commerce (${domain}). Analise a(s) imagem(ns) enviada(s). Use apenas a imagem e seu conhecimento prévio do modelo — NÃO invente busca na internet.`
 }
 
-const FASHION_NAMING = `- nome: curto e comercial (até ~6 palavras) — ex.: "Regata Preta Brasil", "Vestido Midi Floral"
-- Leia estampa/cor/modelo visíveis; não invente marca se não aparecer`
+const FASHION_NAMING = `- nome: curto e comercial (até ~6 palavras) — ex.: "Bermuda Jeans Azul", "Vestido Midi Floral"
+- Use tipo de peça + cor/estampa/corte visíveis; nome GENÉRICO sem marca de terceiros
+- NÃO coloque marca no campo "nome"; omita attributes.brand salvo instrução explícita do lojista por bloco
+- Não invente marca se não aparecer na peça`
 
 const BEAUTY_NAMING = `- nome: curto e comercial (até ~6 palavras) — priorize texto LEGÍVEL na embalagem (marca + linha + concentração/volume se visíveis)
 - Ex.: "Dior Sauvage EDT", "Perfume Floral 100ml", "Body Splash Morango"

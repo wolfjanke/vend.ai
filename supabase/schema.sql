@@ -37,6 +37,7 @@ create table if not exists products (
   id            uuid primary key default uuid_generate_v4(),
   store_id      uuid not null references stores(id) on delete cascade,
   name          text not null,
+  brand         text,
   description   text not null default '',
   category      text not null default 'outro',
   audience      text check (audience is null or audience in ('feminine', 'masculine', 'unisex', 'kids')),
