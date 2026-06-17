@@ -38,7 +38,7 @@ export const LANDING_FAQ_ITEMS: LandingFaqItem[] = [
   },
   {
     q: 'Tem período de teste nos planos pagos?',
-    a: 'Sim. Starter: 7 dias grátis. Pro e Loja: 14 dias. Enterprise: 30 dias. Você só é cobrado após o trial, se mantiver o plano.',
+    a: 'Sim. Na primeira assinatura paga: Starter, Pro e Loja incluem 14 dias grátis; Enterprise, 30 dias. Use o plano Grátis (até 10 produtos) para conhecer a vitrine antes de assinar. O trial é único por loja — trocar de plano durante o trial não adiciona dias. A cobrança só ocorre após o período, se você mantiver o plano.',
   },
   {
     q: 'Posso pagar trimestral ou anual?',

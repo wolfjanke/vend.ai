@@ -410,7 +410,7 @@ function CadastroPage() {
             </div>
             <div className="flex flex-col gap-2">
               {[
-                { Icon: Camera, title: 'Cadastrar primeiro produto', sub: 'Tire uma foto e a IA faz o resto',    href: '/admin/produtos/novo' },
+                { Icon: Camera, title: 'Cadastrar primeiro produto', sub: 'Foto, preço e tamanhos — a Vi usa isso para responder no Direct', href: '/admin/produtos/novo' },
                 { Icon: LayoutDashboard, title: 'Ir para o painel',           sub: 'Ver pedidos e gerenciar sua loja',    href: '/admin/dashboard' },
                 { Icon: Store, title: 'Ver minha loja',             sub: 'Como seus clientes vão ver',          href: `/${finalSlug}` },
               ].map(item => (

@@ -24,7 +24,7 @@ describe('resolveTrialDays', () => {
       isFirstPaid: true,
       subscriptionStatus: null,
       trialEndsAt: null,
-    })).toBe(7)
+    })).toBe(14)
   })
 
   it('não concede trial em upgrade após histórico', () => {

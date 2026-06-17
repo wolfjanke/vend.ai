@@ -31,6 +31,12 @@ globs: lib/payments/**,lib/asaas/**,app/api/webhooks/**,app/api/admin/subscripti
 
 Upgrade no admin cria assinatura Asaas com trial; cobrança real ocorre no Asaas (link/fatura por e-mail), não há tela de cartão/PIX dentro do painel vend.ai.
 
+## Trial (1ª assinatura paga por loja)
+
+- Starter / Pro / Loja: **14 dias**; Enterprise: **30 dias** (`TRIAL_DAYS_BY_PLAN` em `lib/plans.ts`).
+- Plano Grátis = vitrine com até 10 produtos antes de assinar (não conta como trial pago).
+- Upgrade durante trial ativo: preserva `trial_ends_at` (sem dias extras). Reassinatura após cancelar: sem novo trial (`billing_history`).
+
 ## Não alterar
 
 `SUBACCOUNT_ENCRYPTION_KEY` — mesma chave em local e Vercel; trocar quebra subcontas já cadastradas.

@@ -69,9 +69,9 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
 
 export const PLAN_SLUGS = Object.keys(PLANS) as PlanSlug[]
 
-/** Dias de trial gratuito ao assinar (planos pagos). */
+/** Dias de trial na 1ª assinatura paga (único por loja — ver lib/billing-trial.ts). */
 export const TRIAL_DAYS_BY_PLAN: Partial<Record<PlanSlug, number>> = {
-  starter:    7,
+  starter:    14,
   pro:        14,
   loja:       14,
   enterprise: 30,

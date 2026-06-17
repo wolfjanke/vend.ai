@@ -41,6 +41,27 @@ export async function GET() {
         AND COALESCE(is_demo, false) = false
     `
 
+    const [catalogRiskRow] = await sql`
+      SELECT COUNT(*)::int AS c FROM stores s
+      WHERE COALESCE(s.is_demo, false) = false
+        AND (
+          SELECT COUNT(*)::int FROM products p
+          WHERE p.store_id = s.id AND p.active = true
+        ) < 3
+    `
+    const [onboardingRiskRow] = await sql`
+      SELECT COUNT(*)::int AS c FROM stores s
+      WHERE COALESCE(s.is_demo, false) = false
+        AND s.created_at >= NOW() - INTERVAL '48 hours'
+        AND NOT EXISTS (
+          SELECT 1 FROM orders o WHERE o.store_id = s.id
+        )
+        AND (
+          SELECT COUNT(*)::int FROM products p
+          WHERE p.store_id = s.id AND p.active = true
+        ) < 3
+    `
+
     const recentStores = await sql`
       SELECT s.id, s.name, s.slug, s.plan, s.subscription_status,
         s.created_at, s.last_login_at,
@@ -89,6 +110,8 @@ export async function GET() {
       activeTrials: Number(trialsRow?.c ?? 0),
       inactive7d: Number(inactiveRow?.c ?? 0),
       totalActive: Number(totalRow?.c ?? 0),
+      catalogRiskStores: Number(catalogRiskRow?.c ?? 0),
+      onboardingRiskStores: Number(onboardingRiskRow?.c ?? 0),
       recentStores,
       signupsByMonth: signupsByMonth.map(r => ({
         month: String(r.month),

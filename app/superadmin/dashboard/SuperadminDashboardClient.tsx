@@ -10,6 +10,7 @@ import {
   Timer,
   AlertTriangle,
   TrendingUp,
+  Package,
 } from 'lucide-react'
 import SuperadminMetricCard from '@/components/superadmin/SuperadminMetricCard'
 import SuperadminPageHeader from '@/components/superadmin/SuperadminPageHeader'
@@ -26,6 +27,8 @@ type DashboardData = {
   activeTrials: number
   inactive7d: number
   totalActive: number
+  catalogRiskStores: number
+  onboardingRiskStores: number
   recentStores: Array<{
     id: string
     name: string
@@ -120,7 +123,7 @@ export default function SuperadminDashboardClient() {
         />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
         <SuperadminMetricCard
           icon={<Users size={22} className="text-foreground" />}
           value={data.totalActive}
@@ -137,6 +140,21 @@ export default function SuperadminDashboardClient() {
           icon={<AlertTriangle size={22} className="text-warm" />}
           value={data.inactive7d}
           label="Inativos 7+ dias"
+          href="/superadmin/engajamento?segment=risk"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 mb-6">
+        <SuperadminMetricCard
+          icon={<Package size={22} className="text-primary" />}
+          value={data.catalogRiskStores}
+          label="Lojas com menos de 3 produtos ativos"
+          href="/superadmin/clientes"
+        />
+        <SuperadminMetricCard
+          icon={<AlertTriangle size={22} className="text-warm" />}
+          value={data.onboardingRiskStores}
+          label="Novas 48h sem pedido e catálogo fraco"
           href="/superadmin/engajamento?segment=risk"
         />
       </div>

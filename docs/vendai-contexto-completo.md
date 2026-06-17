@@ -65,7 +65,7 @@ Pergunta *"Qual a diferença de vitrine e loja online?"* — gancho para educar 
 - Trial **somente na 1ª assinatura paga** (`isFirstPaidSubscription` via `billing_history` sem `SUBSCRIPTION_CREATED`)
 - **Intencional:** cancelou e voltou → **sem trial novo**
 - Upgrade durante trial ativo → preserva `trial_ends_at`
-- Dias por plano: Starter 7, Pro/Loja 14, Enterprise 30
+- Dias por plano (1ª assinatura): Starter/Pro/Loja 14, Enterprise 30. Grátis = descoberta (10 produtos) sem trial pago.
 
 ### Arquivos
 
@@ -172,13 +172,34 @@ lib/checkout/marketing-pricing.ts
 lib/banners.ts                  # Banners + roadmap imagem
 lib/banner-ai.ts                # Geração texto Vi
 components/landing/*            # Hero, plans, sticky CTA
-components/loja/ViChat.tsx      # Chat Vi na loja
+lib/vi-readiness.ts            # Score catálogo / Vi pronta
 app/admin/marketing/            # Painel marketing
 ```
 
 ---
 
-## 10. Próximos passos possíveis
+## 10. Vi readiness (onboarding de catálogo)
+
+Risco de churn silencioso: lojista cadastra mal → Vi responde mal → abandono sem ticket.
+
+### Implementado (jun/2026)
+
+| Item | Detalhe |
+|------|---------|
+| `lib/vi-readiness.ts` | Score por produto (foto, preço, estoque) + relatório da loja |
+| `ViReadinessCard` | Painel "Sua Vi está pronta?" no dashboard |
+| Mínimo | 3 produtos ativos completos para status **Pronta** |
+| `/cadastro` passo 3 | Copy honesta no grátis (sem prometer IA na foto) |
+| Superadmin | Lojas com &lt; 3 produtos ativos; novas 48h sem pedido + catálogo fraco |
+
+### Roadmap
+
+- E-mail D+2 para lojas com readiness baixo
+- Wizard no primeiro produto (foto → preço → estoque)
+
+---
+
+## 11. Próximos passos possíveis
 
 1. **Ads:** testar C3 no Instagram com criativo espelhando H1 + mock "Tem no P?"
 2. **Checkout:** ligar quando ≥ N lojas pedirem ou Fase 3 for priorizada

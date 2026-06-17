@@ -14,7 +14,7 @@ import MetricCard from '@/components/admin/MetricCard'
 import PedidoCard from '@/components/admin/PedidoCard'
 import RecoveryCard from '@/components/admin/RecoveryCard'
 import RecoveryInfoModal from '@/components/admin/RecoveryInfoModal'
-import OnboardingChecklist from '@/components/admin/OnboardingChecklist'
+import ViReadinessCard from '@/components/admin/ViReadinessCard'
 import ViUsageCard from '@/components/admin/ViUsageCard'
 import ViLimitBanner from '@/components/admin/ViLimitBanner'
 import AdminPageError from '@/components/admin/AdminPageError'
@@ -22,9 +22,9 @@ import LowStockPanel from '@/components/admin/LowStockPanel'
 import { getViUsageStats } from '@/lib/vi-limits'
 import { getLowStockSkus, normalizeStockAlerts } from '@/lib/stock-alerts'
 import { formatPlanPrice } from '@/lib/plans'
-import type { Order, Product, StoreSettings } from '@/types'
-import type { PlanSlug } from '@/types'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
+import type { Order, Product, StoreSettings, PlanSlug } from '@/types'
+import { assessStoreViReadiness } from '@/lib/vi-readiness'
 
 function todayRange() {
   const start = new Date()
@@ -82,7 +82,6 @@ export default async function DashboardPage() {
   let monthRows: { total: number }[]
   let recentRows: Order[]
   let recoveryRows: Order[]
-  let productCountRows: { c: number }[]
   let activeProducts: Product[]
 
   try {
@@ -101,7 +100,6 @@ export default async function DashboardPage() {
       monthRows,
       recentRows,
       recoveryRows,
-      productCountRows,
       activeProducts,
     ] = await Promise.all([
       sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'NOVO'`,
@@ -114,7 +112,6 @@ export default async function DashboardPage() {
       showRecovery
         ? sql`SELECT * FROM orders WHERE store_id = ${storeId} AND status = 'NOVO' AND created_at < NOW() - INTERVAL '24 hours' AND recovery_sent_at IS NULL ORDER BY created_at DESC`
         : Promise.resolve([]),
-      sql`SELECT COUNT(*)::int as c FROM products WHERE store_id = ${storeId}`,
       sql`SELECT * FROM products WHERE store_id = ${storeId} AND active = true ORDER BY name ASC`,
     ]) as [
       { c: number }[],
@@ -125,7 +122,6 @@ export default async function DashboardPage() {
       { total: number }[],
       Order[],
       Order[],
-      { c: number }[],
       Product[],
     ]
   } catch (e) {
@@ -149,12 +145,11 @@ export default async function DashboardPage() {
   const totalHoje = (todayRows as { total: number }[]).reduce((s, o) => s + Number(o.total), 0)
   const totalSemana = (weekRows as { total: number }[]).reduce((s, o) => s + Number(o.total), 0)
   const totalMes = (monthRows as { total: number }[]).reduce((s, o) => s + Number(o.total), 0)
-  const productCount = Number(productCountRows[0]?.c ?? 0)
   const hasLogo = Boolean(store?.logo_url?.trim())
-  const hasProducts = productCount > 0
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''
   const storePublicUrl = baseUrl && store?.slug ? `${baseUrl}/${store.slug}` : ''
-  const showOnboarding = storePublicUrl && (!hasLogo || !hasProducts)
+  const viReadiness = assessStoreViReadiness((activeProducts ?? []) as Product[])
+  const showViReadiness = Boolean(storePublicUrl)
 
   const stockAlerts = normalizeStockAlerts(store?.settings_json?.stockAlerts)
   const lowStockSkus = stockAlerts.enabled
@@ -235,8 +230,12 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {showOnboarding && (
-        <OnboardingChecklist hasLogo={hasLogo} hasProducts={hasProducts} storeUrl={storePublicUrl} />
+      {showViReadiness && (
+        <ViReadinessCard
+          report={viReadiness}
+          storeUrl={storePublicUrl}
+          hasLogo={hasLogo}
+        />
       )}
 
       {stockAlerts.enabled && (
