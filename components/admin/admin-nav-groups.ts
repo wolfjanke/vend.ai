@@ -53,6 +53,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { label: 'Pedidos',     href: '/admin/pedidos',      Icon: ShoppingBag,     match: 'prefix' },
       { label: 'PDV',         href: '/admin/pdv',          Icon: Monitor,         match: 'prefix', planOnly: 'loja' },
       { label: 'Assistente IA este mês', href: '/admin/dashboard#vi', Icon: Bot, match: 'exact' },
+      { label: 'Plano',       href: '/admin/plano',        Icon: Crown,           match: 'exact' },
     ],
   },
   {

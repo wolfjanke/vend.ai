@@ -143,6 +143,20 @@ export function formatBillingCycleLabel(cycle: BillingCycle): string {
   return 'Mensal'
 }
 
+/** Label curta para tabs mobile (desconto em subtítulo separado). */
+export function formatBillingCycleLabelShort(cycle: BillingCycle): string {
+  if (cycle === 'quarterly') return 'Trimestral'
+  if (cycle === 'annual') return 'Anual'
+  return 'Mensal'
+}
+
+/** Texto de desconto do ciclo, ou null para mensal. */
+export function getBillingCycleDiscountLabel(cycle: BillingCycle): string | null {
+  if (cycle === 'quarterly') return '-10% no total'
+  if (cycle === 'annual') return '-20% no total'
+  return null
+}
+
 export function formatBillingPeriodNoun(cycle: BillingCycle): string {
   if (cycle === 'quarterly') return 'trimestre'
   if (cycle === 'annual') return 'ano'
@@ -191,7 +205,8 @@ export const PLAN_FEATURE_LINES: Record<PlanSlug, string[]> = {
     '500 msgs Vi/mês',
     'Pedidos via WhatsApp',
     'Temas de identidade visual',
-    'Controle de estoque',
+    'Controle de estoque por SKU',
+    'Alertas de estoque no painel',
   ],
   starter: [
     'Até 50 produtos',
@@ -199,6 +214,7 @@ export const PLAN_FEATURE_LINES: Record<PlanSlug, string[]> = {
     '20 análises de foto/mês',
     'Links de pagamento na vitrine',
     'IA no cadastro de produtos',
+    'Alertas de estoque no painel',
   ],
   pro: [
     'Até 200 produtos',
@@ -207,6 +223,7 @@ export const PLAN_FEATURE_LINES: Record<PlanSlug, string[]> = {
     'Cupons de desconto',
     'Recuperação de pedidos',
     'Vi completa + streaming',
+    'Alertas de estoque no painel',
   ],
   loja: [
     'Produtos ilimitados',
@@ -214,6 +231,7 @@ export const PLAN_FEATURE_LINES: Record<PlanSlug, string[]> = {
     'PDV para loja física',
     'Análises de foto ilimitadas',
     'Vi completa + streaming',
+    'Alertas de estoque no painel',
   ],
   enterprise: [
     'Produtos ilimitados',
@@ -221,5 +239,6 @@ export const PLAN_FEATURE_LINES: Record<PlanSlug, string[]> = {
     'Suporte prioritário',
     'Vi completa + streaming',
     'Atendimento dedicado',
+    'Alertas de estoque no painel',
   ],
 }

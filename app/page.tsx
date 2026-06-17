@@ -15,6 +15,7 @@ import LandingHeroMobile from '@/components/landing/LandingHeroMobile'
 import ScrollReveal from '@/components/landing/ScrollReveal'
 import LandingPlans from '@/components/landing/LandingPlans'
 import LandingFooter from '@/components/landing/LandingFooter'
+import LandingStickyCta from '@/components/landing/LandingStickyCta'
 import { LandingEditorialCard, LandingPainLines } from '@/components/landing/LandingEditorialCard'
 
 /** Padding horizontal seguro no mobile (evita texto colado na borda / cortado) */
@@ -33,7 +34,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── Hero ──────────────────────────────────────────────── */}
-      <section className={`min-h-[calc(100vh-64px)] flex flex-col lg:flex-row lg:items-center lg:justify-between ${sectionX} gap-12 lg:gap-8 xl:gap-12 relative overflow-hidden pt-8 pb-16`}>
+      <section data-landing-hero className={`min-h-[calc(100vh-64px)] flex flex-col lg:flex-row lg:items-center lg:justify-between ${sectionX} gap-12 lg:gap-8 xl:gap-12 relative overflow-hidden pt-8 pb-16`}>
         {/* orbs */}
         <div className="animate-float-orb absolute w-[600px] h-[600px] -top-32 -left-32 bg-[radial-gradient(circle,_#7B6EFF12,_transparent_65%)] pointer-events-none" />
         <div className="animate-float-orb2 absolute w-[500px] h-[500px] bottom-0 right-32 bg-[radial-gradient(circle,_#00E5A00D,_transparent_65%)] pointer-events-none" />
@@ -42,18 +43,18 @@ export default function LandingPage() {
           {/* badge */}
           <div className="relative inline-flex flex-wrap items-center justify-center gap-2 px-3 py-2 sm:px-4 rounded-full border border-primary/40 bg-primary/10 text-primary text-[11px] sm:text-xs font-bold mb-6 sm:mb-7 ring-pulse max-w-full text-center">
             <Zap size={12} className="fill-primary shrink-0" />
-            <span className="break-words text-balance">Plataforma com IA para quem vende moda</span>
+            <span className="break-words text-balance">Vitrine online com IA para quem vende moda</span>
           </div>
 
           <h1 className="font-syne font-extrabold text-[1.65rem] min-[400px]:text-[1.85rem] sm:text-4xl md:text-5xl lg:text-6xl leading-[1.12] sm:leading-[1.1] mb-5 break-words hyphens-auto max-w-full">
-            Sua loja de roupas<br />
-            no digital{' '}
-            <span className="text-grad">em 2 minutos.</span>
+            Sua vitrine de moda<br />
+            no ar{' '}
+            <span className="text-grad">em minutos.</span>
           </h1>
 
           <p className="text-muted text-base sm:text-lg leading-relaxed mb-8 max-w-md break-words">
-            Catálogo inteligente, assistente com IA e pedidos organizados no WhatsApp.
-            Use o pagamento que você já conhece — sem precisar de site ou taxa de marketplace.
+            Vitrine inteligente, assistente com IA e pedidos organizados no WhatsApp.
+            Sem marketplace, sem complicação — use o pagamento que você já conhece.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
@@ -81,22 +82,17 @@ export default function LandingPage() {
           </div>
 
           <div className="text-sm text-muted space-y-2 max-w-md">
-            <p className="font-syne font-bold text-foreground text-base break-words">
-              Junte-se a quem já vende mais
-            </p>
             <p className="break-words leading-relaxed">
-              Lojistas de todo o Brasil usando o vend.ai para vender mais com menos esforço.
+              Feito para lojistas de moda no Brasil — do brechó à pequena marca.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <span className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={12} className="fill-accent text-accent" />
-                ))}
-                <span className="ml-1">Avaliação dos lojistas</span>
+                <CheckCircle2 size={13} className="text-accent" />
+                Sem cartão de crédito
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle2 size={13} className="text-accent" />
-                Sem cartão de crédito
+                Cancele quando quiser
               </span>
             </div>
           </div>
@@ -110,7 +106,7 @@ export default function LandingPage() {
       <section className={`${sectionX} py-14 border-t border-border bg-surface/40`}>
         <ScrollReveal className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto min-w-0">
           {[
-            '✓ Loja no ar em 2 minutos',
+            '✓ Vitrine no ar em minutos',
             '✓ Sem cartão de crédito',
             '✓ Cancele quando quiser',
             '✓ Vi atendendo 24h',
@@ -337,12 +333,22 @@ export default function LandingPage() {
             {
               n: '05',
               title: 'Controle de estoque',
-              desc: 'Por tamanho e cor, com alertas automáticos de estoque baixo.',
+              desc: 'Por tamanho, cor ou volume — controle por SKU e aviso de estoque baixo no painel.',
             },
             {
               n: '06',
               title: 'Recuperação de pedido',
               desc: 'No plano Pro ou superior, veja pedidos não finalizados há 24h e envie mensagem pronta pelo painel.',
+            },
+            {
+              n: '07',
+              title: 'Desconto no PIX',
+              desc: 'Configure percentual automático quando o cliente escolhe PIX no carrinho ou no WhatsApp.',
+            },
+            {
+              n: '08',
+              title: 'Cupons e PDV',
+              desc: 'Cupons de desconto no Pro. Mini PDV para loja física no plano Loja.',
             },
           ].map((f, i) => (
             <ScrollReveal key={f.title} delay={i * 80}>
@@ -430,7 +436,7 @@ export default function LandingPage() {
             Lojistas de todo o Brasil usando o vend.ai para vender mais com menos esforço.
           </p>
           <p className="text-[11px] text-muted/80 mb-12 max-w-xl break-words">
-            Exemplos ilustrativos de experiências com a plataforma.
+            Exemplos ilustrativos do dia a dia de quem vende moda online.
           </p>
         </ScrollReveal>
 
@@ -548,6 +554,10 @@ export default function LandingPage() {
         <div className="max-w-2xl space-y-2 min-w-0 mx-auto sm:mx-0">
           {[
             {
+              q: 'Qual a diferença de vitrine e loja online?',
+              a: 'A vitrine é seu catálogo com link próprio — o cliente navega, fala com a Vi e finaliza pelo WhatsApp. Não é um e-commerce com checkout complexo; é o que funciona para quem já vende no Direct.',
+            },
+            {
               q: 'Preciso saber de tecnologia para usar?',
               a: 'Não. O vend.ai foi feito pra quem nunca criou um site. Se você consegue usar o WhatsApp, consegue usar o vend.ai.',
             },
@@ -566,6 +576,10 @@ export default function LandingPage() {
             {
               q: 'Qual o limite de produtos em cada plano?',
               a: 'Grátis: 10 produtos. Starter: 50. Pro: 200. Loja e Enterprise: ilimitado. Cada cor, modelo, estampa ou material diferente conta como 1 produto. Tamanhos (P, M, G, etc.) são variações gratuitas dentro do mesmo produto.',
+            },
+            {
+              q: 'Como funcionam os alertas de estoque?',
+              a: 'Em Configurações → Venda, você ativa os alertas e define quando avisar (ex.: ≤ 3 peças por tamanho ou cor). Os avisos aparecem no dashboard e na lista de produtos — só dentro do painel, sem e-mail.',
             },
             {
               q: 'A análise de foto com IA funciona no plano grátis?',
@@ -610,7 +624,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA Final ─────────────────────────────────────────── */}
-      <section className={`${sectionX} py-20 sm:py-24 border-t border-border relative overflow-hidden`}>
+      <section data-landing-final-cta className={`${sectionX} py-20 sm:py-24 border-t border-border relative overflow-hidden`}>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#7B6EFF18_0%,_transparent_65%)] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,_#00E5A010_0%,_transparent_50%)] pointer-events-none" />
 
@@ -620,8 +634,8 @@ export default function LandingPage() {
             Grátis para começar
           </div>
           <h2 className="font-syne font-extrabold text-3xl sm:text-4xl md:text-5xl mb-5 leading-tight">
-            Sua loja de roupas online<br />
-            <span className="text-grad">em 2 minutos. Grátis.</span>
+            Sua vitrine de moda online.<br />
+            <span className="text-grad">Grátis para começar.</span>
           </h2>
           <p className="text-muted text-base sm:text-lg mb-10 max-w-md mx-auto leading-relaxed">
             Sem cartão de crédito, sem fidelidade, sem complicação. Comece agora e veja como é fácil vender mais.
@@ -650,6 +664,7 @@ export default function LandingPage() {
       </section>
 
       <LandingFooter />
+      <LandingStickyCta />
     </main>
   )
 }

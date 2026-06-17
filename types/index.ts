@@ -78,6 +78,13 @@ export interface PaymentLink {
   active?: boolean
 }
 
+/** Alertas de estoque baixo (painel + lista de produtos). */
+export interface StockAlertsConfig {
+  enabled:   boolean
+  /** Avisar quando SKU tiver qty ≤ threshold (1–99). */
+  threshold: number
+}
+
 export interface StoreSettings {
   theme?:            'dark' | 'light'
   welcomeMessage?:   string
@@ -109,6 +116,8 @@ export interface StoreSettings {
   categoryNavStyle?: 'pills' | 'circles'
   /** Tamanho da logo no header da vitrine: sm (P), md (M), lg (G). */
   logoSize?: 'sm' | 'md' | 'lg'
+  /** Alertas quando estoque por SKU fica baixo. */
+  stockAlerts?: StockAlertsConfig
 }
 
 /** Categoria customizada por loja (valor = slug estável no produto). */

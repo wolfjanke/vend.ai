@@ -21,8 +21,11 @@ import OnboardingChecklist from '@/components/admin/OnboardingChecklist'
 import ViUsageCard from '@/components/admin/ViUsageCard'
 import ViLimitBanner from '@/components/admin/ViLimitBanner'
 import AdminPageError from '@/components/admin/AdminPageError'
+import LowStockPanel from '@/components/admin/LowStockPanel'
 import { getViUsageStats } from '@/lib/vi-limits'
-import type { Order } from '@/types'
+import { getLowStockSkus, normalizeStockAlerts } from '@/lib/stock-alerts'
+import { formatPlanPrice } from '@/lib/plans'
+import type { Order, Product, StoreSettings } from '@/types'
 import type { PlanSlug } from '@/types'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
@@ -60,7 +63,7 @@ function greeting() {
 }
 
 function fmtMoney(n: number) {
-  return `R$\u00a0${n.toFixed(2).replace('.', ',')}`
+  return formatPlanPrice(Math.round(n * 100))
 }
 
 export default async function DashboardPage() {
@@ -72,7 +75,7 @@ export default async function DashboardPage() {
   const week = weekRange()
   const month = monthRange()
 
-  let store: { name: string; plan?: PlanSlug; logo_url: string | null; slug: string } | undefined
+  let store: { name: string; plan?: PlanSlug; logo_url: string | null; slug: string; settings_json?: StoreSettings | null } | undefined
   let viStats: Awaited<ReturnType<typeof getViUsageStats>>
   let novoRows: { c: number }[]
   let confirmadoRows: { c: number }[]
@@ -83,9 +86,10 @@ export default async function DashboardPage() {
   let recentRows: Order[]
   let recoveryRows: Order[]
   let productCountRows: { c: number }[]
+  let activeProducts: Product[]
 
   try {
-    const storeRows = await sql`SELECT name, plan, logo_url, slug FROM stores WHERE id = ${storeId} LIMIT 1`
+    const storeRows = await sql`SELECT name, plan, logo_url, slug, settings_json FROM stores WHERE id = ${storeId} LIMIT 1`
     store = storeRows[0] as typeof store
     const plan = store?.plan ?? 'free'
     const showRecovery = plan === 'pro' || plan === 'loja' || plan === 'enterprise'
@@ -101,6 +105,7 @@ export default async function DashboardPage() {
       recentRows,
       recoveryRows,
       productCountRows,
+      activeProducts,
     ] = await Promise.all([
       sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'NOVO'`,
       sql`SELECT COUNT(*) as c FROM orders WHERE store_id = ${storeId} AND status = 'CONFIRMADO' AND created_at >= ${start} AND created_at <= ${end}`,
@@ -113,6 +118,7 @@ export default async function DashboardPage() {
         ? sql`SELECT * FROM orders WHERE store_id = ${storeId} AND status = 'NOVO' AND created_at < NOW() - INTERVAL '24 hours' AND recovery_sent_at IS NULL ORDER BY created_at DESC`
         : Promise.resolve([]),
       sql`SELECT COUNT(*)::int as c FROM products WHERE store_id = ${storeId}`,
+      sql`SELECT * FROM products WHERE store_id = ${storeId} AND active = true ORDER BY name ASC`,
     ]) as [
       { c: number }[],
       { c: number }[],
@@ -123,6 +129,7 @@ export default async function DashboardPage() {
       Order[],
       Order[],
       { c: number }[],
+      Product[],
     ]
   } catch (e) {
     console.error('[admin/dashboard]', e)
@@ -151,6 +158,11 @@ export default async function DashboardPage() {
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''
   const storePublicUrl = baseUrl && store?.slug ? `${baseUrl}/${store.slug}` : ''
   const showOnboarding = storePublicUrl && (!hasLogo || !hasProducts)
+
+  const stockAlerts = normalizeStockAlerts(store?.settings_json?.stockAlerts)
+  const lowStockSkus = stockAlerts.enabled
+    ? getLowStockSkus(activeProducts ?? [], stockAlerts)
+    : []
 
   return (
     <div className={adminPage}>
@@ -191,29 +203,44 @@ export default async function DashboardPage() {
           label="Total hoje"
           valueColor="text-accent"
           highlight
+          className="col-span-2 lg:col-span-1"
         />
       </div>
 
       <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-8">
         <ViUsageCard used={viStats.used} limit={viStats.limit} percent={viStats.percent} />
-        <div className="bg-surface border border-border rounded-2xl p-5 flex items-start gap-3">
+        <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 flex items-start gap-3 min-w-0 overflow-hidden">
           <TrendingUp size={20} className="text-muted shrink-0 mt-0.5" aria-hidden />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-xs text-muted mb-1">Esta semana</p>
-            <p className="font-syne font-extrabold text-xl text-foreground tabular-nums">{fmtMoney(totalSemana)}</p>
+            <p
+              className="font-syne font-extrabold text-lg sm:text-xl text-foreground tabular-nums truncate"
+              title={fmtMoney(totalSemana)}
+            >
+              {fmtMoney(totalSemana)}
+            </p>
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-2xl p-5 flex items-start gap-3">
+        <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 flex items-start gap-3 min-w-0 overflow-hidden">
           <Calendar size={20} className="text-muted shrink-0 mt-0.5" aria-hidden />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-xs text-muted mb-1">Este mês</p>
-            <p className="font-syne font-extrabold text-xl text-foreground tabular-nums">{fmtMoney(totalMes)}</p>
+            <p
+              className="font-syne font-extrabold text-lg sm:text-xl text-foreground tabular-nums truncate"
+              title={fmtMoney(totalMes)}
+            >
+              {fmtMoney(totalMes)}
+            </p>
           </div>
         </div>
       </div>
 
       {showOnboarding && (
         <OnboardingChecklist hasLogo={hasLogo} hasProducts={hasProducts} storeUrl={storePublicUrl} />
+      )}
+
+      {stockAlerts.enabled && (
+        <LowStockPanel items={lowStockSkus} threshold={stockAlerts.threshold} />
       )}
 
       {/* Pedidos para recuperar */}

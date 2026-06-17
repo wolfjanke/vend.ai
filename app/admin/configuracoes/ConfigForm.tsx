@@ -19,6 +19,7 @@ import ConfigSectionNav, { type ConfigSectionId } from '@/components/admin/Confi
 import { adminCard } from '@/lib/admin-ui'
 import { normalizeCheckoutMode } from '@/lib/checkout-availability'
 import { activePaymentLinks, MAX_PAYMENT_LINKS } from '@/lib/payment-links'
+import { normalizeStockAlerts } from '@/lib/stock-alerts'
 import type { CheckoutMode } from '@/types'
 import {
   LOGO_SIZE_OPTIONS,
@@ -154,6 +155,10 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
     if (v == null || v === undefined) return ''
     return String(v)
   })
+
+  const initialStockAlerts = normalizeStockAlerts(settings.stockAlerts)
+  const [stockAlertsEnabled, setStockAlertsEnabled] = useState(initialStockAlerts.enabled)
+  const [stockAlertsThresholdStr, setStockAlertsThresholdStr] = useState(String(initialStockAlerts.threshold))
 
   const initialDaily = store.vi_daily_limit
   const [viDailyEnabled, setViDailyEnabled] = useState(() => initialDaily != null && initialDaily > 0)
@@ -311,6 +316,10 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
       assistant_welcome_message: canWelcome ? (assistantWelcome.trim() || null) : undefined,
       assistant_tone:          canTone ? assistantTone : undefined,
       assistant_gender:        assistantGender,
+      stockAlerts: normalizeStockAlerts({
+        enabled:   stockAlertsEnabled,
+        threshold: Math.min(99, Math.max(1, parseInt(stockAlertsThresholdStr.trim(), 10) || 3)),
+      }),
     }
     const parsed = storeSettingsPatchSchema.safeParse(body)
     if (!parsed.success) {
@@ -993,6 +1002,43 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
                 Número máximo de parcelas sem juros usado na loja para exibir &quot;Nx R$ …&quot; em cada produto. Deixe em branco para não mostrar essa linha.
               </p>
             </div>
+            )}
+          </div>
+
+          <SectionHeader title="Alertas de estoque" />
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={stockAlertsEnabled}
+                onChange={e => setStockAlertsEnabled(e.target.checked)}
+                className="mt-1 shrink-0"
+              />
+              <span className="min-w-0">
+                <span className="text-sm font-medium text-foreground block">Avisar estoque baixo no painel</span>
+                <span className="text-xs text-muted break-words">
+                  Aparece no dashboard e na lista de produtos. Por SKU (ex.: Vestido Rosa — M).
+                </span>
+              </span>
+            </label>
+
+            {stockAlertsEnabled && (
+              <div className="min-w-0">
+                <label htmlFor="stock-threshold" className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+                  Avisar quando restar ≤
+                </label>
+                <input
+                  id="stock-threshold"
+                  type="number"
+                  min={1}
+                  max={99}
+                  inputMode="numeric"
+                  className="w-full max-w-[120px] min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
+                  value={stockAlertsThresholdStr}
+                  onChange={e => setStockAlertsThresholdStr(e.target.value)}
+                />
+                <p className="text-xs text-muted mt-1.5 break-words">Peças por tamanho, cor ou volume (1 a 99).</p>
+              </div>
             )}
           </div>
 

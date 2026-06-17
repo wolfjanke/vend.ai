@@ -5,6 +5,7 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { Product, ProductVariant, StoreSettings, PlanSlug } from '@/types'
 import { getCategoryDisplayLabel, PLAN_PRODUCT_LIMITS } from '@/types'
+import { normalizeStockAlerts, productLowStockMinQty } from '@/lib/stock-alerts'
 import ToggleActiveButton from './ToggleActiveButton'
 import DeleteProductButton from './DeleteProductButton'
 import Pagination from '@/components/ui/Pagination'
@@ -119,6 +120,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
   const settings = (settingsRows[0]?.settings_json as StoreSettings | null) ?? {}
   const customCategories = settings.customCategories ?? []
   const storePlan = (settingsRows[0]?.plan ?? 'free') as PlanSlug
+  const stockAlerts = normalizeStockAlerts(settings.stockAlerts)
   const productLimit = PLAN_PRODUCT_LIMITS[storePlan]
   const totalProducts = await sql`SELECT COUNT(*)::int as c FROM products WHERE store_id = ${storeId}`
   const totalProductCount = Number(totalProducts[0]?.c ?? 0)
@@ -225,6 +227,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
             {(products as Product[]).map(p => {
               const nVar = p.variants_json?.length ?? 0
               const oos = productOutOfStock(p)
+              const lowQty = stockAlerts.enabled ? productLowStockMinQty(p, stockAlerts.threshold) : null
               return (
                 <div
                   key={p.id}
@@ -258,11 +261,18 @@ export default async function ProdutosPage({ searchParams }: Props) {
                     />
                   </div>
 
-                  {oos && (
-                    <div className="mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border border-warm/40 text-warm bg-warm/10">
-                        Sem estoque
-                      </span>
+                  {(oos || lowQty != null) && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {oos && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border border-warm/40 text-warm bg-warm/10">
+                          Sem estoque
+                        </span>
+                      )}
+                      {!oos && lowQty != null && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border border-yellow-500/40 text-yellow-400 bg-yellow-500/10">
+                          Baixo ({lowQty})
+                        </span>
+                      )}
                     </div>
                   )}
 

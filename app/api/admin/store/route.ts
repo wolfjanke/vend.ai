@@ -66,6 +66,7 @@ export async function PATCH(req: NextRequest) {
       assistant_tone,
       assistant_gender,
       logoSize,
+      stockAlerts,
     } = parsed.data
 
     const storeRows = await sql`
@@ -138,6 +139,7 @@ export async function PATCH(req: NextRequest) {
       ...(freeShippingMin !== undefined && { freeShippingMin }),
       ...(installmentsMaxNoInterest !== undefined && { installmentsMaxNoInterest }),
       ...(logoSize !== undefined && { logoSize: normalizeLogoSize(logoSize) }),
+      ...(stockAlerts !== undefined && { stockAlerts }),
     }
 
     const existingLogo = (storeRows[0]?.logo_url as string | null) ?? null

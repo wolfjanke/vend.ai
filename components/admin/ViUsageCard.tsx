@@ -16,7 +16,7 @@ export default function ViUsageCard({ used, limit, percent }: Props) {
   const pct = Math.min(100, percent)
 
   return (
-    <div id="vi" className="bg-surface border border-border rounded-2xl p-5 min-w-0 scroll-mt-24">
+    <div id="vi" className="bg-surface border border-border rounded-2xl p-4 sm:p-5 min-w-0 scroll-mt-24">
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">Assistente IA este mês</p>
@@ -32,12 +32,21 @@ export default function ViUsageCard({ used, limit, percent }: Props) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <Link
-        href="/admin/configuracoes"
-        className="text-xs text-primary hover:underline min-h-[44px] inline-flex items-center"
-      >
-        Ver detalhes
-      </Link>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        <Link
+          href="/admin/plano"
+          className="text-primary font-semibold hover:underline min-h-[44px] inline-flex items-center"
+        >
+          Gerenciar plano
+        </Link>
+        <span className="text-muted hidden sm:inline" aria-hidden>·</span>
+        <Link
+          href="/admin/configuracoes"
+          className="text-muted hover:text-primary hover:underline min-h-[44px] inline-flex items-center"
+        >
+          Ver detalhes
+        </Link>
+      </div>
     </div>
   )
 }

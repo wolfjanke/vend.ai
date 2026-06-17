@@ -5,6 +5,8 @@ import { Loader2, Crown } from 'lucide-react'
 import {
   formatPlanPrice,
   formatBillingCycleLabel,
+  formatBillingCycleLabelShort,
+  getBillingCycleDiscountLabel,
   formatBillingPeriodNoun,
   getDailyCentsFromCharge,
   PLAN_FEATURE_LINES,
@@ -175,6 +177,96 @@ export default function PlanoClient() {
   const currentBilling = currentPlan?.billing[data.billingCycle]
   const currentDisplayMonthly = currentBilling?.displayMonthlyCents ?? currentPlan?.priceCents ?? 0
 
+  const planDisplayName =
+    data.plan === 'free' ? 'Grátis' : data.plan.charAt(0).toUpperCase() + data.plan.slice(1)
+  const compactPlanLine = [
+    planDisplayName,
+    isPaid && currentPlan ? `${formatPlanPrice(currentDisplayMonthly)}/mês` : null,
+    statusLabel,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const currentPlanBody = (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div>
+          <div className="text-muted text-xs mb-0.5">Plano</div>
+          <div className="font-semibold capitalize">{data.plan === 'free' ? 'Grátis' : data.plan}</div>
+        </div>
+        <div>
+          <div className="text-muted text-xs mb-0.5">Status</div>
+          <div className="font-semibold">{statusLabel}</div>
+        </div>
+        {isPaid && currentPlan && (
+          <>
+            <div>
+              <div className="text-muted text-xs mb-0.5">Valor mensal</div>
+              <div className="font-semibold tabular-nums">{formatPlanPrice(currentDisplayMonthly)}</div>
+            </div>
+            <div>
+              <div className="text-muted text-xs mb-0.5">Ciclo</div>
+              <div className="font-semibold break-words">{formatBillingCycleLabel(data.billingCycle)}</div>
+            </div>
+          </>
+        )}
+        <div>
+          <div className="text-muted text-xs mb-0.5">Renovação</div>
+          <div className="tabular-nums">{formatDate(data.subscriptionEndsAt)}</div>
+        </div>
+      </div>
+
+      {data.subscriptionStatus === 'TRIAL' && data.trialDaysRemaining != null && (
+        <p className="mt-3 text-sm text-accent font-medium">
+          Trial — {data.trialDaysRemaining}{' '}
+          {data.trialDaysRemaining === 1 ? 'dia restante' : 'dias restantes'}
+        </p>
+      )}
+
+      <div className="mt-4 pt-4 border-t border-border space-y-2 text-sm">
+        <div className="flex justify-between gap-2 min-w-0">
+          <span className="text-muted shrink-0">Produtos ativos</span>
+          <span className="tabular-nums shrink-0 text-right">
+            {data.usage.productCount}
+            {data.usage.productLimit != null ? ` / ${data.usage.productLimit}` : ' / ∞'}
+          </span>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <span
+            className="text-muted min-w-0 break-words"
+            title="Mensagens Assistente IA (mês)"
+          >
+            <span className="sm:hidden">Msgs Vi (mês)</span>
+            <span className="hidden sm:inline">Mensagens Assistente IA (mês)</span>
+          </span>
+          <span className="tabular-nums shrink-0 text-right">
+            {data.usage.viMessagesUsed.toLocaleString('pt-BR')} /{' '}
+            {data.usage.viMessagesLimit.toLocaleString('pt-BR')}
+          </span>
+        </div>
+        {data.usage.viOverageMessages > 0 && (
+          <div className="flex justify-between gap-2 text-yellow-400 min-w-0">
+            <span className="break-words">Excedente Assistente IA</span>
+            <span className="tabular-nums shrink-0">
+              {data.usage.viOverageMessages.toLocaleString('pt-BR')}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {isPaid && data.subscriptionStatus !== 'CANCELLED' && (
+        <button
+          type="button"
+          onClick={handleCancel}
+          disabled={!!busy}
+          className="mt-4 w-full min-h-[44px] px-4 py-2 rounded-xl border border-warm/40 text-warm text-sm font-semibold hover:bg-warm/10 disabled:opacity-50"
+        >
+          {busy === 'cancel' ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Cancelar plano'}
+        </button>
+      )}
+    </>
+  )
+
   return (
     <div className="space-y-5 min-w-0">
       {error && (
@@ -183,78 +275,30 @@ export default function PlanoClient() {
         </div>
       )}
 
+      <p className="md:hidden text-sm text-foreground break-words rounded-xl border border-border bg-surface2/40 px-4 py-3">
+        <span className="text-muted text-xs block mb-0.5">Seu plano</span>
+        <span className="font-semibold">{compactPlanLine}</span>
+      </p>
+
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-      {/* Plano atual */}
-      <div className={`${adminCard} xl:col-span-4 xl:sticky xl:top-24 h-fit border-primary/30`}>
+      {/* Plano atual — mobile colapsável */}
+      <details className={`md:hidden ${adminCard} border-primary/30 group`}>
+        <summary className="list-none cursor-pointer flex items-center gap-2 min-h-[44px] [&::-webkit-details-marker]:hidden">
+          <Crown size={18} className="text-primary shrink-0" aria-hidden />
+          <span className="font-syne font-bold text-base min-w-0 truncate flex-1">Plano atual</span>
+          <span className="text-xs text-primary font-semibold shrink-0 group-open:hidden">Expandir</span>
+          <span className="text-xs text-muted font-semibold shrink-0 hidden group-open:inline">Recolher</span>
+        </summary>
+        <div className="pt-3 border-t border-border mt-2">{currentPlanBody}</div>
+      </details>
+
+      {/* Plano atual — desktop */}
+      <div className={`hidden md:block ${adminCard} xl:col-span-4 xl:sticky xl:top-24 h-fit border-primary/30`}>
         <div className="flex items-center gap-2 mb-3">
           <Crown size={18} className="text-primary shrink-0" />
           <span className="font-syne font-bold text-base">Plano atual</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div>
-            <div className="text-muted text-xs mb-0.5">Plano</div>
-            <div className="font-semibold capitalize">{data.plan === 'free' ? 'Grátis' : data.plan}</div>
-          </div>
-          <div>
-            <div className="text-muted text-xs mb-0.5">Status</div>
-            <div className="font-semibold">{statusLabel}</div>
-          </div>
-          {isPaid && currentPlan && (
-            <>
-              <div>
-                <div className="text-muted text-xs mb-0.5">Valor mensal</div>
-                <div className="font-semibold tabular-nums">{formatPlanPrice(currentDisplayMonthly)}</div>
-              </div>
-              <div>
-                <div className="text-muted text-xs mb-0.5">Ciclo</div>
-                <div className="font-semibold break-words">{formatBillingCycleLabel(data.billingCycle)}</div>
-              </div>
-            </>
-          )}
-          <div>
-            <div className="text-muted text-xs mb-0.5">Renovação</div>
-            <div className="tabular-nums">{formatDate(data.subscriptionEndsAt)}</div>
-          </div>
-        </div>
-
-        {data.subscriptionStatus === 'TRIAL' && data.trialDaysRemaining != null && (
-          <p className="mt-3 text-sm text-accent font-medium">
-            Trial — {data.trialDaysRemaining} {data.trialDaysRemaining === 1 ? 'dia restante' : 'dias restantes'}
-          </p>
-        )}
-
-        <div className="mt-4 pt-4 border-t border-border space-y-2 text-sm">
-          <div className="flex justify-between gap-2">
-            <span className="text-muted">Produtos ativos</span>
-            <span className="tabular-nums shrink-0">
-              {data.usage.productCount}
-              {data.usage.productLimit != null ? ` / ${data.usage.productLimit}` : ' / ∞'}
-            </span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="text-muted">Mensagens Assistente IA (mês)</span>
-            <span className="tabular-nums shrink-0">
-              {data.usage.viMessagesUsed.toLocaleString('pt-BR')} / {data.usage.viMessagesLimit.toLocaleString('pt-BR')}
-            </span>
-          </div>
-          {data.usage.viOverageMessages > 0 && (
-            <div className="flex justify-between gap-2 text-yellow-400">
-              <span>Excedente Assistente IA</span>
-              <span className="tabular-nums">{data.usage.viOverageMessages.toLocaleString('pt-BR')}</span>
-            </div>
-          )}
-        </div>
-
-        {isPaid && data.subscriptionStatus !== 'CANCELLED' && (
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={!!busy}
-            className="mt-4 w-full min-h-[44px] px-4 py-2 rounded-xl border border-warm/40 text-warm text-sm font-semibold hover:bg-warm/10 disabled:opacity-50"
-          >
-            {busy === 'cancel' ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Cancelar plano'}
-          </button>
-        )}
+        {currentPlanBody}
       </div>
 
       {/* Grid de planos */}
@@ -262,31 +306,44 @@ export default function PlanoClient() {
       <div>
         <h2 className="font-syne font-bold text-sm mb-3">Planos disponíveis</h2>
 
-        <div className="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Periodicidade de cobrança">
+        <div
+          className="grid grid-cols-1 min-[400px]:grid-cols-3 gap-2 mb-4 pt-1"
+          role="tablist"
+          aria-label="Periodicidade de cobrança"
+        >
           {BILLING_CYCLES.map(cycle => {
             const active = billingCycle === cycle
             const isAnnual = cycle === 'annual'
+            const discount = getBillingCycleDiscountLabel(cycle)
             return (
               <button
                 key={cycle}
                 type="button"
                 role="tab"
                 aria-selected={active}
+                aria-label={formatBillingCycleLabel(cycle)}
                 onClick={() => setBillingCycle(cycle)}
-                className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold border transition-all break-words ${
+                className={`relative w-full min-h-[44px] px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all flex flex-col items-center justify-center gap-0.5 ${
                   active
                     ? 'bg-primary text-white border-primary'
                     : 'border-border text-muted hover:border-primary hover:text-foreground'
-                }`}
+                } ${isAnnual ? 'mt-2 min-[400px]:mt-0' : ''}`}
               >
-                {formatBillingCycleLabel(cycle)}
                 {isAnnual && (
-                  <span className={`ml-1.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
-                    active ? 'bg-white/20 text-white' : 'bg-accent/20 text-accent'
-                  }`}>
+                  <span
+                    className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap ${
+                      active ? 'bg-white/20 text-white' : 'bg-accent/20 text-accent'
+                    }`}
+                  >
                     Melhor valor
                   </span>
                 )}
+                <span>{formatBillingCycleLabelShort(cycle)}</span>
+                {discount ? (
+                  <span className={`text-[10px] font-normal ${active ? 'text-white/80' : 'text-muted'}`}>
+                    {discount}
+                  </span>
+                ) : null}
               </button>
             )
           })}
@@ -315,7 +372,7 @@ export default function PlanoClient() {
                   </span>
                 )}
                 <div className="font-syne font-bold capitalize mb-1">{p.name}</div>
-                <div className="text-lg font-extrabold tabular-nums mb-1">
+                <div className="text-base sm:text-lg font-extrabold tabular-nums mb-1 min-w-0 truncate">
                   {formatPlanPrice(displayMonthly)}
                   <span className="text-xs font-normal text-muted">/mês</span>
                 </div>

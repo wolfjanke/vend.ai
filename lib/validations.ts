@@ -114,6 +114,10 @@ export const storeSettingsPatchSchema = z.object({
   freeShippingMin: z.number().nonnegative().nullable().optional(),
   installmentsMaxNoInterest: z.number().int().min(1).max(48).nullable().optional(),
   viDailyLimit: z.number().int().min(1).max(100_000).nullable().optional(),
+  stockAlerts: z.object({
+    enabled:   z.boolean(),
+    threshold: z.number().int().min(1).max(99),
+  }).optional(),
   assistant_name: z
     .string()
     .max(20, 'Máximo 20 caracteres')

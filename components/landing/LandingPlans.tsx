@@ -1,25 +1,55 @@
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import ScrollReveal from '@/components/landing/ScrollReveal'
-import { PLANS, PLAN_SLUGS, formatPlanPrice, formatOverageLine, PLAN_FEATURE_LINES, TRIAL_DAYS_BY_PLAN, type PlanSlug } from '@/lib/plans'
+import {
+  PLANS,
+  PLAN_SLUGS,
+  formatPlanPrice,
+  formatOverageLine,
+  PLAN_FEATURE_LINES,
+  TRIAL_DAYS_BY_PLAN,
+  type PlanSlug,
+} from '@/lib/plans'
 
 export default function LandingPlans() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4 sm:gap-5 min-w-0">
-      {PLAN_SLUGS.map((slug, i) => {
-        const plan = PLANS[slug]
-        const popular = slug === 'pro'
-        const overage = formatOverageLine(slug)
-        const priceLabel = formatPlanPrice(plan.price)
-        const trialDays = TRIAL_DAYS_BY_PLAN[slug]
+    <div className="min-w-0">
+      {/* Mobile: carrossel horizontal com snap */}
+      <div
+        className="flex sm:hidden gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label="Planos — deslize para ver mais"
+      >
+        {PLAN_SLUGS.map((slug, i) => (
+          <div key={slug} className="shrink-0 w-[85vw] max-w-[320px] snap-center min-w-0">
+            <PlanCard slug={slug} index={i} />
+          </div>
+        ))}
+      </div>
 
-        return (
-          <ScrollReveal key={slug} delay={i * 80}>
-            <div
-              className={`bg-[#161616] border rounded-[2px] p-5 sm:p-6 w-full flex flex-col h-full min-w-0 ${
-                popular ? 'border-primary shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]' : 'border-border'
-              }`}
-            >
+      {/* Tablet+ : grid */}
+      <div className="hidden sm:grid sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4 sm:gap-5 min-w-0">
+        {PLAN_SLUGS.map((slug, i) => (
+          <PlanCard key={slug} slug={slug} index={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PlanCard({ slug, index: i }: { slug: PlanSlug; index: number }) {
+  const plan = PLANS[slug]
+  const popular = slug === 'pro'
+  const overage = formatOverageLine(slug)
+  const priceLabel = formatPlanPrice(plan.price)
+  const trialDays = TRIAL_DAYS_BY_PLAN[slug]
+
+  return (
+    <ScrollReveal delay={i * 80}>
+      <div
+        className={`bg-[#161616] border rounded-[2px] p-5 sm:p-6 w-full flex flex-col h-full min-w-0 ${
+          popular ? 'border-primary shadow-[0_0_0_1px_var(--primary-dim),0_20px_60px_var(--primary-glow)]' : 'border-border'
+        }`}
+      >
               {popular && (
                 <span className="inline-flex bg-primary text-white text-xs font-bold px-3 py-1 rounded-full self-start mb-3">
                   Mais popular
@@ -58,10 +88,7 @@ export default function LandingPlans() {
               >
                 {slug === 'free' ? 'Começar grátis' : `Escolher ${plan.name}`}
               </Link>
-            </div>
-          </ScrollReveal>
-        )
-      })}
-    </div>
+      </div>
+    </ScrollReveal>
   )
 }
