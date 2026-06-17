@@ -17,6 +17,9 @@ export function quoteStatusLabel(
   return isQuoteOrder(order) ? 'Orçamento' : fallback
 }
 
+/** Badge de status para orçamentos em aberto (distinto de cancelado). */
+export const QUOTE_STATUS_COLOR = 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30'
+
 /** Normaliza item vindo do JSON do pedido (qty/price podem vir como string). */
 export function normalizeOrderItem(raw: OrderItem): OrderItem {
   return {

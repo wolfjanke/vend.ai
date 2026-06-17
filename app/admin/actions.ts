@@ -13,6 +13,8 @@ import { incrementStockForOrder } from '@/lib/order-pricing'
 import { PRODUCT_CATEGORY_SLUGS } from '@/types'
 import { stripEmojis } from '@/lib/strip-emoji'
 import { normalizeCategoryEmoji } from '@/lib/category-nav'
+import { normalizeStockAlerts } from '@/lib/stock-alerts'
+import type { StockAlertsConfig } from '@/types'
 
 function slugifyLabel(label: string): string {
   const base = label
@@ -164,6 +166,31 @@ export async function updateCategoryNavStyle(style: 'pills' | 'circles'): Promis
     WHERE id = ${session.storeId}
   `
   await revalidateStorePaths(session.storeId)
+}
+
+export async function saveStockAlerts(
+  enabled: boolean,
+  threshold: number,
+): Promise<StockAlertsConfig> {
+  const session = await getSession()
+  if (!session?.storeId) throw new Error('Não autorizado')
+
+  const stockAlerts = normalizeStockAlerts({ enabled, threshold })
+
+  const rows = await sql`
+    UPDATE stores
+    SET settings_json = jsonb_set(
+      COALESCE(settings_json, '{}'::jsonb),
+      '{stockAlerts}',
+      ${JSON.stringify(stockAlerts)}::jsonb,
+      true
+    )
+    WHERE id = ${session.storeId}
+    RETURNING id
+  `
+  if (!rows[0]) throw new Error('Loja não encontrada')
+
+  return stockAlerts
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {

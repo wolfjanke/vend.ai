@@ -242,7 +242,7 @@ export default function ViChat({
       setApiMessages([...apiNext, { role: 'assistant', content: accumulated }])
     } catch (err) {
       const detail = err instanceof Error ? err.message : ''
-      const friendly = detail && !['Erro na API', 'Resposta inválida', 'Resposta vazia'].includes(detail)
+      const friendly = detail && !['Erro na API', 'Resposta inválida', 'Resposta vazia', 'Erro interno'].includes(detail)
         ? detail
         : 'Desculpe, tive um problema. Tente novamente ou fale com nossa vendedora no WhatsApp!'
       setMessages([...displayNext, {

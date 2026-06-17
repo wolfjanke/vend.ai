@@ -180,8 +180,8 @@ export function buildWhatsAppRedirectUrl(whatsapp: string): string {
   return `https://wa.me/${withCountry}`
 }
 
-export function viModelForPlan(plan: PlanSlug): string {
-  return plan === 'free' ? GEMINI_MODELS.stockSearch : GEMINI_MODELS.viChat
+export function viModelForPlan(_plan: PlanSlug): string {
+  return GEMINI_MODELS.viChat
 }
 
 export function viStreamsForPlan(plan: PlanSlug): boolean {

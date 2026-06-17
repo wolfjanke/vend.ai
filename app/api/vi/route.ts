@@ -151,10 +151,25 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     logServerError('[/api/vi]', error)
     const msg = error instanceof Error ? error.message : ''
-    if (msg.includes('429') || msg.toLowerCase().includes('quota')) {
+    const lower = msg.toLowerCase()
+    if (
+      msg.includes('429') ||
+      lower.includes('quota') ||
+      lower.includes('resource exhausted')
+    ) {
       return NextResponse.json(
         { error: 'Muitas consultas à IA agora. Aguarde um minuto e tente de novo.' },
         { status: 429 },
+      )
+    }
+    if (
+      msg.includes('503') ||
+      lower.includes('high demand') ||
+      lower.includes('unavailable')
+    ) {
+      return NextResponse.json(
+        { error: 'A assistente está com alta demanda. Aguarde alguns segundos e tente de novo.' },
+        { status: 503 },
       )
     }
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

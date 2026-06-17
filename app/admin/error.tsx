@@ -15,8 +15,8 @@ export default function AdminError({
         Erro ao carregar esta página
       </h1>
       <p className="text-sm text-muted mb-6 break-words">
-        Pode ser uma migration pendente no banco (008–010) ou instabilidade momentânea.
-        Confira os logs do servidor e tente novamente.
+        Pode ser instabilidade momentânea na conexão com o Neon, migration pendente ou internet.
+        Confira <code className="font-mono text-xs">DATABASE_URL</code> (use endpoint com <code className="font-mono text-xs">-pooler</code>) e tente novamente.
       </p>
       <button
         type="button"

@@ -1,15 +1,15 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Shirt } from 'lucide-react'
+import { Shirt } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { getCategoryDisplayLabel, type Product, type ProductVariant, type StoreSettings, type PlanSlug } from '@/types'
+import { getCategoryDisplayLabel, type Product, type ProductVariant, type StoreSettings } from '@/types'
 import { getStorePlanContext } from '@/lib/store-plan-access'
 import { normalizeStockAlerts, productLowStockMinQty } from '@/lib/stock-alerts'
 import ToggleActiveButton from './ToggleActiveButton'
 import DeleteProductButton from './DeleteProductButton'
 import Pagination from '@/components/ui/Pagination'
-import StockAlertsSettings from '@/components/admin/StockAlertsSettings'
+import ProdutosHeaderActions from '@/components/admin/produtos/ProdutosHeaderActions'
 
 const PAGE_SIZE = 24
 
@@ -54,10 +54,8 @@ export default async function ProdutosPage({ searchParams }: Props) {
   const sort = parseSort(params.sort)
   const categoryParam = params.category?.trim() ?? ''
 
-  const settingsRows = await sql`SELECT settings_json, plan, is_demo, slug, name, whatsapp FROM stores WHERE id = ${storeId} LIMIT 1`
+  const settingsRows = await sql`SELECT settings_json, plan, is_demo, slug FROM stores WHERE id = ${storeId} LIMIT 1`
   const settings = (settingsRows[0]?.settings_json as StoreSettings | null) ?? {}
-  const storeName = String(settingsRows[0]?.name ?? '')
-  const storeWhatsapp = String(settingsRows[0]?.whatsapp ?? '')
   const customCategories = settings.customCategories ?? []
 
   const categoryRows = await sql`
@@ -183,20 +181,8 @@ export default async function ProdutosPage({ searchParams }: Props) {
             )}
           </div>
         </div>
-        <Link
-          href="/admin/produtos/novo"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold hover:bg-primary/20 transition-all shrink-0 self-start"
-        >
-          <Plus size={18} aria-hidden />
-          Novo produto
-        </Link>
+        <ProdutosHeaderActions stockAlerts={stockAlerts} />
       </div>
-
-      <StockAlertsSettings
-        initial={stockAlerts}
-        storeName={storeName}
-        whatsapp={storeWhatsapp}
-      />
 
       <form action={basePath} method="GET" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_12rem_12rem_auto] gap-2 lg:items-end mb-6">
         <div className="min-w-0 sm:col-span-2 lg:col-span-1">

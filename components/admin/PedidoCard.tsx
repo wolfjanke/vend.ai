@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react'
 import type { DeliveryAddress, Order, OrderItem, OrderStatus } from '@/types'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types'
 import { updateOrderStatus } from '@/app/admin/actions'
-import { isQuoteOrder, normalizeOrderItems, quoteStatusLabel } from '@/lib/orders'
+import { isQuoteOrder, normalizeOrderItems, quoteStatusLabel, QUOTE_STATUS_COLOR } from '@/lib/orders'
 import { formatPhoneDisplay, whatsappWaMeDigits } from '@/lib/masks'
 import PedidoQuoteEditor from '@/components/admin/PedidoQuoteEditor'
 
@@ -69,9 +69,7 @@ export default function PedidoCard({ order }: Props) {
 
   const quote = isQuoteOrder({ ...order, status })
   const statusLabel = quoteStatusLabel({ ...order, status }, ORDER_STATUS_LABELS[status])
-  const statusColor = quote
-    ? 'text-warm bg-warm/10 border-warm/30'
-    : ORDER_STATUS_COLORS[status]
+  const statusColor = quote ? QUOTE_STATUS_COLOR : ORDER_STATUS_COLORS[status]
 
   const dc = Number(order.discount_coupon ?? 0)
   const dp = Number(order.discount_pix ?? 0)
@@ -119,11 +117,46 @@ export default function PedidoCard({ order }: Props) {
 
   const actions = quote
     ? [
-        { key: 'confirm_payment', label: 'Pagamento confirmado', cls: 'text-accent border-accent/40 hover:bg-accent/10' },
+        { key: 'confirm_payment', label: 'Pagamento confirmado', cls: 'bg-accent/15 border-accent/50 text-accent hover:bg-accent/25' },
         { key: 'edit', label: 'Editar orçamento', cls: 'text-primary border-primary/40 hover:bg-primary/20' },
         { key: 'cancel', label: 'Descartar', cls: 'text-warm border-warm/40 hover:bg-warm/10', destructive: true },
       ]
     : NEXT_ACTIONS[status].map(a => ({ ...a, key: a.status }))
+
+  type CardAction = (typeof actions)[number]
+
+  function onActionClick(action: CardAction) {
+    if ('destructive' in action && action.destructive) {
+      setCancelConfirm(true)
+      return
+    }
+    if (action.key === 'edit') {
+      setEditing(true)
+      return
+    }
+    if (action.key === 'confirm_payment') {
+      void confirmQuotePayment()
+      return
+    }
+    if ('status' in action && action.status) {
+      handleAction(action.status, action.key)
+    }
+  }
+
+  function renderActionButton(action: CardAction, fullWidth = true) {
+    return (
+      <button
+        key={action.key}
+        type="button"
+        onClick={() => onActionClick(action)}
+        disabled={pending || pendingKey === action.key}
+        className={`px-3.5 py-2 min-h-[44px] rounded-lg border text-xs font-semibold transition-all disabled:opacity-50 inline-flex items-center justify-center gap-1.5 ${fullWidth ? 'w-full' : 'w-auto'} ${action.cls}`}
+      >
+        {pendingKey === action.key ? <Loader2 size={14} className="animate-spin shrink-0" /> : null}
+        <span className="truncate">{action.label}</span>
+      </button>
+    )
+  }
 
   return (
     <div className="bg-surface border border-border rounded-2xl p-5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all">
@@ -282,35 +315,19 @@ export default function PedidoCard({ order }: Props) {
       )}
 
       {actions.length > 0 && !cancelConfirm && !editing && (
-        <div className="flex gap-2 flex-wrap">
-          {actions.map(action => (
-            <button
-              key={action.key}
-              onClick={() => {
-                if (action.destructive) {
-                  setCancelConfirm(true)
-                  return
-                }
-                if (action.key === 'edit') {
-                  setEditing(true)
-                  return
-                }
-                if (action.key === 'confirm_payment') {
-                  void confirmQuotePayment()
-                  return
-                }
-                if ('status' in action && action.status) {
-                  handleAction(action.status, action.key)
-                }
-              }}
-              disabled={pending || pendingKey === action.key}
-              className={`px-3.5 py-2 min-h-[40px] rounded-lg border text-xs font-semibold transition-all disabled:opacity-50 inline-flex items-center justify-center gap-1.5 ${action.cls}`}
-            >
-              {pendingKey === action.key ? <Loader2 size={14} className="animate-spin" /> : null}
-              {action.label}
-            </button>
-          ))}
-        </div>
+        quote ? (
+          <div className="space-y-2">
+            {renderActionButton(actions[0])}
+            <div className="grid grid-cols-2 gap-2">
+              {renderActionButton(actions[1])}
+              {renderActionButton(actions[2])}
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2 flex-wrap">
+            {actions.map(action => renderActionButton(action, false))}
+          </div>
+        )
       )}
 
       {(status === 'ENTREGUE' || status === 'CANCELADO') && (

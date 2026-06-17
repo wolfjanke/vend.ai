@@ -463,6 +463,19 @@ function extractChunkText(chunk: unknown): string {
   )
 }
 
+function isGeminiTransientError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error)
+  const lower = msg.toLowerCase()
+  return (
+    msg.includes('503') ||
+    msg.includes('429') ||
+    lower.includes('high demand') ||
+    lower.includes('unavailable') ||
+    lower.includes('quota') ||
+    lower.includes('resource exhausted')
+  )
+}
+
 /** Resposta da Vi — streaming (planos pagos) ou texto direto (grátis). */
 export async function viChatResponse(options: ViChatOptions): Promise<Response | string> {
   const modelName = options.model ?? GEMINI_MODELS.viChat
@@ -475,31 +488,41 @@ export async function viChatResponse(options: ViChatOptions): Promise<Response |
     throw new Error('Nenhuma mensagem do cliente para responder')
   }
 
-  if (options.stream) {
-    const result = await model.generateContentStream({ contents })
-    const encoder = new TextEncoder()
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of result.stream) {
-            const text = extractChunkText(chunk)
-            if (text) controller.enqueue(encoder.encode(text))
+  async function runOnce(): Promise<Response | string> {
+    if (options.stream) {
+      const result = await model.generateContentStream({ contents })
+      const encoder = new TextEncoder()
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of result.stream) {
+              const text = extractChunkText(chunk)
+              if (text) controller.enqueue(encoder.encode(text))
+            }
+          } finally {
+            controller.close()
           }
-        } finally {
-          controller.close()
-        }
-      },
-    })
-    return new Response(readable, {
-      headers: {
-        'Content-Type':  'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-      },
-    })
+        },
+      })
+      return new Response(readable, {
+        headers: {
+          'Content-Type':  'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        },
+      })
+    }
+
+    const result = await model.generateContent({ contents })
+    return result.response.text?.() ?? ''
   }
 
-  const result = await model.generateContent({ contents })
-  return result.response.text?.() ?? ''
+  try {
+    return await runOnce()
+  } catch (first) {
+    if (!isGeminiTransientError(first)) throw first
+    await new Promise(r => setTimeout(r, 800))
+    return await runOnce()
+  }
 }
 
 export { genAI }

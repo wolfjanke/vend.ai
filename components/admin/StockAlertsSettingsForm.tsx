@@ -1,66 +1,62 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { normalizeStockAlerts } from '@/lib/stock-alerts'
 import type { StockAlertsConfig } from '@/types'
-import { adminCard } from '@/lib/admin-ui'
+import { saveStockAlerts } from '@/app/admin/actions'
 
 interface Props {
-  initial:     StockAlertsConfig
-  storeName:   string
-  whatsapp:    string
+  initial:  StockAlertsConfig
+  onSaved?: (config: StockAlertsConfig) => void
 }
 
-export default function StockAlertsSettings({ initial, storeName, whatsapp }: Props) {
+export default function StockAlertsSettingsForm({ initial, onSaved }: Props) {
   const normalized = normalizeStockAlerts(initial)
   const [enabled, setEnabled] = useState(normalized.enabled)
   const [thresholdStr, setThresholdStr] = useState(String(normalized.threshold))
-  const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [pending, startTransition] = useTransition()
 
-  async function handleSave() {
+  function handleSave() {
     const stockAlerts = normalizeStockAlerts({
       enabled,
       threshold: Math.min(99, Math.max(1, parseInt(thresholdStr.trim(), 10) || 3)),
     })
 
-    setLoading(true)
     setError('')
     setSaved(false)
 
-    try {
-      const res = await fetch('/api/admin/store', {
-        method:  'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name: storeName.trim(), whatsapp, stockAlerts }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError((data as { error?: string }).error ?? 'Erro ao salvar.')
-        return
+    startTransition(async () => {
+      try {
+        const result = await saveStockAlerts(stockAlerts.enabled, stockAlerts.threshold)
+        setSaved(true)
+        onSaved?.(result)
+        window.setTimeout(() => setSaved(false), 2000)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : ''
+        if (
+          msg.toLowerCase().includes('fetch failed') ||
+          msg.toLowerCase().includes('connect') ||
+          msg.toLowerCase().includes('timeout')
+        ) {
+          setError('Falha de conexão com o banco. Verifique a internet e tente de novo.')
+        } else {
+          setError(msg || 'Erro ao salvar alertas.')
+        }
       }
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } catch {
-      setError('Erro ao salvar.')
-    } finally {
-      setLoading(false)
-    }
+    })
   }
 
   return (
-    <section className={`${adminCard} mb-6 space-y-4`}>
-      <div>
-        <h2 className="font-syne font-bold text-base sm:text-lg text-foreground">Alertas de estoque</h2>
-        <p className="text-xs text-muted mt-1 break-words">
-          Avisos internos no painel — não afetam a vitrine. Também aparecem no{' '}
-          <Link href="/admin/dashboard" className="text-primary font-semibold hover:underline">
-            dashboard
-          </Link>.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-xs text-muted break-words">
+        Avisos internos no painel — não afetam a vitrine. Também aparecem no{' '}
+        <Link href="/admin/dashboard" className="text-primary font-semibold hover:underline">
+          dashboard
+        </Link>.
+      </p>
 
       <label className="flex items-start gap-3 cursor-pointer min-h-[44px]">
         <input
@@ -72,7 +68,7 @@ export default function StockAlertsSettings({ initial, storeName, whatsapp }: Pr
         <span className="min-w-0">
           <span className="text-sm font-medium text-foreground block">Avisar estoque baixo no painel</span>
           <span className="text-xs text-muted break-words">
-            Destaca SKUs com poucas peças (ex.: Vestido Rosa — M) na lista abaixo.
+            Destaca SKUs com poucas peças (ex.: Vestido Rosa — M) na lista de produtos.
           </span>
         </span>
       </label>
@@ -104,16 +100,16 @@ export default function StockAlertsSettings({ initial, storeName, whatsapp }: Pr
 
       <button
         type="button"
-        onClick={() => void handleSave()}
-        disabled={loading}
-        className={`w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+        onClick={handleSave}
+        disabled={pending}
+        className={`w-full min-h-[44px] px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
           saved
             ? 'bg-accent text-bg'
             : 'bg-primary text-white hover:bg-primary/90'
         } disabled:opacity-60`}
       >
-        {loading ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar alertas'}
+        {pending ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar alertas'}
       </button>
-    </section>
+    </div>
   )
 }
