@@ -43,7 +43,7 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
     .join('\n')
 
   const lines: string[] = [
-    `🛍️ *Orçamento #${orderNum} — vend.ai*`,
+    `🛍️ *Orçamento #${orderNum} — vendai.club*`,
     `_Intenção de compra — confirme valores e estoque com o cliente antes de fechar._`,
     ``,
     `*Cliente:* ${name}`,
@@ -103,7 +103,7 @@ export function formatOrderMessage(payload: CheckoutPayload): string {
   }
 
   if (notes?.trim()) lines.push('', `*Obs:* ${notes.trim()}`)
-  lines.push(``, now, ``, `Pedido feito via vend.ai/\u200b${store.slug}`)
+  lines.push(``, now, ``, `Pedido feito via vendai.club/\u200b${store.slug}`)
 
   return lines.join('\n')
 }

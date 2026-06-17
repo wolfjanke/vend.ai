@@ -1,6 +1,6 @@
-# vend.ai
+# vendai.club
 
-Sistema de vendas para lojas de moda com IA integrada. Catálogo digital + assistente Vi (Gemini) + pedidos no WhatsApp. Assinatura dos planos via Asaas (checkout integrado da loja: futuro, flag `CHECKOUT_ENABLED`).
+Plataforma de vitrine online com IA para lojas de moda no Brasil. Site: https://vendai.club
 
 **Produção:** [vendai.club](https://vendai.club)
 
@@ -34,8 +34,8 @@ Planos pagos incluem excedente de mensagens Vi (ver `lib/plans.ts`). Definição
 ## Setup local
 
 ```bash
-git clone https://github.com/seu-usuario/vend.ai.git
-cd vend.ai
+git clone https://github.com/seu-usuario/vend.ai.git vendai.club
+cd vendai.club
 npm install
 cp .env.local.example .env.local
 ```

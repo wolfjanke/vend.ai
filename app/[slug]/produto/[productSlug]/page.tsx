@@ -20,7 +20,7 @@ function appBaseUrl(): string {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  if (isReservedStoreSlug(params.slug)) return { title: 'vend.ai' }
+  if (isReservedStoreSlug(params.slug)) return { title: 'vendai.club' }
 
   const storeName = await getStoreNameBySlug(params.slug)
   if (!storeName) return { title: 'Loja não encontrada' }

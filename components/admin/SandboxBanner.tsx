@@ -1,6 +1,6 @@
 import { isSandboxMode, getVendaiAsaasKey } from '@/lib/payments/config'
 
-/** Aviso de sandbox para cobrança de assinaturas vend.ai — exibir em /admin/plano, não no layout global. */
+/** Aviso de sandbox para cobrança de assinaturas vendai.club — exibir em /admin/plano, não no layout global. */
 export default function SandboxBanner() {
   if (!isSandboxMode()) return null
 

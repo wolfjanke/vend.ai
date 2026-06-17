@@ -11,6 +11,8 @@ import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
 import type { AgeGroup, GenderFocus } from '@/types'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
+import BrandLogo from '@/components/BrandLogo'
+import { BRAND, storePublicPath } from '@/lib/brand'
 
 type Step = 1 | 2 | 3
 
@@ -208,8 +210,8 @@ function CadastroPage() {
     <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md bg-surface border border-border rounded-[28px] p-6 sm:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.4)] animate-fade-up">
 
-        <div className="font-syne font-extrabold text-2xl sm:text-3xl text-grad text-center mb-8">
-          vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
+        <div className="flex justify-center mb-8">
+          <BrandLogo size="xl" />
         </div>
 
         <div className="flex items-center justify-center gap-0 mb-9">
@@ -303,7 +305,7 @@ function CadastroPage() {
               <div className="flex flex-col gap-1 px-3.5 py-2.5 bg-accent/10 border border-accent/30 rounded-[10px] min-w-0">
                 <div className="flex items-start gap-2 min-w-0">
                   <span className="text-xs text-muted shrink-0 pt-0.5">Seu link:</span>
-                  <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all min-w-0">vend.ai/{slug}</span>
+                  <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all min-w-0">{storePublicPath(slug)}</span>
                 </div>
                 <p className="text-[11px] text-muted break-words">
                   Se o endereço já existir, adicionamos um sufixo automático ao criar a loja.
@@ -397,7 +399,7 @@ function CadastroPage() {
             <h2 className="font-syne font-extrabold text-xl sm:text-2xl mb-1 text-center">Sua loja está no ar!</h2>
             <p className="text-sm text-muted text-center mb-5">Tudo pronto para começar a vender</p>
             <div className="flex flex-col gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl mb-5 min-w-0 overflow-hidden">
-              <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all text-center">{baseUrl ? `${baseUrl}/${finalSlug}` : `vend.ai/${finalSlug}`}</span>
+              <span className="font-mono text-xs sm:text-sm text-accent font-semibold break-all text-center">{baseUrl ? `${baseUrl}/${finalSlug}` : storePublicPath(finalSlug)}</span>
               <button
                 type="button"
                 onClick={() => { if (baseUrl) void navigator.clipboard.writeText(`${baseUrl}/${finalSlug}`) }}

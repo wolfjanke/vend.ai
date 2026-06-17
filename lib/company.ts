@@ -1,6 +1,10 @@
-/** Dados da empresa responsável pelo vend.ai (footer e documentos legais). */
+/** Dados da empresa responsável pelo vendai.club (footer e documentos legais). */
+import { BRAND } from '@/lib/brand'
+
 export const PRODUCT = {
-  name: process.env.PRODUCT_NAME ?? 'vend.ai',
+  name:        BRAND.name,
+  domain:      BRAND.domain,
+  displayName: BRAND.displayName,
 } as const
 
 export const COMPANY = {

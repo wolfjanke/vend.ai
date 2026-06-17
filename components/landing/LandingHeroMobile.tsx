@@ -1,6 +1,7 @@
 'use client'
 
 import { Shirt } from 'lucide-react'
+import BrandLogo from '@/components/BrandLogo'
 
 /** Prévia compacta da vitrine no hero — visível só abaixo de `lg`. */
 export default function LandingHeroMobile() {
@@ -18,9 +19,7 @@ export default function LandingHeroMobile() {
       <div className="w-full max-w-[280px] bg-surface border border-border rounded-[28px] p-3 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
         <div className="bg-surface2 rounded-[20px] p-3 overflow-hidden">
           <div className="flex justify-between items-center gap-2 mb-3 min-w-0">
-            <span className="font-syne font-extrabold text-xs text-grad shrink-0">
-              vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
-            </span>
+            <BrandLogo size="xs" href={null} />
             <span className="text-[10px] text-muted truncate">Urban Mix</span>
           </div>
           <div className="grid grid-cols-2 gap-2 mb-3">

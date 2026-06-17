@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Crown } from 'lucide-react'
+import { Loader2, Crown, X } from 'lucide-react'
 import {
   formatPlanPrice,
   formatBillingCycleLabel,
@@ -15,6 +15,8 @@ import {
 } from '@/lib/plans'
 import { adminCard } from '@/lib/admin-ui'
 import type { SubscriptionStatus } from '@/types'
+import BillingOwnerForm from '@/components/admin/BillingOwnerForm'
+import type { BillingOwnerInput } from '@/lib/validations'
 
 interface PlanBilling {
   displayMonthlyCents: number
@@ -37,6 +39,17 @@ interface BillingRow {
   created_at: string
 }
 
+interface BillingOwnerData {
+  hasBillingDoc: boolean
+  type: 'pf' | 'pj' | null
+  docMasked: string | null
+  legalName: string | null
+  addressFilled: boolean
+}
+
+interface PlanoClientProps {
+  ownerName?: string
+}
 interface SubscriptionData {
   plan: PlanSlug
   subscriptionStatus: SubscriptionStatus | null
@@ -76,31 +89,40 @@ function formatDaily(cents: number): string {
   return formatPlanPrice(cents)
 }
 
-export default function PlanoClient() {
+export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
   const [data, setData] = useState<SubscriptionData | null>(null)
+  const [billingOwner, setBillingOwner] = useState<BillingOwnerData | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
+  const [billingModalPlan, setBillingModalPlan] = useState<PlanSlug | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/subscription')
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
+      const [subRes, billingRes] = await Promise.all([
+        fetch('/api/admin/subscription'),
+        fetch('/api/admin/billing-owner'),
+      ])
+      if (!subRes.ok) {
+        const j = await subRes.json().catch(() => ({}))
         setError((j as { error?: string }).error ?? 'Erro ao carregar plano')
         setData(null)
         return
       }
-      const json = await res.json() as SubscriptionData
+      const json = await subRes.json() as SubscriptionData
       setData({
         ...json,
         billingTestAllowed: json.billingTestAllowed ?? true,
       })
       setBillingCycle(json.billingCycle ?? 'monthly')
+
+      if (billingRes.ok) {
+        setBillingOwner(await billingRes.json() as BillingOwnerData)
+      }
     } catch {
       setError('Erro de conexão')
       setData(null)
@@ -111,7 +133,7 @@ export default function PlanoClient() {
 
   useEffect(() => { load() }, [load])
 
-  async function handleUpgrade(plan: PlanSlug) {
+  async function handleUpgrade(plan: PlanSlug, billing?: BillingOwnerInput) {
     setBusy(plan)
     setError(null)
     try {
@@ -122,19 +144,36 @@ export default function PlanoClient() {
           plan,
           billingCycle,
           action: data?.subscriptionStatus && data.subscriptionStatus !== 'CANCELLED' ? 'upgrade' : 'create',
+          ...(billing ? { billing } : {}),
         }),
       })
       const j = await res.json()
       if (!res.ok) {
-        setError(j.error ?? 'Não foi possível alterar o plano')
-        return
+        throw new Error((j as { error?: string }).error ?? 'Não foi possível alterar o plano')
       }
+      setBillingModalPlan(null)
       await load()
-    } catch {
-      setError('Erro de conexão')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro de conexão'
+      setError(msg)
+      throw err
     } finally {
       setBusy(null)
     }
+  }
+
+  function requestUpgrade(plan: PlanSlug) {
+    if (billingOwner?.hasBillingDoc) {
+      void handleUpgrade(plan)
+      return
+    }
+    setBillingModalPlan(plan)
+  }
+
+  async function handleBillingSubmit(billing: BillingOwnerInput) {
+    const plan = billingModalPlan
+    if (!plan) return
+    await handleUpgrade(plan, billing)
   }
 
   async function handleCancel() {
@@ -394,7 +433,7 @@ export default function PlanoClient() {
                 <button
                   type="button"
                   disabled={(isCurrent && data.billingCycle === billingCycle) || !!busy || !data.paymentsConfigured || !data.billingTestAllowed}
-                  onClick={() => handleUpgrade(p.slug)}
+                  onClick={() => requestUpgrade(p.slug)}
                   className="mt-auto w-full min-h-[44px] px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busy === p.slug ? (
@@ -459,6 +498,47 @@ export default function PlanoClient() {
       </div>
       </div>
       </div>
+
+      {billingModalPlan && (
+        <div
+          className="fixed inset-0 z-[500] bg-bg/80 flex items-end sm:items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="billing-modal-title"
+        >
+          <div className="bg-surface border border-border rounded-2xl p-5 w-full max-w-lg max-h-[calc(100vh-32px)] overflow-y-auto shadow-xl max-w-[calc(100vw-32px)] sm:max-w-lg">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="min-w-0">
+                <h3 id="billing-modal-title" className="font-syne font-bold text-lg break-words">
+                  Dados para cobrança
+                </h3>
+                <p className="text-xs text-muted mt-1 break-words">
+                  O Asaas exige CPF ou CNPJ antes de criar a assinatura do plano{' '}
+                  <span className="capitalize font-medium">{billingModalPlan}</span>.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBillingModalPlan(null)}
+                className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-border text-muted hover:text-foreground"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <BillingOwnerForm
+              ownerName={ownerName}
+              initial={{
+                type: billingOwner?.type ?? undefined,
+                legalName: billingOwner?.legalName,
+              }}
+              submitLabel="Salvar e fazer upgrade"
+              loading={!!busy}
+              onSubmit={handleBillingSubmit}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

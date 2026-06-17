@@ -2,10 +2,11 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import WolfHubFooter from '@/components/WolfHubFooter'
 import { COMPANY } from '@/lib/company'
+import { BRAND } from '@/lib/brand'
 
 export const metadata = {
-  title: 'Termos de Uso — vend.ai',
-  description: 'Termos e condições de uso da plataforma vend.ai.',
+  title: `Termos de Uso — ${BRAND.displayName}`,
+  description: `Termos e condições de uso da plataforma ${BRAND.displayName}.`,
 }
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -40,12 +41,12 @@ export default function TermosPage() {
       </div>
 
       <div className="bg-surface border border-border rounded-xl px-5 py-4 mb-10 text-sm text-muted">
-        Ao criar uma conta no vend.ai, você concorda com estes Termos de Uso. Leia com atenção antes de utilizar a plataforma.
+        Ao criar uma conta no vendai.club, você concorda com estes Termos de Uso. Leia com atenção antes de utilizar a plataforma.
       </div>
 
-      <Section title="1. O que é o vend.ai">
+      <Section title="1. O que é o vendai.club">
         <p>
-          O <strong className="text-foreground">vend.ai</strong> é uma plataforma de catálogo digital com inteligência artificial que permite a lojistas de moda criarem uma loja online, gerenciarem produtos e receberem pedidos via WhatsApp. O serviço é operado por{' '}
+          O <strong className="text-foreground">vendai.club</strong> é uma plataforma de catálogo digital com inteligência artificial que permite a lojistas de moda criarem uma loja online, gerenciarem produtos e receberem pedidos via WhatsApp. O serviço é operado por{' '}
           <strong className="text-foreground">{COMPANY.name}</strong>, CNPJ {COMPANY.cnpj}, com sede em {COMPANY.city}.
         </p>
         <p>
@@ -62,7 +63,7 @@ export default function TermosPage() {
 
       <Section title="2. Aceitação dos termos">
         <p>
-          Ao se cadastrar, acessar ou utilizar o vend.ai, você declara ter lido e aceito estes Termos de Uso e nossa{' '}
+          Ao se cadastrar, acessar ou utilizar o vendai.club, você declara ter lido e aceito estes Termos de Uso e nossa{' '}
           <Link href="/privacidade" className="text-primary hover:underline">Política de Privacidade</Link>.
         </p>
         <p>
@@ -85,12 +86,12 @@ export default function TermosPage() {
         </ul>
         <p>
           Em caso de suspeita de acesso não autorizado, notifique-nos imediatamente em{' '}
-          <a href="mailto:suporte@vend.ai" className="text-primary hover:underline">suporte@vend.ai</a>.
+          <a href={`mailto:${BRAND.supportEmail}`} className="text-primary hover:underline">{BRAND.supportEmail}</a>.
         </p>
       </Section>
 
       <Section title="4. Uso permitido da plataforma">
-        <p>Você pode usar o vend.ai para:</p>
+        <p>Você pode usar o vendai.club para:</p>
         <ul className="list-disc list-inside space-y-1 pl-1">
           <li>Criar e gerenciar sua loja de moda ou roupas</li>
           <li>Cadastrar produtos próprios ou de terceiros que você legalmente revende</li>
@@ -118,7 +119,7 @@ export default function TermosPage() {
 
       <Section title="6. Planos e pagamentos">
         <p>
-          O vend.ai oferece um plano gratuito e planos pagos (Starter, Pro, Loja). Os preços e benefícios de cada plano estão descritos na página principal.
+          O vendai.club oferece um plano gratuito e planos pagos (Starter, Pro, Loja). Os preços e benefícios de cada plano estão descritos na página principal.
         </p>
         <ul className="list-disc list-inside space-y-1 pl-1">
           <li>Os planos pagos são cobrados mensalmente de forma recorrente.</li>
@@ -131,7 +132,7 @@ export default function TermosPage() {
 
       <Section title="7. Propriedade intelectual">
         <p>
-          <strong className="text-foreground">Do vend.ai:</strong> todo o código, design, interface, marca e tecnologia da plataforma são propriedade da {COMPANY.name} e protegidos por direitos autorais e marcas registradas.
+          <strong className="text-foreground">do vendai.club:</strong> todo o código, design, interface, marca e tecnologia da plataforma são propriedade da {COMPANY.name} e protegidos por direitos autorais e marcas registradas.
         </p>
         <p>
           <strong className="text-foreground">Do usuário:</strong> você mantém todos os direitos sobre os conteúdos que publica (fotos, descrições, nome da loja). Ao publicar esses conteúdos, você nos concede uma licença não exclusiva para exibir e processar esses dados exclusivamente para operar a plataforma em seu benefício.
@@ -140,7 +141,7 @@ export default function TermosPage() {
 
       <Section title="8. Disponibilidade e funcionamento">
         <p>
-          Nos esforçamos para manter o vend.ai disponível 24h por dia, mas não garantimos disponibilidade ininterrupta. Podem ocorrer pausas para manutenção, atualizações ou por motivos de força maior.
+          Nos esforçamos para manter o vendai.club disponível 24h por dia, mas não garantimos disponibilidade ininterrupta. Podem ocorrer pausas para manutenção, atualizações ou por motivos de força maior.
         </p>
         <p>
           A assistente Vi opera com inteligência artificial. As respostas são geradas automaticamente e podem, ocasionalmente, conter imprecisões. Você é responsável por revisar o funcionamento da Vi na sua loja e corrigir informações incorretas no catálogo.
@@ -149,7 +150,7 @@ export default function TermosPage() {
 
       <Section title="9. Limitação de responsabilidade">
         <p>
-          O vend.ai não se responsabiliza por:
+          O vendai.club não se responsabiliza por:
         </p>
         <ul className="list-disc list-inside space-y-1 pl-1">
           <li>Perdas de vendas ou lucros cessantes por indisponibilidade da plataforma</li>
@@ -159,13 +160,13 @@ export default function TermosPage() {
           <li>Problemas decorrentes de uso inadequado da plataforma</li>
         </ul>
         <p>
-          A responsabilidade do vend.ai em qualquer hipótese fica limitada ao valor pago pelo usuário nos últimos 3 meses.
+          A responsabilidade do vendai.club em qualquer hipótese fica limitada ao valor pago pelo usuário nos últimos 3 meses.
         </p>
       </Section>
 
       <Section title="10. Rescisão">
         <p>
-          <strong className="text-foreground">Por você:</strong> você pode encerrar sua conta a qualquer momento acessando as configurações da conta ou entrando em contato pelo e-mail <a href="mailto:suporte@vend.ai" className="text-primary hover:underline">suporte@vend.ai</a>.
+          <strong className="text-foreground">Por você:</strong> você pode encerrar sua conta a qualquer momento acessando as configurações da conta ou entrando em contato pelo e-mail <a href={`mailto:${BRAND.supportEmail}`} className="text-primary hover:underline">{BRAND.supportEmail}</a>.
         </p>
         <p>
           <strong className="text-foreground">Por nós:</strong> podemos suspender ou encerrar sua conta caso haja violação destes Termos, inadimplência ou uso inadequado da plataforma. Em casos graves, a suspensão pode ser imediata sem aviso prévio.
@@ -194,10 +195,10 @@ export default function TermosPage() {
         </p>
         <p>
           <strong className="text-foreground">Suporte geral:</strong>{' '}
-          <a href="mailto:suporte@vend.ai" className="text-primary hover:underline">suporte@vend.ai</a>
+          <a href={`mailto:${BRAND.supportEmail}`} className="text-primary hover:underline">{BRAND.supportEmail}</a>
           <br />
           <strong className="text-foreground">Privacidade e dados:</strong>{' '}
-          <a href="mailto:privacidade@vend.ai" className="text-primary hover:underline">privacidade@vend.ai</a>
+          <a href={`mailto:${BRAND.privacyEmail}`} className="text-primary hover:underline">{BRAND.privacyEmail}</a>
         </p>
       </Section>
 
@@ -207,7 +208,7 @@ export default function TermosPage() {
         </Link>
         <Link href="/" className="text-sm text-muted hover:text-foreground transition-colors flex items-center gap-1">
           <ArrowLeft size={13} />
-          Voltar para o vend.ai
+          Voltar para o início
         </Link>
       </div>
     </main>

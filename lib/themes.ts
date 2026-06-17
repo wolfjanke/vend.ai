@@ -89,7 +89,7 @@ const DEFAULT_SPACING: ThemeSpacing = {
 export const THEMES: Record<ThemeName, ThemeDefinition> = {
   default: {
     name:                 'default',
-    label:                'vend.ai',
+    label: 'vendai.club',
     description:          'Tema padrão da plataforma',
     forSegments:          ['todos'],
     defaultBackground:    'dark',

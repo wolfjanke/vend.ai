@@ -7,6 +7,8 @@ import {
   ShoppingBag,
   type LucideIcon,
 } from 'lucide-react'
+import BrandLogo from '@/components/BrandLogo'
+import { BRAND } from '@/lib/brand'
 
 const ROTATE_MS = 5500
 
@@ -81,16 +83,14 @@ export default function LandingHeroDevices() {
                 </div>
                 <div className="flex-1 min-w-0 text-center">
                   <span className="text-[10px] text-muted font-mono truncate block">
-                    vend.ai/{v.slug}
+                    {BRAND.domain}/{v.slug}
                   </span>
                 </div>
               </div>
               {/* Área “desktop” */}
               <div className="aspect-[16/10] p-2.5 sm:p-3 bg-bg flex flex-col gap-2 min-h-0">
                 <div className="flex items-center justify-between gap-2 min-w-0">
-                  <span className="font-syne font-extrabold text-[11px] text-grad shrink-0">
-                    vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
-                  </span>
+                  <BrandLogo size="xs" href={null} />
                   <span className="text-[10px] text-muted truncate" title={v.storeName}>
                     {v.storeName}
                   </span>
@@ -129,9 +129,7 @@ export default function LandingHeroDevices() {
           <div className="w-full bg-surface border border-border rounded-[32px] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.5),0_0_0_1px_#7B6EFF22]">
             <div className="bg-surface2 rounded-[20px] p-3 overflow-hidden">
               <div className="flex justify-between items-center mb-2.5 min-w-0 gap-2">
-                <span className="font-syne font-extrabold text-xs text-grad shrink-0">
-                  vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
-                </span>
+                <BrandLogo size="xs" href={null} />
                 <span className="text-[10px] text-muted truncate min-w-0" title={v.storeName}>
                   {v.storeName}
                 </span>

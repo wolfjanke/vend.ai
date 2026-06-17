@@ -1,5 +1,5 @@
 ---
-description: Mobile-first obrigatório em todo componente React/TSX do projeto vend.ai
+description: Mobile-first obrigatório em todo componente React/TSX do projeto vendai.club
 globs:
   - "**/*.tsx"
   - "**/*.ts"
@@ -8,7 +8,7 @@ globs:
 alwaysApply: true
 ---
 
-# Regra Mobile-First — vend.ai
+# Regra Mobile-First — vendai.club
 
 O foco principal do produto é uso em celular. Todo layout e componente deve funcionar em viewports de 320px–430px sem corte, sobreposição ilegível ou scroll horizontal acidental.
 

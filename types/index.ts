@@ -231,6 +231,17 @@ export interface Store extends StoreAddress {
   subscription_ends_at?:   string | null
   trial_ends_at?:          string | null
   billing_cycle?:          'monthly' | 'quarterly' | 'annual'
+  /** Titular da assinatura vendai.club (Asaas). */
+  billing_owner_type?:     'pf' | 'pj' | null
+  billing_owner_doc_enc?:  string | null
+  billing_legal_name?:     string | null
+  billing_postal_code?:    string | null
+  billing_address?:        string | null
+  billing_address_number?: string | null
+  billing_complement?:     string | null
+  billing_province?:       string | null
+  billing_city?:           string | null
+  billing_state?:          string | null
   terms_version?:          string | null
   terms_accepted_at?:      string | null
   terms_accepted_ip?:      string | null

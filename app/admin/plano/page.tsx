@@ -1,12 +1,24 @@
 import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
+import { sql } from '@/lib/db'
 import SandboxBanner from '@/components/admin/SandboxBanner'
 import PlanoClient from './PlanoClient'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
+import type { Store } from '@/types'
 
 export default async function PlanoPage() {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
+
+  let ownerName = ''
+  try {
+    const rows = await sql`SELECT name, settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const store = rows[0] as Pick<Store, 'name' | 'settings_json'> | undefined
+    const settings = store?.settings_json as { ownerName?: string } | undefined
+    ownerName = settings?.ownerName?.trim() || store?.name || ''
+  } catch {
+    ownerName = ''
+  }
 
   return (
     <div className={adminPage}>
@@ -17,7 +29,7 @@ export default async function PlanoPage() {
         </p>
       </div>
       <SandboxBanner />
-      <PlanoClient />
+      <PlanoClient ownerName={ownerName} />
     </div>
   )
 }

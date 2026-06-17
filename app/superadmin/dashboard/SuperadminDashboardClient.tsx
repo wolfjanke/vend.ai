@@ -83,7 +83,7 @@ export default function SuperadminDashboardClient() {
     <div className="animate-fade-up min-w-0">
       <SuperadminPageHeader
         title="Dashboard"
-        description="Visão geral do negócio vend.ai"
+        description="Visão geral do negócio vendai.club"
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

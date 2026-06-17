@@ -3,15 +3,14 @@
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
+import BrandLogo from '@/components/BrandLogo'
 
 export default function LandingHeader() {
   const [open, setOpen] = useState(false)
 
   return (
     <header className="relative sticky top-0 z-50 glass border-b border-border min-h-16 flex items-center justify-between px-4 sm:px-6 animate-slide-down">
-      <span className="font-syne font-extrabold text-lg sm:text-xl text-grad shrink-0">
-        vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)', opacity: 1 }}>.</span>ai
-      </span>
+      <BrandLogo size="md" priority />
 
       <nav className="hidden md:flex gap-6 text-sm font-medium text-muted">
         <a href="#como-funciona" className="hover:text-foreground transition-colors">Como funciona</a>

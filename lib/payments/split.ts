@@ -19,7 +19,7 @@ interface AsaasSplitEntry {
 }
 
 /**
- * Monta split: lojista (líquido) + vend.ai (take rate % + taxa fixa).
+ * Monta split: lojista (líquido) + vendai.club (take rate % + taxa fixa).
  * Usa percentual efetivo que incorpora a taxa fixa no valor cobrado.
  */
 export function buildCheckoutSplit(

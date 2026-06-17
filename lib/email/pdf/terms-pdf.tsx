@@ -121,7 +121,7 @@ export function TermsPdfDocument({
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.logo}>vend.ai</Text>
+          <Text style={styles.logo}>vendai.club</Text>
           <Text style={styles.title}>Contrato de Uso da Plataforma</Text>
           <Text style={styles.subtitle}>
             {COMPANY.name} · CNPJ {COMPANY.cnpj}
@@ -140,7 +140,7 @@ export function TermsPdfDocument({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Objeto do Contrato</Text>
           <Text style={styles.text}>
-            O presente contrato tem por objeto a licença de uso da plataforma vend.ai,
+            O presente contrato tem por objeto a licença de uso da plataforma vendai.club,
             sistema de vendas online com inteligência artificial, operado pela {COMPANY.name},
             CNPJ {COMPANY.cnpj}, com sede em {companyCityShort()}, doravante denominada CONTRATADA.
           </Text>
@@ -173,7 +173,7 @@ export function TermsPdfDocument({
         <View style={styles.highlight}>
           <Text style={styles.highlightTitle}>IMPORTANTE — EMISSÃO DE NOTA FISCAL</Text>
           <Text style={styles.highlightText}>
-            O vend.ai e a Wolf Hub NÃO se responsabilizam pela emissão de notas fiscais
+            O vendai.club e a Wolf Hub NÃO se responsabilizam pela emissão de notas fiscais
             referentes às vendas realizadas pelo CONTRATANTE através da plataforma.
             A emissão de nota fiscal é obrigação exclusiva do CONTRATANTE, conforme
             legislação tributária vigente.

@@ -42,7 +42,7 @@ export function getLowStockSkus(products: Product[], config: StockAlertsConfig):
           results.push({
             productId:    p.id,
             productName:  p.name,
-            productSlug:  p.slug,
+            productSlug:  p.slug ?? p.id,
             variantId:    v.id,
             variantLabel: v.color,
             skuKey,

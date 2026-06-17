@@ -113,7 +113,7 @@ export default function AdminPrivacySection() {
       <div className="flex items-center gap-2 text-muted">
         <Shield size={16} className="shrink-0" aria-hidden />
         <p className="text-xs break-words">
-          Como lojista, você é controlador dos dados dos seus clientes. O vend.ai atua como operador.
+          Como lojista, você é controlador dos dados dos seus clientes. O vendai.club atua como operador.
         </p>
       </div>
 

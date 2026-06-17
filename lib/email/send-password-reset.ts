@@ -5,7 +5,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   const content = `
     <p style="margin:0 0 16px;font-size:15px;color:#333333;">Olá,</p>
     <p style="margin:0 0 16px;font-size:15px;color:#333333;">
-      Recebemos um pedido para redefinir a senha da sua conta vend.ai.
+      Recebemos um pedido para redefinir a senha da sua conta vendai.club.
     </p>
     <p style="margin:0 0 24px;text-align:center;">
       <a href="${resetUrl}"
@@ -20,7 +20,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
 
   await sendEmail({
     to,
-    subject: 'Redefinir senha — vend.ai',
-    html: baseTemplate(content, 'Redefinir sua senha vend.ai'),
+    subject: 'Redefinir senha — vendai.club',
+    html: baseTemplate(content, 'Redefinir sua senha vendai.club'),
   })
 }

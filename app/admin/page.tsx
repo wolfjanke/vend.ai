@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import BrandLogo from '@/components/BrandLogo'
 
 export default function AdminLoginPage() {
   const [email,   setEmail]   = useState('')
@@ -34,8 +35,8 @@ export default function AdminLoginPage() {
   return (
     <main className="relative z-10 min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-surface border border-border rounded-[28px] p-10 shadow-[0_20px_60px_rgba(0,0,0,0.4)] animate-fade-up">
-        <div className="font-syne font-extrabold text-3xl text-grad text-center mb-8">
-          vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
+        <div className="flex justify-center mb-8">
+          <BrandLogo size="xl" />
         </div>
         <h2 className="font-syne font-bold text-xl mb-1">Bem-vinda de volta!</h2>
         <p className="text-sm text-muted mb-6">Acesse o painel da sua loja</p>

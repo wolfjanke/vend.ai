@@ -1,4 +1,4 @@
-# Migrations vend.ai (Neon)
+# Migrations vendai.club (Neon)
 
 Execute **na ordem numérica** (001 → 015). Todas usam `IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` quando possível — reexecutar é seguro.
 

@@ -50,7 +50,7 @@ export async function wolfHubFetch<T = unknown>(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     access_token: apiKey,
-    'User-Agent': 'vend.ai/1.0',
+    'User-Agent': 'vendai.club/1.0',
     ...((options.headers as Record<string, string>) ?? {}),
   }
 
@@ -93,7 +93,16 @@ export interface CreateCustomerInput {
   cpfCnpj?: string
   mobilePhone?: string
   externalReference?: string
+  postalCode?: string
+  address?: string
+  addressNumber?: string
+  complement?: string
+  province?: string
+  city?: string
+  state?: string
 }
+
+export type UpdateCustomerInput = CreateCustomerInput
 
 export async function createCustomer(input: CreateCustomerInput): Promise<{ id: string }> {
   assertPaymentsConfigured()
@@ -105,6 +114,37 @@ export async function createCustomer(input: CreateCustomerInput): Promise<{ id: 
       cpfCnpj: input.cpfCnpj,
       mobilePhone: input.mobilePhone,
       externalReference: input.externalReference,
+      postalCode: input.postalCode,
+      address: input.address,
+      addressNumber: input.addressNumber,
+      complement: input.complement,
+      province: input.province,
+      city: input.city,
+      state: input.state,
+    }),
+  })
+}
+
+export async function updateCustomer(
+  customerId: string,
+  input: UpdateCustomerInput,
+): Promise<{ id: string }> {
+  assertPaymentsConfigured()
+  return wolfHubFetch<{ id: string }>(`/customers/${customerId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      name: input.name,
+      email: input.email,
+      cpfCnpj: input.cpfCnpj,
+      mobilePhone: input.mobilePhone,
+      externalReference: input.externalReference,
+      postalCode: input.postalCode,
+      address: input.address,
+      addressNumber: input.addressNumber,
+      complement: input.complement,
+      province: input.province,
+      city: input.city,
+      state: input.state,
     }),
   })
 }

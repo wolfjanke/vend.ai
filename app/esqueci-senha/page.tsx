@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import BrandLogo from '@/components/BrandLogo'
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState('')
@@ -26,8 +27,8 @@ export default function EsqueciSenhaPage() {
   return (
     <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md bg-surface border border-border rounded-[28px] p-6 sm:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.4)] animate-fade-up">
-        <div className="font-syne font-extrabold text-2xl sm:text-3xl text-grad text-center mb-6">
-          vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
+        <div className="flex justify-center mb-6">
+          <BrandLogo size="xl" />
         </div>
         <h1 className="font-syne font-bold text-xl sm:text-2xl mb-2 text-center">Esqueci minha senha</h1>
         <p className="text-sm text-muted text-center mb-6">

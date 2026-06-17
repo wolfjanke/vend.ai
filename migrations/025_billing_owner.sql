@@ -1,0 +1,11 @@
+-- Dados do titular da assinatura vendai.club (Asaas billing customer)
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_owner_type TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_owner_doc_enc TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_legal_name TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_postal_code TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_address TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_address_number TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_complement TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_province TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_city TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS billing_state TEXT;

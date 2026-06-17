@@ -2,10 +2,11 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import WolfHubFooter from '@/components/WolfHubFooter'
 import { COMPANY } from '@/lib/company'
+import { BRAND } from '@/lib/brand'
 
 export const metadata = {
-  title: 'Política de Privacidade — vend.ai',
-  description: 'Como o vend.ai coleta, usa e protege seus dados pessoais. Em conformidade com a LGPD (Lei 13.709/2018).',
+  title: `Política de Privacidade — ${BRAND.displayName}`,
+  description: `Como o ${BRAND.displayName} coleta, usa e protege seus dados pessoais. Em conformidade com a LGPD (Lei 13.709/2018).`,
 }
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -42,12 +43,12 @@ export default function PrivacidadePage() {
 
       <Section title="1. Quem somos (Controlador dos Dados)">
         <p>
-          O <strong className="text-foreground">vend.ai</strong> é uma plataforma de catálogo digital com inteligência artificial voltada para lojistas de moda. Para fins da LGPD, o controlador dos dados é a{' '}
+          O <strong className="text-foreground">vendai.club</strong> é uma plataforma de catálogo digital com inteligência artificial voltada para lojistas de moda. Para fins da LGPD, o controlador dos dados é a{' '}
           <strong className="text-foreground">{COMPANY.name}</strong>, CNPJ {COMPANY.cnpj}, com sede em {COMPANY.city}, com canal de contato dedicado:
         </p>
         <p>
           <strong className="text-foreground">E-mail do Encarregado (DPO):</strong>{' '}
-          <a href="mailto:privacidade@vend.ai" className="text-primary hover:underline">privacidade@vend.ai</a>
+          <a href={`mailto:${BRAND.privacyEmail}`} className="text-primary hover:underline">{BRAND.privacyEmail}</a>
         </p>
         <p>
           Qualquer dúvida, solicitação ou exercício de direitos sobre seus dados pessoais deve ser enviado para esse endereço.
@@ -86,7 +87,7 @@ export default function PrivacidadePage() {
           </table>
         </div>
         <p>
-          <strong className="text-foreground">Dados de clientes da sua loja:</strong> quando um consumidor finaliza um pedido na vitrine, coletamos e armazenamos os dados necessários ao pedido (nome, WhatsApp, endereço de entrega quando aplicável) para que o lojista gerencie vendas na plataforma. O lojista é o controlador desses dados; o vend.ai atua como operador. Pedidos via WhatsApp também são registrados na plataforma com os dados informados no checkout.
+          <strong className="text-foreground">Dados de clientes da sua loja:</strong> quando um consumidor finaliza um pedido na vitrine, coletamos e armazenamos os dados necessários ao pedido (nome, WhatsApp, endereço de entrega quando aplicável) para que o lojista gerencie vendas na plataforma. O lojista é o controlador desses dados; o vendai.club atua como operador. Pedidos via WhatsApp também são registrados na plataforma com os dados informados no checkout.
         </p>
       </Section>
 
@@ -106,7 +107,7 @@ export default function PrivacidadePage() {
       </Section>
 
       <Section title="4. Compartilhamento com terceiros">
-        <p>Para funcionar, o vend.ai utiliza serviços de infraestrutura confiáveis. Abaixo os fornecedores e o que recebem:</p>
+        <p>Para funcionar, o vendai.club utiliza serviços de infraestrutura confiáveis. Abaixo os fornecedores e o que recebem:</p>
         <ul className="list-disc list-inside space-y-1.5 pl-1">
           <li>
             <strong className="text-foreground">Neon / Supabase</strong> — banco de dados onde ficam os dados da sua loja e conta. Servidores seguros com criptografia em repouso.
@@ -139,7 +140,7 @@ export default function PrivacidadePage() {
       </Section>
 
       <Section title="6. Seus direitos como titular dos dados">
-        <p>A LGPD garante os seguintes direitos, que você pode exercer a qualquer momento pelo e-mail <a href="mailto:privacidade@vend.ai" className="text-primary hover:underline">privacidade@vend.ai</a> ou pelas ferramentas self-service na plataforma (exportação de dados e exclusão de conta em Configurações → Privacidade e LGPD):</p>
+        <p>A LGPD garante os seguintes direitos, que você pode exercer a qualquer momento pelo e-mail <a href={`mailto:${BRAND.privacyEmail}`} className="text-primary hover:underline">{BRAND.privacyEmail}</a> ou pelas ferramentas self-service na plataforma (exportação de dados e exclusão de conta em Configurações → Privacidade e LGPD):</p>
         <ul className="list-disc list-inside space-y-1.5 pl-1">
           <li><strong className="text-foreground">Acesso</strong> — confirmar se tratamos seus dados e obter uma cópia.</li>
           <li><strong className="text-foreground">Correção</strong> — corrigir dados incompletos, inexatos ou desatualizados.</li>
@@ -198,7 +199,7 @@ export default function PrivacidadePage() {
 
       <Section title="9.1. Dados de clientes finais (compradores)">
         <p>
-          Quando um consumidor finaliza um pedido na vitrine de uma loja, o lojista é o controlador dos dados do pedido (nome, WhatsApp, endereço). O vend.ai atua como operador para armazenar e transmitir esses dados conforme instruções do lojista.
+          Quando um consumidor finaliza um pedido na vitrine de uma loja, o lojista é o controlador dos dados do pedido (nome, WhatsApp, endereço). O vendai.club atua como operador para armazenar e transmitir esses dados conforme instruções do lojista.
         </p>
         <p>
           <strong className="text-foreground">Retenção:</strong> pedidos e dados de entrega são mantidos por até <strong className="text-foreground">24 meses</strong> após a última interação, salvo obrigação legal de guarda mais longa (fiscal/contábil). Após esse prazo, dados podem ser anonimizados automaticamente.
@@ -220,7 +221,7 @@ export default function PrivacidadePage() {
         </p>
         <p>
           <strong className="text-foreground">E-mail:</strong>{' '}
-          <a href="mailto:privacidade@vend.ai" className="text-primary hover:underline">privacidade@vend.ai</a>
+          <a href={`mailto:${BRAND.privacyEmail}`} className="text-primary hover:underline">{BRAND.privacyEmail}</a>
           <br />
           Prazo de resposta: até 15 dias úteis.
         </p>
@@ -236,7 +237,7 @@ export default function PrivacidadePage() {
         </Link>
         <Link href="/" className="text-sm text-muted hover:text-foreground transition-colors flex items-center gap-1">
           <ArrowLeft size={13} />
-          Voltar para o vend.ai
+          Voltar para o início
         </Link>
       </div>
     </main>

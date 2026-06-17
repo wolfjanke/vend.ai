@@ -2,10 +2,11 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import WolfHubFooter from '@/components/WolfHubFooter'
 import { COMPANY } from '@/lib/company'
+import { BRAND } from '@/lib/brand'
 
 export const metadata = {
-  title: 'Contato — vend.ai',
-  description: 'Fale com o time do vend.ai.',
+  title: `Contato — ${BRAND.displayName}`,
+  description: `Fale com o time do ${BRAND.displayName}.`,
 }
 
 export default function ContatoPage() {
@@ -26,21 +27,21 @@ export default function ContatoPage() {
           </h1>
           <p className="text-sm text-muted leading-relaxed break-words">
             Para suporte, dúvidas sobre sua conta ou solicitações relacionadas ao{' '}
-            <strong className="text-foreground">vend.ai</strong>, utilize os canais abaixo.
+            <strong className="text-foreground">{BRAND.displayName}</strong>, utilize os canais abaixo.
           </p>
         </div>
 
         <div className="flex flex-col gap-4 text-sm text-muted leading-relaxed">
           <p>
             <strong className="text-foreground">Suporte:</strong>{' '}
-            <a href="mailto:suporte@vend.ai" className="text-primary hover:underline break-all">
-              suporte@vend.ai
+            <a href={`mailto:${BRAND.supportEmail}`} className="text-primary hover:underline break-all">
+              {BRAND.supportEmail}
             </a>
           </p>
           <p>
             <strong className="text-foreground">Privacidade e LGPD:</strong>{' '}
-            <a href="mailto:privacidade@vend.ai" className="text-primary hover:underline break-all">
-              privacidade@vend.ai
+            <a href={`mailto:${BRAND.privacyEmail}`} className="text-primary hover:underline break-all">
+              {BRAND.privacyEmail}
             </a>
           </p>
           <p className="break-words">

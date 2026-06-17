@@ -1,4 +1,4 @@
-/** Configuração central Asaas — conta única vend.ai (Wolf Hub Desenvolvimento de Software LTDA). */
+/** Configuração central Asaas — conta única vendai.club (Wolf Hub Desenvolvimento de Software LTDA). */
 
 export function getAsaasEnv(): 'sandbox' | 'production' {
   const env = (process.env.ASAAS_ENV ?? 'sandbox').toLowerCase()
@@ -18,7 +18,7 @@ export function getAsaasBaseUrl(): string {
     : 'https://api.asaas.com/v3'
 }
 
-/** Chave API da conta Asaas do vend.ai (conta mãe — subcontas dos lojistas). */
+/** Chave API da conta Asaas do vendai.club (conta mãe — subcontas dos lojistas). */
 export function getVendaiAsaasKey(): string | undefined {
   return (
     process.env.VENDAI_ASAAS_KEY?.trim()
@@ -28,7 +28,7 @@ export function getVendaiAsaasKey(): string | undefined {
   )
 }
 
-/** Wallet ID do vend.ai na conta Asaas (recebe take rate no split). */
+/** Wallet ID do vendai.club na conta Asaas (recebe take rate no split). */
 export function getVendaiAsaasWalletId(): string | undefined {
   return (
     process.env.VENDAI_ASAAS_WALLET_ID?.trim()

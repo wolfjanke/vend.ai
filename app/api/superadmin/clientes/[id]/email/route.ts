@@ -27,7 +27,7 @@ export async function POST(_req: Request, { params }: Ctx) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://vendai.club'
     const result = await sendEmail({
       to:      row.email as string,
-      subject: `${row.name} — ative sua loja no vend.ai`,
+      subject: `${row.name} — ative sua loja no vendai.club`,
       html: `
         <p>Olá!</p>
         <p>Sua loja <strong>${row.name}</strong> está quase pronta.</p>

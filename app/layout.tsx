@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Syne, DM_Sans } from 'next/font/google'
 import './globals.css'
+import { BRAND } from '@/lib/brand'
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_TITLE, siteUrl } from '@/lib/site-seo'
 
 const syne = Syne({
   subsets:  ['latin'],
@@ -17,15 +19,38 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://vendai.club'),
-  title:       'vend.ai — Moda com IA',
-  description: 'Catálogo digital com IA integrada para lojas de roupas. Pedidos direto no WhatsApp.',
-  keywords:    ['loja online', 'moda', 'roupas', 'IA', 'WhatsApp', 'catálogo digital'],
-  icons:       { icon: '/favicon.svg', apple: '/favicon.svg' },
+  metadataBase: new URL(siteUrl()),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${BRAND.displayName}`,
+  },
+  description: SITE_DESCRIPTION,
+  keywords:    [...SITE_KEYWORDS],
+  icons: {
+    icon:   { url: BRAND.favicon, type: 'image/svg+xml' },
+    apple:  { url: BRAND.appleTouch, type: 'image/svg+xml' },
+    shortcut: BRAND.favicon,
+  },
+  alternates:  { canonical: siteUrl() },
   openGraph: {
-    title:       'vend.ai — Moda com IA',
-    description: 'Catálogo inteligente + assistente IA + pedidos no WhatsApp',
+    title:       SITE_TITLE,
+    description: SITE_DESCRIPTION,
     type:        'website',
+    url:         siteUrl(),
+    locale:      'pt_BR',
+    siteName:    BRAND.displayName,
+    images:      [{ url: BRAND.ogImage, width: 1200, height: 630, alt: BRAND.alt, type: 'image/svg+xml' }],
+  },
+  twitter: {
+    card:        'summary_large_image',
+    title:       SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images:      [BRAND.ogImage],
+  },
+  robots: {
+    index:  true,
+    follow: true,
+    googleBot: { index: true, follow: true },
   },
 }
 

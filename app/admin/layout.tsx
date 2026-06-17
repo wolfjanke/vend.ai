@@ -5,6 +5,7 @@ import AdminSidebar from '@/components/admin/AdminSidebar'
 import MobileNav from '@/components/admin/MobileNav'
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
+import BrandLogo from '@/components/BrandLogo'
 
 /** Obrigatório com getServerSession/cookies — sem isto o build pode pré-renderizar e `cookies()` lança em produção. */
 export const dynamic = 'force-dynamic'
@@ -47,9 +48,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Top Header */}
       <header className="sticky top-0 z-50 glass border-b border-border h-16 flex items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
-          <span className="font-syne font-extrabold text-lg text-grad">
-            vend<span className="text-accent" style={{ WebkitTextFillColor: 'var(--accent)' }}>.</span>ai
-          </span>
+          <BrandLogo size="md" href="/" />
           <span className="hidden sm:block text-xs text-muted">|</span>
           <span className="hidden sm:block font-syne text-xs font-semibold text-muted uppercase tracking-widest">
             {store?.name ?? 'Painel'}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import SuperadminPageHeader from '@/components/superadmin/SuperadminPageHeader'
 import { PLANS, PLAN_SLUGS } from '@/lib/plans'
+import { BRAND } from '@/lib/brand'
 
 type Config = {
   plan_limits: Record<string, { products: number | null; vi_messages: number }>
@@ -26,7 +27,7 @@ export default function ConfiguracoesClient() {
           take_rates: d.take_rates ?? {},
           maintenance_mode: Boolean(d.maintenance_mode),
           new_signups_enabled: d.new_signups_enabled !== false,
-          support_email: typeof d.support_email === 'string' ? d.support_email : 'suporte@vendai.club',
+          support_email: typeof d.support_email === 'string' ? d.support_email : BRAND.supportEmail,
         })
       })
   }, [])

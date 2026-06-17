@@ -14,6 +14,8 @@ import {
 } from '@/lib/payments/subscriptions'
 import { PLAN_PRODUCT_LIMITS, PLANS, PAID_PLAN_SLUGS, getChargeAmountCents, getDisplayMonthlyCents, type PlanSlug, type BillingCycle } from '@/lib/plans'
 import { sendUpgradeEmail } from '@/lib/email/send-upgrade'
+import { saveBillingOwner } from '@/lib/billing-owner'
+import { billingOwnerSchema } from '@/lib/validations'
 
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -21,6 +23,7 @@ const postSchema = z.object({
   plan: z.enum(['starter', 'pro', 'loja', 'enterprise']),
   action: z.enum(['create', 'upgrade']).optional(),
   billingCycle: z.enum(['monthly', 'quarterly', 'annual']).default('monthly'),
+  billing: billingOwnerSchema.optional(),
 })
 
 export async function GET() {
@@ -119,10 +122,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 422 })
   }
 
-  const { plan, action, billingCycle } = parsed.data
+  const { plan, action, billingCycle, billing } = parsed.data
 
   try {
     await assertBillingTestAllowed(session.storeId)
+
+    if (billing) {
+      await saveBillingOwner(session.storeId, billing)
+    }
 
     const before = await getSubscriptionStatus(session.storeId)
     const oldPlan = before.plan

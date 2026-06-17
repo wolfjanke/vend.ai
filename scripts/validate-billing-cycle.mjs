@@ -35,7 +35,7 @@ for (const [cycle, value] of [['QUARTERLY', quarterly / 100], ['YEARLY', annual 
     headers: {
       'Content-Type': 'application/json',
       access_token: key,
-      'User-Agent': 'vend.ai/1.0',
+      'User-Agent': 'vendai.club/1.0',
     },
     body: JSON.stringify({
       customer: 'cus_invalid_cycle_test',
@@ -43,7 +43,7 @@ for (const [cycle, value] of [['QUARTERLY', quarterly / 100], ['YEARLY', annual 
       value,
       nextDueDate: '2026-07-01',
       cycle,
-      description: 'vend.ai billing cycle validation',
+      description: 'vendai.club billing cycle validation',
       externalReference: 'test-billing-cycle',
     }),
   })

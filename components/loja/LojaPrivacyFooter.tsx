@@ -82,7 +82,7 @@ export default function LojaPrivacyFooter({ storeSlug }: Props) {
             </button>
           </p>
           <p className="text-[11px] text-muted/70 break-words">
-            Dados tratados conforme a LGPD. Operador: vend.ai.
+            Dados tratados conforme a LGPD. Operador: vendai.club.
           </p>
         </div>
       </footer>

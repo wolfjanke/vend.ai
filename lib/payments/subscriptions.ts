@@ -14,7 +14,12 @@ import {
   createPayment,
   asaasCreateSubscription,
   cancelSubscriptionAsaas,
+  updateCustomer,
 } from './wolf-hub'
+import {
+  BILLING_DOC_REQUIRED_MSG,
+  buildAsaasCustomerPayload,
+} from '@/lib/billing-owner'
 import type { SubscriptionStatus } from '@/types'
 
 const ASAAS_CYCLE = {
@@ -70,18 +75,20 @@ async function loadStoreBilling(storeId: string) {
 export async function ensureBillingCustomer(storeId: string): Promise<string> {
   const store = await loadStoreBilling(storeId)
   if (!store) throw new Error('Loja não encontrada')
-  if (store.asaas_billing_customer_id) return store.asaas_billing_customer_id
+
+  const payload = await buildAsaasCustomerPayload(storeId)
+  if (!payload?.cpfCnpj) {
+    throw new Error(BILLING_DOC_REQUIRED_MSG)
+  }
 
   assertPaymentsConfigured()
 
-  const email = store.owner_email
-  if (!email) throw new Error('E-mail do lojista não encontrado para cobrança')
+  if (store.asaas_billing_customer_id) {
+    await updateCustomer(store.asaas_billing_customer_id, payload)
+    return store.asaas_billing_customer_id
+  }
 
-  const customer = await createCustomer({
-    name: store.name,
-    email,
-    externalReference: storeId,
-  })
+  const customer = await createCustomer(payload)
 
   await sql`
     UPDATE stores SET asaas_billing_customer_id = ${customer.id}
@@ -162,7 +169,7 @@ export async function createSubscription(
     value: valueReais,
     nextDueDate,
     cycle: ASAAS_CYCLE[billingCycle],
-    description: `Assinatura ${planDef.name} (${billingCycle}) — vend.ai`,
+    description: `Assinatura ${planDef.name} (${billingCycle}) — vendai.club`,
     externalReference: storeId,
   })
 

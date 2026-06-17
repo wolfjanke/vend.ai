@@ -26,7 +26,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#1A1A1A;">
-      Bem-vindo ao vend.ai, ${ownerName}!
+      Bem-vindo ao vendai.club, ${ownerName}!
     </h1>
     <p style="margin:0 0 24px;font-size:15px;color:#666666;">
       Sua loja <strong>${storeName}</strong> está no ar e pronta para vender.
@@ -101,8 +101,8 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
         Importante — Nota Fiscal
       </p>
       <p style="margin:0;font-size:12px;color:#7A5900;line-height:1.6;">
-        O vend.ai não emite notas fiscais das suas vendas. Essa responsabilidade
-        é sua como lojista, conforme legislação vigente. O vend.ai emite NF apenas
+        O vendai.club não emite notas fiscais das suas vendas. Essa responsabilidade
+        é sua como lojista, conforme legislação vigente. O vendai.club emite NF apenas
         referente à assinatura mensal da plataforma.
       </p>
     </div>
@@ -125,5 +125,5 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
     </p>
   `
 
-  return baseTemplate(content, `Bem-vindo ao vend.ai! Sua loja ${storeName} está no ar.`)
+  return baseTemplate(content, `Bem-vindo ao vendai.club! Sua loja ${storeName} está no ar.`)
 }

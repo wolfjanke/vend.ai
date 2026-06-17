@@ -1,4 +1,4 @@
-# vend.ai — Vi System Prompt
+# vendai.club — Vi System Prompt
 
 O prompt da assistente Vi é gerado em **`lib/vi-prompt.ts`** (`buildViSystemPrompt`) com o estoque e dados da loja em tempo real.
 

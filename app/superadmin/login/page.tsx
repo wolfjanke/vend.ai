@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { signIn, signOut } from 'next-auth/react'
+import BrandLogo from '@/components/BrandLogo'
 
 export default function SuperadminLoginPage() {
   const [email,   setEmail]   = useState('')
@@ -43,10 +44,10 @@ export default function SuperadminLoginPage() {
   return (
     <main className="relative z-10 min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-surface border border-border rounded-[28px] p-8 sm:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.4)] animate-fade-up">
-        <div className="font-syne font-extrabold text-2xl sm:text-3xl text-center mb-2">
-          vend<span className="text-[#FF6B6B]">.</span>ai
+        <div className="flex justify-center mb-2">
+          <BrandLogo size="xl" />
         </div>
-        <p className="text-center text-sm text-[#FF6B6B] font-medium mb-6">Wolf Hub — vend.ai</p>
+        <p className="text-center text-sm text-[#FF6B6B] font-medium mb-6">Wolf Hub — vendai.club</p>
 
         <h2 className="font-syne font-bold text-lg sm:text-xl mb-1">Painel do negócio</h2>
         <p className="text-sm text-muted mb-6">Acesso restrito ao dono do SaaS</p>

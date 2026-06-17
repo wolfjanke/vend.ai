@@ -3,6 +3,7 @@ import { isSuperadminEmail } from '@/lib/superadmin-allowlist'
 import SuperadminSidebar from '@/components/superadmin/SuperadminSidebar'
 import SuperadminMobileNav from '@/components/superadmin/SuperadminMobileNav'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
+import BrandLogo from '@/components/BrandLogo'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,9 +20,7 @@ export default async function SuperadminLayout({ children }: { children: React.R
       <div className="relative z-10 min-h-screen">
         <header className="sticky top-0 z-40 glass border-b border-border h-16 flex items-center justify-between px-4 sm:px-6 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-syne font-extrabold text-lg sm:text-xl truncate">
-              vend<span className="text-[#FF6B6B]">.</span>ai
-            </span>
+            <BrandLogo size="md" href="/" />
             <span className="shrink-0 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full bg-[#FF6B6B]/15 text-[#FF6B6B] border border-[#FF6B6B]/30">
               Wolf Hub Admin
             </span>

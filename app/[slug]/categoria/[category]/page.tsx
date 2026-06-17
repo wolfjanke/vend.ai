@@ -17,7 +17,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (isReservedStoreSlug(params.slug)) {
-    return { title: 'vend.ai' }
+    return { title: 'vendai.club' }
   }
 
   try {
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return { title: `${label} — ${publicStore.name}` }
   } catch {
-    return { title: 'vend.ai' }
+    return { title: 'vendai.club' }
   }
 }
 

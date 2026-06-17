@@ -15,14 +15,14 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (isReservedStoreSlug(params.slug)) {
-    return { title: 'vend.ai' }
+    return { title: 'vendai.club' }
   }
   try {
     const name = await getStoreNameBySlug(params.slug)
     if (!name) return { title: 'Loja não encontrada' }
-    return { title: `${name} — vend.ai` }
+    return { title: `${name} — vendai.club` }
   } catch {
-    return { title: 'vend.ai' }
+    return { title: 'vendai.club' }
   }
 }
 

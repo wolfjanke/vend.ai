@@ -39,7 +39,7 @@ export async function sendWelcomeEmail(store: {
 
   return sendEmail({
     to: store.ownerEmail,
-    subject: `Bem-vindo ao vend.ai — ${store.storeName} está no ar!`,
+    subject: `Bem-vindo ao vendai.club — ${store.storeName} está no ar!`,
     html,
     attachments: [
       {

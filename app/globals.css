@@ -87,10 +87,27 @@ body::after {
 
 /* ─── Gradient text util ────────────────────────────────────────────────────── */
 .text-grad {
-  background: linear-gradient(135deg, #7B6EFF, #00E5A0);
+  background: linear-gradient(90deg, #5C7BFF 0%, #41A8FF 50%, #22D9C3 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ─── vendai.club wordmark (vetor CSS — spec JSON da marca) ─────────────────── */
+.brand-wordmark-main {
+  background: linear-gradient(90deg, #5C7BFF 0%, #41A8FF 50%, #22D9C3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-wordmark-club {
+  background: linear-gradient(90deg, #41A8FF 0%, #22D9C3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
 }
 
 /* ─── Glassmorphism util ─────────────────────────────────────────────────────── */

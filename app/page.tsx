@@ -16,7 +16,16 @@ import ScrollReveal from '@/components/landing/ScrollReveal'
 import LandingPlans from '@/components/landing/LandingPlans'
 import LandingFooter from '@/components/landing/LandingFooter'
 import LandingStickyCta from '@/components/landing/LandingStickyCta'
+import LandingJsonLd from '@/components/landing/LandingJsonLd'
 import { LandingEditorialCard, LandingPainLines } from '@/components/landing/LandingEditorialCard'
+import { SITE_DESCRIPTION, SITE_TITLE, siteUrl } from '@/lib/site-seo'
+import { BRAND } from '@/lib/brand'
+
+export const metadata = {
+  title:       SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  alternates:  { canonical: siteUrl() },
+}
 
 /** Padding horizontal seguro no mobile (evita texto colado na borda / cortado) */
 const sectionX = 'px-4 sm:px-6 md:px-12 lg:px-16'
@@ -29,6 +38,7 @@ const demoStoreHref =
 export default function LandingPage() {
   return (
     <main className="relative z-10 min-w-0 overflow-x-hidden">
+      <LandingJsonLd />
       <div className="relative">
         <LandingHeader />
       </div>
@@ -129,7 +139,7 @@ export default function LandingPage() {
             Você passa mais tempo respondendo Direct do que vendendo?
           </h2>
           <p className="text-muted text-base max-w-full sm:max-w-lg mb-10 sm:mb-12 break-words">
-            Esse é o problema de quem começa. Com o vend.ai isso muda.
+            Esse é o problema de quem começa. Com o vendai.club isso muda.
           </p>
         </ScrollReveal>
 
@@ -375,7 +385,7 @@ export default function LandingPage() {
               Feito para quem<br />vende moda
             </h2>
             <p className="text-muted text-base leading-relaxed mb-8">
-              Não importa se você está começando do zero ou já vende no Instagram. O vend.ai é feito pra você ter uma presença digital de verdade — sem complicação.
+              Não importa se você está começando do zero ou já vende no Instagram. O vendai.club é feito pra você ter uma presença digital de verdade — sem complicação.
             </p>
             <div className="flex flex-wrap gap-2.5 mb-8">
               {[
@@ -397,20 +407,20 @@ export default function LandingPage() {
             <div className="bg-primary/8 border border-primary/25 rounded-[2px] p-7 mb-5">
               <p className="font-syne font-bold text-sm mb-3 text-primary">Por que não só link no bio?</p>
               <p className="text-sm text-muted leading-relaxed">
-                Porque no vend.ai você tem catálogo inteligente, IA que sugere produtos ao cliente e pedido formatado direto no seu WhatsApp — sem planilha, sem confusão, sem perder venda.
+                Porque no vendai.club você tem catálogo inteligente, IA que sugere produtos ao cliente e pedido formatado direto no seu WhatsApp — sem planilha, sem confusão, sem perder venda.
               </p>
             </div>
             <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
               {[
                 { label: 'Link na bio', items: ['Só mostra uma foto', 'Cliente precisa te chamar', 'Você responde manualmente', 'Sem controle de estoque'] },
-                { label: 'vend.ai', items: ['Catálogo completo', 'Vi atende 24h', 'Pedido no WhatsApp', 'Estoque atualizado'] },
+                { label: 'vendai.club', items: ['Catálogo completo', 'Vi atende 24h', 'Pedido no WhatsApp', 'Estoque atualizado'] },
               ].map(col => (
-                <div key={col.label} className={`rounded-[2px] p-4 border ${col.label === 'vend.ai' ? 'border-primary/40 bg-primary/8' : 'border-[#252525] bg-[#161616]'}`}>
-                  <p className={`font-syne font-bold text-xs mb-3 ${col.label === 'vend.ai' ? 'text-primary' : 'text-muted'}`}>{col.label}</p>
+                <div key={col.label} className={`rounded-[2px] p-4 border ${col.label === 'vendai.club' ? 'border-primary/40 bg-primary/8' : 'border-[#252525] bg-[#161616]'}`}>
+                  <p className={`font-syne font-bold text-xs mb-3 ${col.label === 'vendai.club' ? 'text-primary' : 'text-muted'}`}>{col.label}</p>
                   <ul className="flex flex-col gap-2">
                     {col.items.map(item => (
                       <li key={item} className="flex items-start gap-1.5 text-xs text-muted">
-                        {col.label === 'vend.ai'
+                        {col.label === 'vendai.club'
                           ? <CheckCircle2 size={11} className="mt-0.5 shrink-0 text-accent" />
                           : <XCircle size={11} className="mt-0.5 shrink-0" style={{ color: 'var(--warm)' }} />
                         }
@@ -433,7 +443,7 @@ export default function LandingPage() {
             Junte-se a quem já vende mais
           </h2>
           <p className="text-muted text-sm sm:text-base mb-2 max-w-xl break-words">
-            Lojistas de todo o Brasil usando o vend.ai para vender mais com menos esforço.
+            Lojistas de todo o Brasil usando o vendai.club para vender mais com menos esforço.
           </p>
           <p className="text-[11px] text-muted/80 mb-12 max-w-xl break-words">
             Exemplos ilustrativos do dia a dia de quem vende moda online.
@@ -503,7 +513,7 @@ export default function LandingPage() {
             Você escolhe como receber
           </h2>
           <p className="text-muted text-sm sm:text-base mb-6 break-words">
-            O vend.ai não processa pagamentos dos seus clientes. Você recebe direto, do jeito que já usa hoje.
+            O vendai.club não processa pagamentos dos seus clientes. Você recebe direto, do jeito que já usa hoje.
           </p>
           <ul className="flex flex-col gap-2.5 text-sm text-muted mb-8">
             {[
@@ -559,7 +569,7 @@ export default function LandingPage() {
             },
             {
               q: 'Preciso saber de tecnologia para usar?',
-              a: 'Não. O vend.ai foi feito pra quem nunca criou um site. Se você consegue usar o WhatsApp, consegue usar o vend.ai.',
+              a: 'Não. O vendai.club foi feito pra quem nunca criou um site. Se você consegue usar o WhatsApp, consegue usar o vendai.club.',
             },
             {
               q: 'Posso cancelar quando quiser?',
@@ -599,15 +609,15 @@ export default function LandingPage() {
             },
             {
               q: 'Onde ficam meus dados? Vocês vendem meus dados?',
-              a: 'Jamais. Seus dados e os da sua loja são armazenados de forma segura em servidores confiáveis. Não vendemos, compartilhamos ou usamos seus dados para fins comerciais. Trabalhamos em total conformidade com a LGPD (Lei 13.709/2018). Você pode solicitar exclusão dos seus dados a qualquer momento pelo e-mail privacidade@vend.ai.',
+              a: `Jamais. Seus dados e os da sua loja são armazenados de forma segura em servidores confiáveis. Não vendemos, compartilhamos ou usamos seus dados para fins comerciais. Trabalhamos em total conformidade com a LGPD (Lei 13.709/2018). Você pode solicitar exclusão dos seus dados a qualquer momento pelo e-mail ${BRAND.privacyEmail}.`,
             },
             {
               q: 'Preciso de CNPJ para usar?',
               a: 'Não. Você pode criar sua loja como pessoa física. Não pedimos CNPJ para começar.',
             },
             {
-              q: 'O vend.ai processa pagamentos dos meus clientes?',
-              a: 'Não. Você recebe direto no PIX, Mercado Pago, PagBank ou como preferir combinar no WhatsApp. O vend.ai organiza catálogo, pedidos e estoque — o dinheiro vai para a sua conta.',
+              q: 'O vendai.club processa pagamentos dos meus clientes?',
+              a: 'Não. Você recebe direto no PIX, Mercado Pago, PagBank ou como preferir combinar no WhatsApp. O vendai.club organiza catálogo, pedidos e estoque — o dinheiro vai para a sua conta.',
             },
           ].map((item, i) => (
             <ScrollReveal key={i} delay={i * 50}>

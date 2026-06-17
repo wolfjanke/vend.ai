@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>vend.ai — Moda Feminina</title>
+<title>vendai.club — Moda Feminina</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -71,17 +71,7 @@
   }
   @keyframes slideDown { from { opacity:0; transform: translateY(-20px); } to { opacity:1; transform: translateY(0); } }
 
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 22px;
-    background: var(--grad);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.5px;
-  }
-  .logo span { opacity: 0.7; }
+  .logo img { height: 28px; width: auto; display: block; }
 
   .store-name {
     font-family: 'Syne', sans-serif;
@@ -1538,7 +1528,7 @@
         <div class="proof-avatars">
           <span>👩</span><span>👩‍🦱</span><span>👩‍🦰</span><span>🧕</span>
         </div>
-        <span class="proof-text">+1.200 lojistas já usam o vend.ai</span>
+        <span class="proof-text">+1.200 lojistas já usam o vendai.club</span>
       </div>
     </div>
     <div class="hero-visual">
@@ -1707,7 +1697,7 @@
         <input class="onb-input" type="text" placeholder="🏪 Nome da sua loja" id="ob_store" oninput="updateSlug(this.value)">
         <div class="onb-slug-preview">
           <span class="slug-label">Seu link será:</span>
-          <span class="slug-val" id="slugPreview">vend.ai/sua-loja</span>
+          <span class="slug-val" id="slugPreview">vendai.club/sua-loja</span>
         </div>
         <input class="onb-input" type="tel" placeholder="📱 WhatsApp da loja (11) 99999-9999" id="ob_wpp">
         <div class="onb-upload-area" onclick="document.getElementById('logoUpload').click()">
@@ -1731,7 +1721,7 @@
       <div class="onb-step-title">Sua loja está no ar!</div>
       <div class="onb-step-sub">Tudo pronto para começar a vender</div>
       <div class="onb-link-box">
-        <span class="onb-link-val" id="onbFinalLink">vend.ai/bella-moda</span>
+        <span class="onb-link-val" id="onbFinalLink">vendai.club/bella-moda</span>
         <button class="onb-copy-btn" onclick="copyLink()">Copiar</button>
       </div>
       <div class="onb-next-steps">
@@ -2148,7 +2138,7 @@ function checkout() {
 
   let items = cart.map(x=>`• ${x.name} — ${x.size} (${x.qty}x) — R$ ${(x.price*x.qty).toFixed(2).replace('.',',')} `).join('\n');
 
-  const msg = `🛍️ *Novo Pedido #${orderNum} — vend.ai*\n\n👤 *Cliente:* ${name}\n📱 *WhatsApp:* ${phone}\n\n━━━━━━━━━━━━━━━\n🧾 *Itens do Pedido:*\n${items}\n━━━━━━━━━━━━━━━\n💰 *Total: R$ ${total.toFixed(2).replace('.',',')}*\n\n📝 *Obs:* ${obs||'Sem observações'}\n\n⏰ ${now}`;
+  const msg = `🛍️ *Novo Pedido #${orderNum} — vendai.club*\n\n👤 *Cliente:* ${name}\n📱 *WhatsApp:* ${phone}\n\n━━━━━━━━━━━━━━━\n🧾 *Itens do Pedido:*\n${items}\n━━━━━━━━━━━━━━━\n💰 *Total: R$ ${total.toFixed(2).replace('.',',')}*\n\n📝 *Obs:* ${obs||'Sem observações'}\n\n⏰ ${now}`;
 
   window.open('https://wa.me/5511999999999?text='+encodeURIComponent(msg), '_blank');
   cart = [];
@@ -2291,8 +2281,8 @@ function showToast(msg) {
 
 function updateSlug(val) {
   const slug = val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  document.getElementById('slugPreview').textContent = 'vend.ai/' + (slug || 'sua-loja');
-  document.getElementById('onbFinalLink').textContent = 'vend.ai/' + (slug || 'minha-loja');
+  document.getElementById('slugPreview').textContent = 'vendai.club/' + (slug || 'sua-loja');
+  document.getElementById('onbFinalLink').textContent = 'vendai.club/' + (slug || 'minha-loja');
 }
 
 function onbNext(step) {

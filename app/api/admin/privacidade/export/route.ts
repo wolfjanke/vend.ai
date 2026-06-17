@@ -43,7 +43,7 @@ export async function GET() {
 
     const payload = {
       exportedAt: new Date().toISOString(),
-      operator:   { product: 'vend.ai', company: COMPANY.name, cnpj: COMPANY.cnpj },
+      operator:   { product: 'vendai.club', company: COMPANY.name, cnpj: COMPANY.cnpj },
       store: {
         id:                    store.id,
         slug:                  store.slug,

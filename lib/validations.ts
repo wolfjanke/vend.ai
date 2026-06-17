@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { digitsOnly, isValidBrazilPhoneDigits, isValidCpf } from '@/lib/masks'
+import { digitsOnly, isValidBrazilPhoneDigits, isValidCpf, isValidCnpj } from '@/lib/masks'
 import { MAX_PAYMENT_LINKS } from '@/lib/payment-links'
 import { stripEmojis } from '@/lib/strip-emoji'
 
@@ -343,3 +343,56 @@ export const quoteUpdateSchema = z.object({
   items: z.array(quoteUpdateItemSchema).min(1),
   notes: z.string().max(5000).optional(),
 })
+
+const billingAddressFieldsSchema = z.object({
+  cep:         z.string(),
+  logradouro:  z.string(),
+  numero:      z.string(),
+  complemento: z.string().optional(),
+  bairro:      z.string(),
+  cidade:      z.string(),
+  uf:          z.string(),
+})
+
+export const billingOwnerSchema = z.object({
+  type: z.enum(['pf', 'pj']),
+  cpfCnpj: z.string().transform(s => digitsOnly(s)),
+  legalName: noEmojiOptional(200),
+  address: billingAddressFieldsSchema.optional(),
+}).superRefine((data, ctx) => {
+  if (data.type === 'pf') {
+    if (data.cpfCnpj.length !== 11 || !isValidCpf(data.cpfCnpj)) {
+      ctx.addIssue({ code: 'custom', path: ['cpfCnpj'], message: 'CPF inválido' })
+    }
+  } else {
+    if (data.cpfCnpj.length !== 14 || !isValidCnpj(data.cpfCnpj)) {
+      ctx.addIssue({ code: 'custom', path: ['cpfCnpj'], message: 'CNPJ inválido' })
+    }
+    if (!data.legalName?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['legalName'], message: 'Razão social obrigatória' })
+    }
+  }
+
+  if (data.address && !isDeliveryAddressEmpty(data.address)) {
+    if (digitsOnly(data.address.cep).length !== 8) {
+      ctx.addIssue({ code: 'custom', path: ['address', 'cep'], message: 'CEP inválido' })
+    }
+    if (!data.address.logradouro.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['address', 'logradouro'], message: 'Logradouro obrigatório' })
+    }
+    if (!data.address.numero.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['address', 'numero'], message: 'Número obrigatório' })
+    }
+    if (!data.address.bairro.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['address', 'bairro'], message: 'Bairro obrigatório' })
+    }
+    if (!data.address.cidade.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['address', 'cidade'], message: 'Cidade obrigatória' })
+    }
+    if (data.address.uf.trim().toUpperCase().length !== 2) {
+      ctx.addIssue({ code: 'custom', path: ['address', 'uf'], message: 'UF inválida' })
+    }
+  }
+})
+
+export type BillingOwnerInput = z.infer<typeof billingOwnerSchema>

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- vend.ai — Schema SQL para Supabase
+-- vendai.club — Schema SQL para Supabase
 -- Execute no SQL Editor: https://supabase.com/dashboard → SQL Editor
 -- ═══════════════════════════════════════════════════════════════════════════
 

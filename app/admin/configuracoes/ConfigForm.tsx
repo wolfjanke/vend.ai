@@ -14,6 +14,7 @@ import { maskPhone, formatPhoneDisplay } from '@/lib/masks'
 import { stripEmojis } from '@/lib/strip-emoji'
 import SectionHeader from '@/components/admin/SectionHeader'
 import AdminPrivacySection from '@/components/admin/AdminPrivacySection'
+import BillingOwnerForm from '@/components/admin/BillingOwnerForm'
 import CheckoutModeSection from '@/components/admin/CheckoutModeSection'
 import ConfigSectionNav, { type ConfigSectionId } from '@/components/admin/ConfigSectionNav'
 import { adminCard } from '@/lib/admin-ui'
@@ -108,6 +109,8 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
   const [newPwd, setNewPwd] = useState('')
   const [pwdErr, setPwdErr] = useState('')
   const [pwdLoading, setPwdLoading] = useState(false)
+  const [billingSaved, setBillingSaved] = useState(false)
+  const [billingDocMasked, setBillingDocMasked] = useState<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoSaving, setLogoSaving] = useState(false)
@@ -125,6 +128,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
   }, [pwdOpen])
 
   const plan = (store.plan ?? 'free') as PlanSlug
+  const ownerName = (settings as { ownerName?: string }).ownerName?.trim() || store.name
   const checkoutMode = normalizeCheckoutMode(store.checkout_mode) as CheckoutMode
   const canName = canUseAssistantFeature(plan, 'customName')
   const canWelcome = canUseAssistantFeature(plan, 'customWelcome')
@@ -370,6 +374,34 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
 
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL : ''
   const [activeSection, setActiveSection] = useState<ConfigSectionId>('config-loja')
+
+  useEffect(() => {
+    if (activeSection !== 'config-conta') return
+    let cancelled = false
+    void fetch('/api/admin/billing-owner')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled || !data) return
+        setBillingDocMasked(data.hasBillingDoc ? data.docMasked : null)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [activeSection])
+
+  async function handleSaveBilling(data: import('@/lib/validations').BillingOwnerInput) {
+    const res = await fetch('/api/admin/billing-owner', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    const j = await res.json()
+    if (!res.ok) {
+      throw new Error((j as { error?: string }).error ?? 'Erro ao salvar dados de cobrança')
+    }
+    setBillingDocMasked(j.docMasked ?? null)
+    setBillingSaved(true)
+    setTimeout(() => setBillingSaved(false), 2500)
+  }
 
   function renderViPanel() {
     return (
@@ -700,6 +732,9 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
           </div>
 
           <SectionHeader title="Endereço da loja (opcional)" />
+          <p className="text-xs text-muted -mt-2 break-words">
+            Exibido na vitrine e mensagens de pedido — não é usado na cobrança do plano vendai.club.
+          </p>
           <div className="space-y-2">
             <div>
               <label className="text-[11px] text-muted block mb-1">CEP</label>
@@ -1098,6 +1133,35 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
           >
             {loading ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar alterações'}
           </button>
+        </ConfigCard>
+
+        <ConfigCard
+          title="Dados de cobrança (plano vendai.club)"
+          subtitle="CPF ou CNPJ exigidos pelo Asaas para assinar um plano pago. Endereço de cobrança é separado do endereço da loja."
+        >
+          {billingDocMasked && (
+            <p className="text-xs text-accent break-words">
+              Documento cadastrado: <span className="font-mono">{billingDocMasked}</span>
+            </p>
+          )}
+          {billingSaved && (
+            <p className="text-sm text-accent font-medium">✓ Dados de cobrança salvos</p>
+          )}
+          <BillingOwnerForm
+            ownerName={ownerName}
+            initial={{
+              type: store.billing_owner_type ?? undefined,
+              legalName: store.billing_legal_name,
+            }}
+            submitLabel={billingDocMasked ? 'Atualizar dados de cobrança' : 'Salvar dados de cobrança'}
+            onSubmit={handleSaveBilling}
+          />
+          <p className="text-xs text-muted break-words">
+            Para ver planos e fazer upgrade, acesse{' '}
+            <Link href="/admin/plano" className="text-primary font-semibold hover:underline">
+              Plano
+            </Link>.
+          </p>
         </ConfigCard>
 
         <AdminPrivacySection />
