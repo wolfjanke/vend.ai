@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { Plus, Shirt } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import type { Product, ProductVariant, StoreSettings, PlanSlug } from '@/types'
-import { getCategoryDisplayLabel, PLAN_PRODUCT_LIMITS } from '@/types'
+import { getCategoryDisplayLabel, type Product, type ProductVariant, type StoreSettings, type PlanSlug } from '@/types'
+import { getStorePlanContext } from '@/lib/store-plan-access'
 import { normalizeStockAlerts, productLowStockMinQty } from '@/lib/stock-alerts'
 import ToggleActiveButton from './ToggleActiveButton'
 import DeleteProductButton from './DeleteProductButton'
@@ -116,12 +116,12 @@ export default async function ProdutosPage({ searchParams }: Props) {
     `
   }
 
-  const settingsRows = await sql`SELECT settings_json, plan FROM stores WHERE id = ${storeId} LIMIT 1`
+  const settingsRows = await sql`SELECT settings_json, plan, is_demo, slug FROM stores WHERE id = ${storeId} LIMIT 1`
   const settings = (settingsRows[0]?.settings_json as StoreSettings | null) ?? {}
   const customCategories = settings.customCategories ?? []
-  const storePlan = (settingsRows[0]?.plan ?? 'free') as PlanSlug
+  const planCtx = getStorePlanContext(settingsRows[0] ?? {})
+  const productLimit = planCtx.productLimit
   const stockAlerts = normalizeStockAlerts(settings.stockAlerts)
-  const productLimit = PLAN_PRODUCT_LIMITS[storePlan]
   const totalProducts = await sql`SELECT COUNT(*)::int as c FROM products WHERE store_id = ${storeId}`
   const totalProductCount = Number(totalProducts[0]?.c ?? 0)
 

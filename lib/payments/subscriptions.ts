@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db'
+import { isPlatformDemoStore } from '@/lib/demo-store'
 import {
   getPlan,
   TRIAL_DAYS_BY_PLAN,
@@ -139,6 +140,11 @@ export async function createSubscription(
 ): Promise<void> {
   if (!isPaidPlan(planSlug)) {
     throw new Error('Plano inválido para assinatura')
+  }
+
+  const demoRows = await sql`SELECT is_demo, slug FROM stores WHERE id = ${storeId} LIMIT 1`
+  if (isPlatformDemoStore(demoRows[0] ?? {})) {
+    throw new Error('Loja de demonstração não pode ter assinatura paga')
   }
 
   if (!getVendaiAsaasKey()) {

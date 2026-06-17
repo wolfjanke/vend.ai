@@ -14,6 +14,8 @@ import {
 } from '@/lib/payments/subscriptions'
 import { PLAN_PRODUCT_LIMITS, PLANS, PAID_PLAN_SLUGS, getChargeAmountCents, getDisplayMonthlyCents, type PlanSlug, type BillingCycle } from '@/lib/plans'
 import { sendUpgradeEmail } from '@/lib/email/send-upgrade'
+import { isPlatformDemoStore } from '@/lib/demo-store'
+import { getStorePlanContext } from '@/lib/store-plan-access'
 import { saveBillingOwner } from '@/lib/billing-owner'
 import { billingOwnerSchema } from '@/lib/validations'
 
@@ -40,18 +42,25 @@ export async function GET() {
       WHERE store_id = ${session.storeId} AND active = true
     `
     const storeRows = await sql`
-      SELECT vi_messages_used, vi_messages_reset_at, vi_overage_messages
+      SELECT vi_messages_used, vi_messages_reset_at, vi_overage_messages, is_demo, slug, plan
       FROM stores WHERE id = ${session.storeId} LIMIT 1
     `
     const store = storeRows[0] as {
       vi_messages_used: number
       vi_overage_messages: number
+      is_demo?: boolean
+      slug?: string
+      plan?: string
     } | undefined
 
-    const plan = sub.plan
+    const planCtx = getStorePlanContext({
+      plan: sub.plan,
+      is_demo: store?.is_demo,
+      slug: store?.slug,
+    })
     const productCount = Number(productRows[0]?.c ?? 0)
-    const productLimit = PLAN_PRODUCT_LIMITS[plan]
-    const viLimit = PLANS[plan].viMessagesLimit
+    const productLimit = planCtx.productLimit
+    const viLimit = planCtx.viMessagesLimit
 
     let history: unknown[] = []
     try {
@@ -68,6 +77,8 @@ export async function GET() {
 
     return NextResponse.json({
       ...sub,
+      isDemoStore: planCtx.isDemo,
+      billingExempt: planCtx.billingExempt,
       paymentsConfigured: !!getVendaiAsaasKey(),
       billingTestAllowed: await isBillingTestAllowedForStore(session.storeId),
       usage: {
@@ -101,6 +112,14 @@ export async function POST(req: NextRequest) {
   const session = await getSessionSafe()
   if (!session?.storeId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  const demoRows = await sql`SELECT is_demo, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
+  if (isPlatformDemoStore(demoRows[0] ?? {})) {
+    return NextResponse.json(
+      { error: 'A loja de demonstração não possui assinatura paga.' },
+      { status: 403 },
+    )
   }
 
   if (!getVendaiAsaasKey()) {

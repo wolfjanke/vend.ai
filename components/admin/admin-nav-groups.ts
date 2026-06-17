@@ -84,9 +84,11 @@ export function isNavGroupActive(pathname: string, group: AdminNavGroup, plan: P
     .some(item => isNavItemActive(pathname, item.href, item.match))
 }
 
-export function visibleNavGroups(plan: PlanSlug): AdminNavGroup[] {
+export function visibleNavGroups(plan: PlanSlug, isDemo = false): AdminNavGroup[] {
   return ADMIN_NAV_GROUPS.map(group => ({
     ...group,
-    items: group.items.filter(item => !item.planOnly || item.planOnly === plan),
+    items: group.items.filter(
+      item => !item.planOnly || item.planOnly === plan || (isDemo && item.planOnly === 'loja'),
+    ),
   })).filter(group => group.items.length > 0)
 }

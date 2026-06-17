@@ -2,6 +2,7 @@ import { sql } from '@/lib/db'
 import { getPlan, type PlanSlug } from '@/lib/plans'
 import { GEMINI_MODELS } from '@/lib/gemini'
 import { digitsOnly } from '@/lib/masks'
+import { getStorePlanContext } from '@/lib/store-plan-access'
 
 const IP_LIMIT = 30
 const IP_WINDOW_MS = 60_000
@@ -38,13 +39,13 @@ function dayKey(d = new Date()): string {
   return `day:${d.toISOString().slice(0, 10)}`
 }
 
-async function loadStoreUsage(storeId: string): Promise<StoreUsageRow | null> {
+async function loadStoreUsage(storeId: string): Promise<(StoreUsageRow & { is_demo?: boolean; slug?: string }) | null> {
   const rows = await sql`
     SELECT id, plan, whatsapp, vi_messages_used, vi_messages_reset_at,
-           vi_overage_messages, vi_daily_limit
+           vi_overage_messages, vi_daily_limit, is_demo, slug
     FROM stores WHERE id = ${storeId} LIMIT 1
   `
-  return (rows[0] as StoreUsageRow | undefined) ?? null
+  return (rows[0] as (StoreUsageRow & { is_demo?: boolean; slug?: string }) | undefined) ?? null
 }
 
 async function resetMonthlyIfNeeded(storeId: string, resetAt: string | null): Promise<void> {
@@ -103,15 +104,26 @@ export async function checkViLimit(storeId: string): Promise<{
   }
 
   const plan = (store.plan ?? 'free') as PlanSlug
-  const planDef = getPlan(plan)
+  const planCtx = getStorePlanContext(store)
 
   await resetMonthlyIfNeeded(storeId, store.vi_messages_reset_at)
   const fresh = await loadStoreUsage(storeId)
   const used = Number(fresh?.vi_messages_used ?? 0)
-  const limit = planDef.viMessagesLimit
+  const limit = planCtx.viMessagesLimit
   const remaining = Math.max(0, limit - used)
 
   if (used >= limit) {
+    if (planCtx.isDemo) {
+      return {
+        allowed:   true,
+        remaining: 999_999,
+        isOverage: false,
+        plan:      planCtx.plan,
+        used,
+        limit,
+        whatsapp:  fresh?.whatsapp ?? store.whatsapp,
+      }
+    }
     if (plan === 'free') {
       return {
         allowed:   false,

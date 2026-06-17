@@ -16,6 +16,7 @@ export async function GET() {
       SELECT plan, COUNT(*)::int AS count
       FROM stores
       WHERE subscription_status = 'ACTIVE' AND plan != 'free'
+        AND COALESCE(is_demo, false) = false
       GROUP BY plan
     `
 
@@ -32,16 +33,18 @@ export async function GET() {
       FROM stores s
       LEFT JOIN admin_users u ON u.store_id = s.id
       WHERE s.subscription_status = 'OVERDUE'
+        AND COALESCE(s.is_demo, false) = false
       ORDER BY s.subscription_ends_at ASC NULLS LAST
     `
 
     let revenueByMonth: { month: string; total_cents: number }[] = []
     try {
       const rev = await sql`
-        SELECT date_trunc('month', created_at) AS month,
-          COALESCE(SUM(amount_cents), 0)::int AS total_cents
-        FROM billing_history
-        WHERE created_at >= NOW() - INTERVAL '12 months'
+        SELECT date_trunc('month', bh.created_at) AS month,
+          COALESCE(SUM(bh.amount_cents), 0)::int AS total_cents
+        FROM billing_history bh
+        INNER JOIN stores st ON st.id = bh.store_id AND COALESCE(st.is_demo, false) = false
+        WHERE bh.created_at >= NOW() - INTERVAL '12 months'
         GROUP BY 1
         ORDER BY 1 DESC
         LIMIT 12

@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db'
 import { getPlan, type PlanSlug } from '@/lib/plans'
+import { isPlatformDemoStore } from '@/lib/demo-store'
 
 function monthChanged(resetAt: string | Date | null): boolean {
   if (!resetAt) return true
@@ -13,6 +14,11 @@ export async function checkPhotoAnalysisLimit(storeId: string, plan: PlanSlug): 
   used:    number
   limit:   number | null
 }> {
+  const storeRows = await sql`SELECT is_demo, slug FROM stores WHERE id = ${storeId} LIMIT 1`
+  if (isPlatformDemoStore(storeRows[0] ?? {})) {
+    return { allowed: true, used: 0, limit: null }
+  }
+
   const planDef = getPlan(plan)
   const limit = planDef.photoAnalysisLimit
   if (limit === 0) {

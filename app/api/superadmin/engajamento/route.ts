@@ -20,6 +20,7 @@ export async function GET() {
       FROM stores s
       LEFT JOIN orders o ON o.store_id = s.id
       WHERE s.subscription_status = 'ACTIVE'
+        AND COALESCE(s.is_demo, false) = false
       GROUP BY s.id
       ORDER BY days_inactive DESC NULLS FIRST
     `

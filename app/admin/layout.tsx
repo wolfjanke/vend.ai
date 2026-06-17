@@ -23,7 +23,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const session = await getSessionSafe()
   if (!session?.storeId) return <AuthSessionProvider>{children}</AuthSessionProvider>
 
-  let store: { name: string; slug: string; plan?: string } | undefined
+  let store: { name: string; slug: string; plan?: string; isDemo?: boolean } | undefined
   let newOrdersCount = 0
   try {
     const shell = await getAdminShellData(session.storeId)
@@ -76,7 +76,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       <ImpersonationBanner />
 
       <div className="flex">
-        <AdminSidebar newOrdersCount={newOrdersCount} plan={(store?.plan ?? 'free') as import('@/types').PlanSlug} />
+        <AdminSidebar newOrdersCount={newOrdersCount} plan={(store?.plan ?? 'free') as import('@/types').PlanSlug} isDemo={store?.isDemo} />
 
         {/* Main */}
         <main className="flex-1 min-w-0 p-4 md:p-6 xl:p-8 pb-[max(5rem,calc(64px+env(safe-area-inset-bottom,0px)))] md:pb-6">
@@ -90,6 +90,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <MobileNav
           newOrdersCount={newOrdersCount}
           plan={(store?.plan ?? 'free') as import('@/types').PlanSlug}
+          isDemo={store?.isDemo}
         />
       </div>
     </div>

@@ -13,12 +13,13 @@ import {
 type Props = {
   newOrdersCount: number
   plan?:            PlanSlug
+  isDemo?:          boolean
 }
 
-export default function MobileNav({ newOrdersCount, plan = 'free' }: Props) {
+export default function MobileNav({ newOrdersCount, plan = 'free', isDemo = false }: Props) {
   const pathname = usePathname() ?? ''
   const [openGroup, setOpenGroup] = useState<AdminNavGroup | null>(null)
-  const groups = visibleNavGroups(plan)
+  const groups = visibleNavGroups(plan, isDemo)
 
   function openSheet(group: AdminNavGroup) {
     setOpenGroup(prev => (prev?.id === group.id ? null : group))

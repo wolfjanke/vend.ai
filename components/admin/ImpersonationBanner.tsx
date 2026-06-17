@@ -16,7 +16,7 @@ export default function ImpersonationBanner() {
   return (
     <div className="bg-warm/15 border-b border-warm/40 px-4 py-2 flex items-center justify-between gap-2 min-w-0 max-w-[100vw]">
       <p className="text-sm break-words min-w-0">
-        Modo edição: você está no painel desta loja. Alterações aparecem na vitrine pública.
+        Editando o painel desta loja — você continua logado como superadmin (não é outro login).
       </p>
       <button
         type="button"

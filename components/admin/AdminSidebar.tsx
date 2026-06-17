@@ -45,13 +45,20 @@ function isActive(pathname: string, href: string, match: 'exact' | 'prefix') {
 
 interface Props {
   newOrdersCount: number
-  plan?: PlanSlug
+  plan?:            PlanSlug
+  isDemo?:          boolean
 }
 
-export default function AdminSidebar({ newOrdersCount, plan = 'free' }: Props) {
+function navItemVisible(item: NavItem, plan: PlanSlug, isDemo: boolean) {
+  if (!item.planOnly) return true
+  if (item.planOnly === plan) return true
+  return isDemo && item.planOnly === 'loja'
+}
+
+export default function AdminSidebar({ newOrdersCount, plan = 'free', isDemo = false }: Props) {
   const pathname = usePathname() ?? ''
 
-  const visibleItems = navItems.filter(item => !item.planOnly || item.planOnly === plan)
+  const visibleItems = navItems.filter(item => navItemVisible(item, plan, isDemo))
 
   return (
     <>

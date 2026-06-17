@@ -22,10 +22,10 @@ export async function GET(req: NextRequest) {
 
     const signupQuery =
       window === '24h'
-        ? sql`SELECT id, name, slug, created_at FROM stores WHERE created_at > NOW() - INTERVAL '24 hours' ORDER BY created_at DESC LIMIT 50`
+        ? sql`SELECT id, name, slug, created_at FROM stores WHERE created_at > NOW() - INTERVAL '24 hours' AND COALESCE(is_demo, false) = false ORDER BY created_at DESC LIMIT 50`
         : window === '30d'
-          ? sql`SELECT id, name, slug, created_at FROM stores WHERE created_at > NOW() - INTERVAL '30 days' ORDER BY created_at DESC LIMIT 50`
-          : sql`SELECT id, name, slug, created_at FROM stores WHERE created_at > NOW() - INTERVAL '7 days' ORDER BY created_at DESC LIMIT 50`
+          ? sql`SELECT id, name, slug, created_at FROM stores WHERE created_at > NOW() - INTERVAL '30 days' AND COALESCE(is_demo, false) = false ORDER BY created_at DESC LIMIT 50`
+          : sql`SELECT id, name, slug, created_at FROM stores WHERE created_at > NOW() - INTERVAL '7 days' AND COALESCE(is_demo, false) = false ORDER BY created_at DESC LIMIT 50`
 
     if (type === 'all' || type === 'signup') {
       const signups = await signupQuery
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
         const billing = await sql`
           SELECT bh.id, bh.type, bh.amount_cents, bh.created_at, s.name
           FROM billing_history bh
-          JOIN stores s ON s.id = bh.store_id
+          JOIN stores s ON s.id = bh.store_id AND COALESCE(s.is_demo, false) = false
           WHERE bh.created_at > NOW() - INTERVAL '30 days'
           ORDER BY bh.created_at DESC
           LIMIT 50

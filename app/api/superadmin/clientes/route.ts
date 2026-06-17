@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
       LEFT JOIN admin_users u ON u.store_id = s.id
       LEFT JOIN products p ON p.store_id = s.id
       LEFT JOIN orders o ON o.store_id = s.id
+      WHERE COALESCE(s.is_demo, false) = false
       GROUP BY s.id, u.email
       ORDER BY s.created_at DESC
     `

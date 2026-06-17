@@ -25,6 +25,7 @@ export async function GET() {
       LEFT JOIN orders o ON o.store_id = s.id
       WHERE s.trial_ends_at > NOW()
         AND (s.subscription_status = 'TRIAL' OR s.subscription_status IS NULL)
+        AND COALESCE(s.is_demo, false) = false
       GROUP BY s.id, u.email
       ORDER BY s.trial_ends_at ASC
     `

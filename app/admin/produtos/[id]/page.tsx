@@ -3,7 +3,8 @@ import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import AdminPageError from '@/components/admin/AdminPageError'
 import ProdutoForm from '@/components/admin/ProdutoForm'
-import type { Product, StoreSettings } from '@/types'
+import type { Product, StoreSettings, PlanSlug } from '@/types'
+import { getStorePlanContext } from '@/lib/store-plan-access'
 
 interface Props {
   params: { id: string }
@@ -16,6 +17,7 @@ export default async function EditarProdutoPage({ params }: Props) {
   const { id } = params
   let product: Product
   let settings: StoreSettings
+  let plan: PlanSlug = 'free'
 
   try {
     const rows = await sql`
@@ -25,8 +27,9 @@ export default async function EditarProdutoPage({ params }: Props) {
     if (!found) notFound()
     product = found
 
-    const storeRows = await sql`SELECT settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const storeRows = await sql`SELECT settings_json, plan, is_demo, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
     settings = (storeRows[0]?.settings_json as StoreSettings | null) ?? {}
+    plan = getStorePlanContext(storeRows[0] ?? {}).plan
   } catch (e) {
     console.error('[admin/produtos/edit]', id, e)
     return (
@@ -49,6 +52,7 @@ export default async function EditarProdutoPage({ params }: Props) {
         productId={id}
         initialProduct={product}
         customCategories={settings.customCategories ?? []}
+        plan={plan}
       />
     </div>
   )

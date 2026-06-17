@@ -68,6 +68,8 @@ interface SubscriptionData {
   }
   plans: PlanOption[]
   billingHistory: BillingRow[]
+  isDemoStore?: boolean
+  billingExempt?: boolean
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -228,6 +230,11 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
 
   const currentPlanBody = (
     <>
+      {data.billingExempt && (
+        <div className="mb-4 rounded-xl border border-warm/30 bg-warm/10 px-4 py-3 text-sm text-warm break-words">
+          Loja de demonstração da plataforma — todos os recursos liberados, sem cobrança de assinatura.
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
         <div>
           <div className="text-muted text-xs mb-0.5">Plano</div>
@@ -293,7 +300,7 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
         )}
       </div>
 
-      {isPaid && data.subscriptionStatus !== 'CANCELLED' && (
+      {isPaid && data.subscriptionStatus !== 'CANCELLED' && !data.billingExempt && (
         <button
           type="button"
           onClick={handleCancel}
@@ -341,6 +348,7 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
       </div>
 
       {/* Grid de planos */}
+      {!data.billingExempt && (
       <div className="xl:col-span-8 space-y-5">
       <div>
         <h2 className="font-syne font-bold text-sm mb-3">Planos disponíveis</h2>
@@ -497,6 +505,7 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
         )}
       </div>
       </div>
+      )}
       </div>
 
       {billingModalPlan && (

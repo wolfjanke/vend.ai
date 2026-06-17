@@ -6,7 +6,7 @@ import { calculateInstallmentQuote } from '@/lib/payments/installment-fees'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/asaas/client'
 import type { Store, PlanSlug } from '@/types'
-import { canUsePdv } from '@/lib/pdv-access'
+import { canUsePdvForStore } from '@/lib/store-plan-access'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -28,12 +28,12 @@ export async function POST(req: NextRequest) {
   }
 
   const storeRows = await sql`
-    SELECT id, plan, asaas_wallet_id, asaas_onboarding_status
+    SELECT id, plan, asaas_wallet_id, asaas_onboarding_status, is_demo, slug
     FROM stores WHERE id = ${session.storeId} LIMIT 1
   `
-  const store = storeRows[0] as Store & { id: string } | undefined
+  const store = storeRows[0] as Store & { id: string; is_demo?: boolean; slug?: string } | undefined
 
-  if (!store || !canUsePdv((store.plan ?? 'free') as PlanSlug)) {
+  if (!store || !canUsePdvForStore(store)) {
     return NextResponse.json({ error: 'PDV disponível apenas no plano Loja' }, { status: 403 })
   }
 

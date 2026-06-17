@@ -4,14 +4,12 @@ import { getSessionSafe } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
 import { decrementStockForOrder, OrderValidationError } from '@/lib/order-pricing'
 import type { CartItem } from '@/types'
-import { canUsePdv } from '@/lib/pdv-access'
-import type { PlanSlug } from '@/types'
+import { canUsePdvForStore } from '@/lib/store-plan-access'
 export { dynamic } from '@/lib/route-dynamic'
 
 async function requirePdvPlan(storeId: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
-  const rows = await sql`SELECT plan FROM stores WHERE id = ${storeId} LIMIT 1`
-  const plan = (rows[0]?.plan ?? 'free') as PlanSlug
-  if (!canUsePdv(plan)) {
+  const rows = await sql`SELECT plan, is_demo, slug FROM stores WHERE id = ${storeId} LIMIT 1`
+  if (!canUsePdvForStore(rows[0] ?? {})) {
     return { ok: false, status: 403, error: 'PDV disponível apenas no plano Loja' }
   }
   return { ok: true }

@@ -4,7 +4,7 @@ import { storeSettingsPatchSchema } from '@/lib/validations'
 import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import { isPaidPlan, type PlanSlug } from '@/lib/plans'
-import { canUseAssistantFeature } from '@/lib/plans'
+import { canUseAssistantFeatureForStore, getStorePlanContext } from '@/lib/store-plan-access'
 import { sanitizePaymentLinks } from '@/lib/payment-links'
 import { normalizeLogoSize } from '@/lib/store-logo'
 import { normalizeAssistantGender } from '@/lib/assistant-gender'
@@ -70,31 +70,33 @@ export async function PATCH(req: NextRequest) {
     } = parsed.data
 
     const storeRows = await sql`
-      SELECT settings_json, plan, tagline, assistant_name, assistant_welcome_message, assistant_tone, assistant_gender, logo_url, theme_logo_url
+      SELECT settings_json, plan, tagline, assistant_name, assistant_welcome_message, assistant_tone, assistant_gender, logo_url, theme_logo_url, is_demo, slug
       FROM stores WHERE id = ${session.storeId} LIMIT 1
     `
-    const plan = (storeRows[0]?.plan ?? 'free') as PlanSlug
+    const storeRow = storeRows[0] ?? {}
+    const plan = (storeRow.plan ?? 'free') as PlanSlug
+    const planCtx = getStorePlanContext(storeRow)
 
-    if (assistant_name !== undefined && !canUseAssistantFeature(plan, 'customName')) {
+    if (assistant_name !== undefined && !canUseAssistantFeatureForStore(storeRow, 'customName')) {
       return NextResponse.json(
         { error: 'Personalize o nome da assistente a partir do plano Starter.' },
         { status: 403 },
       )
     }
-    if (assistant_welcome_message !== undefined && !canUseAssistantFeature(plan, 'customWelcome')) {
+    if (assistant_welcome_message !== undefined && !canUseAssistantFeatureForStore(storeRow, 'customWelcome')) {
       return NextResponse.json(
         { error: 'Mensagem de boas-vindas disponível a partir do plano Pro.' },
         { status: 403 },
       )
     }
-    if (assistant_tone !== undefined && !canUseAssistantFeature(plan, 'customTone')) {
+    if (assistant_tone !== undefined && !canUseAssistantFeatureForStore(storeRow, 'customTone')) {
       return NextResponse.json(
         { error: 'Tom da assistente disponível a partir do plano Pro.' },
         { status: 403 },
       )
     }
 
-    if (paymentLinks !== undefined && paymentLinks.length > 0 && !isPaidPlan(plan)) {
+    if (paymentLinks !== undefined && paymentLinks.length > 0 && !planCtx.isDemo && !isPaidPlan(plan)) {
       return NextResponse.json(
         { error: 'Links de pagamento disponíveis a partir do plano Starter.' },
         { status: 403 },

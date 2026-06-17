@@ -253,8 +253,8 @@ async function setup() {
   let storeId
   if (existingStore.length === 0) {
     const [store] = await sql`
-      INSERT INTO stores (user_id, slug, name, whatsapp, settings_json)
-      VALUES (${userId}, 'urban-mix', 'Urban Mix', '5511999999999', ${demoSettings}::jsonb)
+      INSERT INTO stores (user_id, slug, name, whatsapp, settings_json, is_demo, plan)
+      VALUES (${userId}, 'urban-mix', 'Urban Mix', '5511999999999', ${demoSettings}::jsonb, true, 'enterprise')
       RETURNING id
     `
     storeId = store.id
@@ -262,7 +262,7 @@ async function setup() {
   } else {
     storeId = existingStore[0].id
     // Garantir que o settings_json está atualizado mesmo se a loja já existia
-    await sql`UPDATE stores SET settings_json = ${demoSettings}::jsonb WHERE id = ${storeId}`
+    await sql`UPDATE stores SET settings_json = ${demoSettings}::jsonb, is_demo = true, plan = 'enterprise' WHERE id = ${storeId}`
     console.log('✓ Loja já existe (settings_json atualizado)')
   }
 

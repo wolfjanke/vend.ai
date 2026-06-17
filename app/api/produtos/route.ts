@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import type { PlanSlug } from '@/types'
-import { PLAN_PRODUCT_LIMITS } from '@/types'
 import { productBodySchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
 import { resolveProductSlugForStore } from '@/lib/product-slug'
+import { getStorePlanContext } from '@/lib/store-plan-access'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -30,9 +29,9 @@ export async function POST(req: NextRequest) {
 
     const { name, description, category, audience, price, promo_price, variants_json, catalog_axes, active } = parsed.data
 
-    const planRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
-    const plan = (planRows[0]?.plan ?? 'free') as PlanSlug
-    const limit = PLAN_PRODUCT_LIMITS[plan]
+    const storeRows = await sql`SELECT plan, is_demo, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const planCtx = getStorePlanContext(storeRows[0] ?? {})
+    const limit = planCtx.productLimit
     if (limit != null) {
       const countRows = await sql`SELECT COUNT(*) as c FROM products WHERE store_id = ${session.storeId}`
       const count = Number(countRows[0]?.c ?? 0)

@@ -5,6 +5,7 @@ import AdminPageError from '@/components/admin/AdminPageError'
 import ProdutoForm    from '@/components/admin/ProdutoForm'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 import type { StoreSettings, PlanSlug } from '@/types'
+import { getStorePlanContext } from '@/lib/store-plan-access'
 
 export default async function NovoProdutoPage() {
   const session = await getSessionSafe()
@@ -13,9 +14,9 @@ export default async function NovoProdutoPage() {
   let settings: StoreSettings
   let plan: PlanSlug = 'free'
   try {
-    const storeRows = await sql`SELECT settings_json, plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
+    const storeRows = await sql`SELECT settings_json, plan, is_demo, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
     settings = (storeRows[0]?.settings_json as StoreSettings | null) ?? {}
-    plan = (storeRows[0]?.plan as PlanSlug) ?? 'free'
+    plan = getStorePlanContext(storeRows[0] ?? {}).plan
   } catch (e) {
     console.error('[admin/produtos/novo]', e)
     return (
