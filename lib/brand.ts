@@ -19,6 +19,7 @@ export const BRAND_GRADIENT = {
 /** Assets vetoriais — fonte única: `public/brand/wordmark.svg` (fundo transparente). */
 export const BRAND_LOGO = {
   wordmark:       '/brand/wordmark.svg',
+  wordmarkEmail:  '/brand/wordmark-email.png',
   wordmarkSquare: '/brand/wordmark-square.svg',
   ogImage:        '/brand/og-image.svg',
   favicon:        '/favicon.svg',

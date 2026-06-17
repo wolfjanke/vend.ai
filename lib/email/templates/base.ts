@@ -1,6 +1,22 @@
 import { COMPANY, companyCityShort } from '@/lib/company'
-import { BRAND } from '@/lib/brand'
+import { BRAND, BRAND_LOGO } from '@/lib/brand'
 import { EMAIL_CONFIG } from '../index'
+
+/** Logo PNG para clientes de e-mail (Gmail não renderiza gradiente em texto nem SVG externo). */
+function emailLogoHtml(): string {
+  const baseUrl = EMAIL_CONFIG.baseUrl
+  const src = `${baseUrl}${BRAND_LOGO.wordmarkEmail}`
+  return `
+              <a href="${baseUrl}" style="text-decoration:none;display:inline-block;line-height:0;">
+                <img
+                  src="${src}"
+                  width="220"
+                  height="57"
+                  alt="${BRAND.displayName}"
+                  style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:220px;max-width:100%;height:auto;"
+                />
+              </a>`
+}
 
 export function baseTemplate(content: string, previewText: string): string {
   const baseUrl = EMAIL_CONFIG.baseUrl
@@ -22,10 +38,7 @@ export function baseTemplate(content: string, previewText: string): string {
 
           <tr>
             <td style="background:#050814;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
-              <div style="display:inline-block;font-family:Arial,Helvetica,sans-serif;line-height:1;position:relative;">
-                <span style="display:block;font-size:32px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(90deg,#5C7BFF,#41A8FF,#22D9C3);-webkit-background-clip:text;color:#41A8FF;">vendai</span>
-                <span style="position:absolute;right:-2%;bottom:-5%;font-size:13px;font-weight:700;background:linear-gradient(90deg,#41A8FF,#22D9C3);-webkit-background-clip:text;color:#22D9C3;">.club</span>
-              </div>
+              ${emailLogoHtml()}
             </td>
           </tr>
 
