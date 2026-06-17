@@ -185,7 +185,10 @@ export function mapAnalysisToVariantDraft(
   }
 
   // color (moda) — N variantes por cor
-  const photoBuckets = distributePhotoIndices(imageCount, rawVariantes.length)
+  const hasExplicitIndices = rawVariantes.some(v => typeof v.fotoIndice === 'number')
+  const photoBuckets = hasExplicitIndices
+    ? rawVariantes.map(v => (typeof v.fotoIndice === 'number' ? [v.fotoIndice] : []))
+    : distributePhotoIndices(imageCount, rawVariantes.length)
   const variants: MappedVariantDraft[] = rawVariantes.map((v, i) => ({
     id:           crypto.randomUUID(),
     color:        v.label ?? v.cor,

@@ -9,11 +9,9 @@ import type {
   CustomCategory,
   VariantType,
   ProductAnalysisHints,
-  ProductAudienceHint,
   ProductAudience,
   ProductAudienceConfidence,
   CatalogAxes,
-  PhotoVariationHint,
   StockAxis,
 } from '@/types'
 import { PRODUCT_CATEGORIES, CLOTHING_SIZES, getCategoryDisplayLabel, PRODUCT_AUDIENCE_OPTIONS, stockKeysForAxes } from '@/types'
@@ -54,26 +52,16 @@ interface VariantState {
 }
 
 type ProductBlockState = {
-  id:             string
-  files:          File[]
-  previews:       string[]
-  piece:          string
-  audience:       ProductAudienceHint
-  colors:         string
-  note:           string
-  photoVariation: PhotoVariationHint | 'unspecified'
+  id:       string
+  files:    File[]
+  previews: string[]
 }
 
 function createEmptyBlock(): ProductBlockState {
   return {
-    id:             crypto.randomUUID(),
-    files:          [],
-    previews:       [],
-    piece:          '',
-    audience:       '',
-    colors:         '',
-    note:           '',
-    photoVariation: 'unspecified',
+    id:       crypto.randomUUID(),
+    files:    [],
+    previews: [],
   }
 }
 
@@ -101,26 +89,10 @@ const VARIANT_TYPE_OPTIONS: Array<{ value: VariantType; label: string }> = [
 
 type CadastroStep = 1 | 2 | 3 | 4
 
-const PHOTO_VARIATION_OPTIONS: Array<{ value: PhotoVariationHint | 'unspecified'; label: string }> = [
-  { value: 'unspecified',    label: 'Não informar (IA decide)' },
-  { value: 'colors',         label: 'Cores diferentes' },
-  { value: 'volumes',        label: 'Volumes diferentes (50ml, 100ml…)' },
-  { value: 'concentrations', label: 'Concentrações (EDT, EDP…)' },
-]
-
 const STOCK_AXIS_OPTIONS: Array<{ value: StockAxis; label: string }> = [
   { value: 'clothing', label: 'Tamanho de roupa (P, M, G…)' },
   { value: 'volume',   label: 'Volume (ml)' },
   { value: 'unique',   label: 'Único (sem variação de tamanho)' },
-]
-
-const AUDIENCE_HINT_OPTIONS: Array<{ value: ProductAudienceHint; label: string }> = [
-  { value: '',          label: 'Não informar' },
-  { value: 'feminine',  label: 'Feminino' },
-  { value: 'masculine', label: 'Masculino' },
-  { value: 'kids',      label: 'Infantil' },
-  { value: 'unisex',    label: 'Unissex' },
-  { value: 'mixed',     label: 'Misto' },
 ]
 
 function BatchDraftThumb({ file }: { file: File }) {
@@ -205,6 +177,25 @@ function distributeFilesAcrossVariants(files: File[], variantCount: number): Fil
   }
 
   return Array.from({ length: variantCount }, (_, i) => (i < files.length ? [files[i]] : []))
+}
+
+function mergePhotoPool(base: File[], extra: File[]): File[] {
+  const seen = new Set<string>()
+  const pool: File[] = []
+  for (const f of [...base, ...extra]) {
+    const fp = fileFingerprint(f)
+    if (seen.has(fp)) continue
+    seen.add(fp)
+    pool.push(f)
+  }
+  return pool
+}
+
+function photosToIndices(photos: File[], pool: File[]): number[] {
+  return photos.map(p => {
+    const idx = pool.findIndex(f => fileFingerprint(f) === fileFingerprint(p))
+    return idx >= 0 ? idx : 0
+  })
 }
 
 /** Evita useMemo+revoke: no Strict Mode o cleanup revoga o blob e o useMemo devolvia a mesma URL inválida (ERR_FILE_NOT_FOUND). */
@@ -307,10 +298,6 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
   const totalBlockPhotos = productBlocks.reduce((sum, b) => sum + b.files.length, 0)
   const blocksStillLoading = productBlocks.some(b => b.files.length > b.previews.length)
   const blocksWithPhotos = productBlocks.filter(b => b.files.length > 0)
-
-  function updateBlock(blockId: string, patch: Partial<ProductBlockState>) {
-    setProductBlocks(prev => prev.map(b => (b.id === blockId ? { ...b, ...patch } : b)))
-  }
 
   function isDuplicateAcrossBlocks(file: File, blocks: ProductBlockState[], excludeBlockId: string): boolean {
     const fp = fileFingerprint(file)
@@ -435,25 +422,13 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     const groups = ready.map(b => {
       const imageIndices = b.files.map((_, i) => offset + i)
       offset += b.files.length
-      const blockHints: NonNullable<ProductAnalysisHints['groups']>[number]['hints'] = {}
-      if (b.piece.trim()) blockHints.pieceType = b.piece.trim()
-      if (b.audience) blockHints.audience = b.audience
-      if (b.colors.trim()) blockHints.colorsNote = b.colors.trim()
-      if (b.note.trim()) blockHints.freeText = b.note.trim()
-      if (b.photoVariation !== 'unspecified') blockHints.photoVariation = b.photoVariation
-      return {
-        imageIndices,
-        hints: Object.keys(blockHints).length ? blockHints : undefined,
-      }
+      return { imageIndices }
     })
-    const hints: ProductAnalysisHints = {
+    return {
       mode:         'blocks',
       productCount: ready.length,
       groups,
     }
-    const firstPiece = ready.find(b => b.piece.trim())?.piece.trim()
-    if (firstPiece) hints.pieceType = firstPiece
-    return hints
   }
 
   function variantDraftsToState(drafts: MappedVariantDraft[], filesSnapshot: File[]): VariantState[] {
@@ -466,6 +441,33 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       stockPrices:      d.stockPrices ?? {},
       stockPromoPrices: {},
       variantType:      d.variantType,
+    }))
+  }
+
+  function variantsFromBatchItem(item: BatchProductDraft): VariantState[] {
+    const photoFiles = item.photoFiles?.length ? item.photoFiles : [item.file]
+    const axes = item.catalogAxes ?? { primaryAxis: 'color' as const, stockAxis: 'clothing' as const }
+
+    if (item.variantDrafts?.length) {
+      let generated = variantDraftsToState(item.variantDrafts, photoFiles)
+      if (generated.every(v => v.photos.length === 0) && photoFiles.length > 0) {
+        const buckets = distributeFilesAcrossVariants(photoFiles, generated.length)
+        generated = generated.map((v, i) => ({ ...v, photos: buckets[i] ?? [] }))
+      }
+      return generated
+    }
+
+    const raw = item.variantes.length ? item.variantes : [{ cor: 'Único', corHex: '#888888' }]
+    const buckets = distributeFilesAcrossVariants(photoFiles, raw.length)
+    return raw.map((v, i) => ({
+      id:               crypto.randomUUID(),
+      color:            v.cor,
+      colorHex:         v.corHex ?? '#888888',
+      photos:           buckets[i] ?? [],
+      stock:            Object.fromEntries(stockKeysForAxes(axes.stockAxis).map(s => [s, 0])),
+      stockPrices:      {},
+      stockPromoPrices: {},
+      variantType:      'cor' as VariantType,
     }))
   }
 
@@ -563,10 +565,9 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     if (source.length === 0) return source
     return source.map((item, i) => {
       if (i !== batchIndex) return item
-      const mainPhotos =
-        variants.length > 0 && variants[0].photos.length > 0
-          ? variants[0].photos
-          : item.photoFiles ?? [item.file]
+      const basePhotos = item.photoFiles?.length ? item.photoFiles : [item.file]
+      const variantPhotoList = variants.flatMap(v => v.photos)
+      const photoFiles = mergePhotoPool(basePhotos, variantPhotoList)
       return {
         ...item,
         nome:      prodName,
@@ -582,12 +583,13 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           stock:         v.stock,
           stockPrices:   v.stockPrices,
           variantType:   v.variantType,
-          photoIndices:  [],
+          photoIndices:  photosToIndices(v.photos, photoFiles),
         })),
         variantes: variants.length
           ? variants.map(v => ({ cor: v.color, corHex: v.colorHex }))
           : item.variantes,
-        photoFiles: mainPhotos,
+        photoFiles,
+        file: photoFiles[0] ?? item.file,
       }
     })
   }
@@ -614,28 +616,34 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
     if (item.catalogAxes) setCatalogAxes(item.catalogAxes)
     if (item.aiMeta) setAiMeta(item.aiMeta)
 
-    const photoFiles = item.photoFiles?.length ? item.photoFiles : [item.file]
-    if (item.variantDrafts?.length) {
-      setVariants(variantDraftsToState(item.variantDrafts, photoFiles))
-    } else {
-      const v = item.variantes[0] ?? { cor: 'Único', corHex: '#888888' }
-      setVariants([{
-        id:               crypto.randomUUID(),
-        color:            v.cor,
-        colorHex:         v.corHex ?? '#888888',
-        photos:           [...photoFiles],
-        stock:            Object.fromEntries(stockKeysForAxes(catalogAxes.stockAxis).map(s => [s, 0])),
-        stockPrices:      {},
-        stockPromoPrices: {},
-        variantType:      'cor' as VariantType,
-      }])
-    }
+    setVariants(variantsFromBatchItem(item))
     setPostAiPhotoNote(
       queue.length > 1
-        ? 'Revise cada produto e suas variações — publique um por vez na etapa final.'
+        ? 'Defina preço e estoque de cada produto. Após publicar, o próximo aparece automaticamente.'
         : '',
     )
     setAiStatus(`✓ ${queue.length} produto${queue.length > 1 ? 's' : ''} identificado${queue.length > 1 ? 's' : ''}`)
+  }
+
+  function advanceToCommercialStep() {
+    if (!prodName.trim()) { alert('Informe o nome do produto'); return }
+    if (!prodCat) { alert('Selecione a categoria'); return }
+    if (!prodAudience) { alert('Selecione o público (feminino, masculino, unissex ou infantil)'); return }
+    if (!variants.length) { alert('Adicione ao menos uma variação'); return }
+
+    const updated = persistCurrentBatchDraft()
+    setBatchQueue(updated)
+    loadBatchProduct(updated, batchIndex)
+    setStep(4)
+  }
+
+  function returnToReviewStep() {
+    if (batchQueue.length) {
+      const updated = persistCurrentBatchDraft()
+      setBatchQueue(updated)
+      loadBatchProduct(updated, batchIndex)
+    }
+    setStep(3)
   }
 
   function applyBatchAnalysis(
@@ -973,9 +981,11 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       }
 
       if (!isEdit && batchQueue.length > 0 && batchIndex < batchQueue.length - 1) {
+        const updated = persistCurrentBatchDraft()
+        setBatchQueue(updated)
         const next = batchIndex + 1
         setBatchIndex(next)
-        loadBatchProduct(batchQueue, next)
+        loadBatchProduct(updated, next)
         setStep(3)
         return
       }
@@ -1066,7 +1076,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
               <li>Cada <strong className="text-foreground font-medium">bloco</strong> é um produto que você vai cadastrar.</li>
               <li>As fotos do bloco são as <strong className="text-foreground font-medium">variações</strong> — cores, estampas ou volumes do mesmo modelo.</li>
               <li>Uma foto só também vale: produto sem variação de cor.</li>
-              <li>Depois a IA analisa todos os blocos de uma vez; você revisa e publica um por um.</li>
+              <li>Depois a IA gera nome, categoria e variações — você revisa e publica.</li>
             </ol>
             <p className="text-[11px] text-muted mt-3 break-words">
               Até {MAX_PRODUCT_BLOCKS} produtos por vez · {MAX_PHOTOS_TOTAL} fotos no total · não repita a mesma foto em blocos diferentes.
@@ -1137,73 +1147,6 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                     </div>
                   )}
                 </div>
-
-                {photoAiEnabled && block.files.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border">
-                    <div className="min-w-0 sm:col-span-2">
-                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Tipo de produto</label>
-                      <select
-                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
-                        value={block.piece}
-                        onChange={e => updateBlock(block.id, { piece: e.target.value })}
-                      >
-                        <option value="">Não informar</option>
-                        {PRODUCT_CATEGORIES.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                        {customCategories.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="min-w-0">
-                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Público</label>
-                      <select
-                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
-                        value={block.audience}
-                        onChange={e => updateBlock(block.id, { audience: e.target.value as ProductAudienceHint })}
-                      >
-                        {AUDIENCE_HINT_OPTIONS.map(o => (
-                          <option key={o.value || 'none'} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="min-w-0">
-                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">O que muda entre as fotos?</label>
-                      <select
-                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary appearance-none"
-                        value={block.photoVariation}
-                        onChange={e => updateBlock(block.id, { photoVariation: e.target.value as PhotoVariationHint | 'unspecified' })}
-                      >
-                        {PHOTO_VARIATION_OPTIONS.map(o => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {block.files.length > 1 && (
-                      <div className="min-w-0 sm:col-span-2">
-                        <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Cores ou volumes</label>
-                        <input
-                          className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
-                          placeholder="Ex.: preto, off-white — ou 50ml, 100ml"
-                          value={block.colors}
-                          onChange={e => updateBlock(block.id, { colors: e.target.value })}
-                        />
-                      </div>
-                    )}
-                    <div className="min-w-0 sm:col-span-2">
-                      <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-                        Observação <span className="normal-case font-normal text-muted">(opcional)</span>
-                      </label>
-                      <textarea
-                        className="w-full px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary min-h-[56px] resize-y break-words"
-                        placeholder="Só se algo importante não aparecer na foto"
-                        value={block.note}
-                        onChange={e => updateBlock(block.id, { note: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -1293,7 +1236,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
                 )}
               </div>
               <p className="text-sm text-muted mb-4 break-words">
-                A IA analisou cada bloco separadamente. Toque em um card para revisar nome, variações e categoria antes de publicar.
+                Toque em cada card para revisar. Depois, use o botão abaixo para definir preço e estoque <strong className="text-foreground font-medium">deste</strong> produto.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {batchQueue.map((item, i) => {
@@ -1461,21 +1404,12 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (!prodName.trim()) { alert('Informe o nome do produto'); return }
-                if (!prodCat) { alert('Selecione a categoria'); return }
-                if (!prodAudience) { alert('Selecione o público (feminino, masculino, unissex ou infantil)'); return }
-                if (!variants.length) { alert('Adicione ao menos uma variação'); return }
-                if (batchQueue.length > 1) {
-                  setBatchQueue(persistCurrentBatchDraft())
-                }
-                setStep(4)
-              }}
+              onClick={advanceToCommercialStep}
               className="flex-[2] min-h-[44px] py-3 bg-primary text-white font-syne font-bold text-sm rounded-xl hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all"
             >
               {batchQueue.length > 1
-                ? `Continuar produto ${batchIndex + 1} →`
-                : 'Confirmar e continuar →'}
+                ? `Preço e estoque — produto ${batchIndex + 1} de ${batchQueue.length} →`
+                : 'Preço e estoque →'}
             </button>
           </div>
         </>
@@ -1484,15 +1418,50 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
       {showCommercial && (
         <>
           {!isEdit && (
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-muted break-words">Etapa 4 — preço, estoque e publicação</p>
-              <button
-                type="button"
-                onClick={() => setStep(3)}
-                className="text-xs text-primary hover:underline min-h-[44px] px-2"
-              >
-                Ajustar revisão
-              </button>
+            <div className="mb-4 flex flex-col gap-3">
+              {batchQueue.length > 1 && (
+                <div className={`${adminCard} border-primary/30 bg-primary/5 py-3 px-4`}>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="font-syne font-bold text-sm">
+                      Produto {batchIndex + 1} de {batchQueue.length}
+                    </span>
+                    <span className="text-xs text-muted truncate max-w-full" title={prodName}>
+                      {prodName.trim() || batchQueue[batchIndex]?.nome}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted break-words">
+                    {batchIndex < batchQueue.length - 1
+                      ? `Após publicar, você passa ao produto ${batchIndex + 2}.`
+                      : 'Último produto desta leva.'}
+                  </p>
+                  <div className="flex gap-1.5 mt-3 min-w-0 overflow-x-auto pb-0.5">
+                    {batchQueue.map((item, i) => (
+                      <div
+                        key={`step4-pill-${i}`}
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium tabular-nums ${
+                          i === batchIndex
+                            ? 'bg-primary text-white'
+                            : i < batchIndex
+                              ? 'bg-accent/20 text-accent'
+                              : 'bg-surface2 text-muted'
+                        }`}
+                      >
+                        {i + 1}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted break-words">Etapa 4 — preço, estoque e publicação</p>
+                <button
+                  type="button"
+                  onClick={returnToReviewStep}
+                  className="text-xs text-primary hover:underline min-h-[44px] px-2"
+                >
+                  Ajustar revisão
+                </button>
+              </div>
             </div>
           )}
 
@@ -1771,7 +1740,7 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="button"
-              onClick={() => (isEdit ? router.back() : setStep(3))}
+              onClick={() => (isEdit ? router.back() : returnToReviewStep())}
               className="flex-1 min-h-[44px] py-3 border border-border rounded-xl text-muted text-sm hover:border-muted hover:text-foreground transition-all"
             >
               {isEdit ? 'Cancelar' : '← Voltar à revisão'}
