@@ -120,7 +120,17 @@ export async function getBillingOwnerPublic(storeId: string): Promise<BillingOwn
     }
   }
 
-  const digits = await decryptTaxId(row.billing_owner_doc_enc)
+  const digits = await decryptTaxId(row.billing_owner_doc_enc).catch(() => null)
+  if (!digits) {
+    return {
+      hasBillingDoc: false,
+      type:          null,
+      docMasked:     null,
+      legalName:     row.billing_legal_name ?? null,
+      ...account,
+    }
+  }
+
   return {
     hasBillingDoc: true,
     type:          row.billing_owner_type,

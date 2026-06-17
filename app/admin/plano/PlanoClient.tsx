@@ -5,8 +5,6 @@ import { Loader2, Crown, X } from 'lucide-react'
 import {
   formatPlanPrice,
   formatBillingCycleLabel,
-  formatBillingCycleLabelShort,
-  getBillingCycleDiscountLabel,
   formatBillingPeriodNoun,
   getDailyCentsFromCharge,
   PLAN_FEATURE_LINES,
@@ -16,6 +14,7 @@ import {
 import { adminCard } from '@/lib/admin-ui'
 import type { SubscriptionStatus } from '@/types'
 import BillingOwnerForm from '@/components/admin/BillingOwnerForm'
+import BillingCycleToggle from '@/components/admin/BillingCycleToggle'
 import CancelRetentionModal from '@/components/admin/CancelRetentionModal'
 import {
   isRetentionOfferEligible,
@@ -89,8 +88,6 @@ const STATUS_LABELS: Record<string, string> = {
   OVERDUE: 'Vencido',
   CANCELLED: 'Cancelado',
 }
-
-const BILLING_CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual']
 
 function formatDate(iso: string | null) {
   if (!iso) return '—'
@@ -414,48 +411,7 @@ export default function PlanoClient({ ownerName = '', storeName = '' }: PlanoCli
       <div>
         <h2 className="font-syne font-bold text-sm mb-3">Planos disponíveis</h2>
 
-        <div
-          className="grid grid-cols-1 min-[400px]:grid-cols-3 gap-2 mb-4 pt-1"
-          role="tablist"
-          aria-label="Periodicidade de cobrança"
-        >
-          {BILLING_CYCLES.map(cycle => {
-            const active = billingCycle === cycle
-            const isAnnual = cycle === 'annual'
-            const discount = getBillingCycleDiscountLabel(cycle)
-            return (
-              <button
-                key={cycle}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-label={formatBillingCycleLabel(cycle)}
-                onClick={() => setBillingCycle(cycle)}
-                className={`relative w-full min-h-[44px] px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all flex flex-col items-center justify-center gap-0.5 ${
-                  active
-                    ? 'bg-primary text-white border-primary'
-                    : 'border-border text-muted hover:border-primary hover:text-foreground'
-                } ${isAnnual ? 'mt-2 min-[400px]:mt-0' : ''}`}
-              >
-                {isAnnual && (
-                  <span
-                    className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap ${
-                      active ? 'bg-white/20 text-white' : 'bg-accent/20 text-accent'
-                    }`}
-                  >
-                    Melhor valor
-                  </span>
-                )}
-                <span>{formatBillingCycleLabelShort(cycle)}</span>
-                {discount ? (
-                  <span className={`text-[10px] font-normal ${active ? 'text-white/80' : 'text-muted'}`}>
-                    {discount}
-                  </span>
-                ) : null}
-              </button>
-            )
-          })}
-        </div>
+        <BillingCycleToggle value={billingCycle} onChange={setBillingCycle} />
 
         <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2">
           {data.plans.map(p => {

@@ -3,6 +3,8 @@ export type PlanSlug = 'free' | 'starter' | 'pro' | 'loja' | 'enterprise'
 
 export type BillingCycle = 'monthly' | 'quarterly' | 'annual'
 
+export const BILLING_CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual']
+
 export type PlanOverage = {
   per:   number
   price: number

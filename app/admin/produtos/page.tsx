@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Shirt } from 'lucide-react'
+import { Plus, Shirt } from 'lucide-react'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { getCategoryDisplayLabel, type Product, type ProductVariant, type StoreSettings } from '@/types'
