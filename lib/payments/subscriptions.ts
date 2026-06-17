@@ -2,18 +2,24 @@ import { sql } from '@/lib/db'
 import { isPlatformDemoStore } from '@/lib/demo-store'
 import {
   getPlan,
-  TRIAL_DAYS_BY_PLAN,
   isPaidPlan,
   getChargeAmountCents,
   getBillingPeriodDays,
   type PlanSlug,
   type BillingCycle,
 } from '@/lib/plans'
+import { addDaysBr, formatDateYmdBr, firstChargeInstantFromYmd } from '@/lib/billing-dates'
+import {
+  isFirstPaidSubscription,
+  preservedTrialEnd,
+  resolveTrialDays,
+} from '@/lib/billing-trial'
 import { getVendaiAsaasKey, assertPaymentsConfigured } from './config'
 import {
   createCustomer,
   createPayment,
   asaasCreateSubscription,
+  updateSubscriptionAsaas,
   cancelSubscriptionAsaas,
   updateCustomer,
 } from './wolf-hub'
@@ -28,16 +34,6 @@ const ASAAS_CYCLE = {
   quarterly: 'QUARTERLY',
   annual:    'YEARLY',
 } as const
-
-function formatDateYmd(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(d: Date, days: number): Date {
-  const out = new Date(d)
-  out.setUTCDate(out.getUTCDate() + days)
-  return out
-}
 
 async function loadStoreBilling(storeId: string) {
   const rows = await sql`
@@ -108,6 +104,8 @@ export interface SubscriptionStatusResult {
   asaasSubscriptionId: string | null
   trialDaysRemaining: number | null
   billingCycle: BillingCycle
+  /** Próxima cobrança: fim do trial ou renovação do período. */
+  nextChargeAt: string | null
 }
 
 export async function getSubscriptionStatus(storeId: string): Promise<SubscriptionStatusResult> {
@@ -115,22 +113,39 @@ export async function getSubscriptionStatus(storeId: string): Promise<Subscripti
   const plan = (store?.plan ?? 'free') as PlanSlug
   const billingCycle = (store?.billing_cycle ?? 'monthly') as BillingCycle
   const trialEnds = store?.trial_ends_at ?? null
+  const status = (store?.subscription_status as SubscriptionStatus) ?? null
   let trialDaysRemaining: number | null = null
-  if (trialEnds && store?.subscription_status === 'TRIAL') {
+  if (trialEnds && status === 'TRIAL') {
     const diff = new Date(trialEnds).getTime() - Date.now()
     trialDaysRemaining = Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)))
   }
 
+  const nextChargeAt =
+    status === 'TRIAL' && trialEnds
+      ? trialEnds
+      : store?.subscription_ends_at ?? null
+
   return {
     plan,
-    subscriptionStatus: (store?.subscription_status as SubscriptionStatus) ?? null,
+    subscriptionStatus: status,
     subscriptionStartedAt: store?.subscription_started_at ?? null,
     subscriptionEndsAt: store?.subscription_ends_at ?? null,
     trialEndsAt: trialEnds,
     asaasSubscriptionId: store?.asaas_subscription_id ?? null,
     trialDaysRemaining,
     billingCycle,
+    nextChargeAt,
   }
+}
+
+/** Atualiza nextDueDate da assinatura no Asaas (ex.: extensão de trial). */
+export async function syncAsaasSubscriptionNextDueDate(
+  asaasSubscriptionId: string,
+  trialEndsAt: Date,
+): Promise<void> {
+  if (!getVendaiAsaasKey()) return
+  const nextDueDate = formatDateYmdBr(trialEndsAt)
+  await updateSubscriptionAsaas(asaasSubscriptionId, { nextDueDate })
 }
 
 export async function createSubscription(
@@ -164,10 +179,26 @@ export async function createSubscription(
   const planDef = getPlan(planSlug)
   const chargeCents = getChargeAmountCents(planSlug, billingCycle)
   const valueReais = chargeCents / 100
-  const trialDays = TRIAL_DAYS_BY_PLAN[planSlug] ?? 0
   const now = new Date()
-  const trialEnds = trialDays > 0 ? addDays(now, trialDays) : null
-  const nextDueDate = trialEnds ? formatDateYmd(trialEnds) : formatDateYmd(addDays(now, 1))
+
+  const isFirstPaid = await isFirstPaidSubscription(storeId)
+  const trialInput = {
+    planSlug,
+    isFirstPaid,
+    subscriptionStatus: existing?.subscription_status as SubscriptionStatus | null,
+    trialEndsAt: existing?.trial_ends_at,
+  }
+  const keptTrialEnd = preservedTrialEnd(trialInput)
+  const trialDaysToGrant = resolveTrialDays(trialInput)
+
+  let trialEnds: Date | null = keptTrialEnd
+  if (!trialEnds && trialDaysToGrant > 0) {
+    trialEnds = addDaysBr(now, trialDaysToGrant)
+  }
+
+  const nextDueDate = trialEnds
+    ? formatDateYmdBr(trialEnds)
+    : formatDateYmdBr(addDaysBr(now, 1))
 
   const sub = await asaasCreateSubscription({
     customer: customerId,
@@ -179,8 +210,10 @@ export async function createSubscription(
     externalReference: storeId,
   })
 
-  const status: SubscriptionStatus = trialDays > 0 ? 'TRIAL' : 'ACTIVE'
-  const endsAt = addDays(now, getBillingPeriodDays(billingCycle))
+  const status: SubscriptionStatus = trialEnds ? 'TRIAL' : 'ACTIVE'
+  const trialEndsIso = trialEnds ? firstChargeInstantFromYmd(nextDueDate).toISOString() : null
+  const endsAt = trialEndsIso
+    ?? addDaysBr(addDaysBr(now, 1), getBillingPeriodDays(billingCycle)).toISOString()
 
   await sql`
     UPDATE stores SET
@@ -189,8 +222,8 @@ export async function createSubscription(
       asaas_subscription_id = ${sub.id},
       subscription_status = ${status},
       subscription_started_at = NOW(),
-      subscription_ends_at = ${endsAt.toISOString()},
-      trial_ends_at = ${trialEnds ? trialEnds.toISOString() : null}
+      subscription_ends_at = ${endsAt},
+      trial_ends_at = ${trialEndsIso}
     WHERE id = ${storeId}
   `
 
@@ -201,7 +234,9 @@ export async function createSubscription(
       'SUBSCRIPTION_CREATED',
       ${planSlug},
       ${chargeCents},
-      ${`Assinatura ${planDef.name} criada (${billingCycle})`}
+      ${trialEndsIso
+        ? `Assinatura ${planDef.name} criada (${billingCycle}) — 1ª cobrança em ${nextDueDate}`
+        : `Assinatura ${planDef.name} criada (${billingCycle})`}
     )
   `
 }
@@ -265,7 +300,7 @@ export async function chargeViOverage(storeId: string): Promise<{ charged: boole
     customer: customerId,
     billingType: 'UNDEFINED',
     value: valueReais,
-    dueDate: formatDateYmd(addDays(new Date(), 3)),
+    dueDate: formatDateYmdBr(addDaysBr(new Date(), 3)),
     description: `Excedente Vi — ${overage.toLocaleString('pt-BR')} mensagens (${plan})`,
     externalReference: `${storeId}:vi-overage`,
   })

@@ -589,7 +589,7 @@ export default function LandingPage() {
             },
             {
               q: 'Como funcionam os alertas de estoque?',
-              a: 'Em Configurações → Venda, você ativa os alertas e define quando avisar (ex.: ≤ 3 peças por tamanho ou cor). Os avisos aparecem no dashboard e na lista de produtos — só dentro do painel, sem e-mail.',
+              a: 'Em Produtos, você ativa os alertas e define quando avisar (ex.: ≤ 3 peças por tamanho ou cor). Os avisos aparecem no dashboard e na lista de produtos — só dentro do painel, sem e-mail.',
             },
             {
               q: 'A análise de foto com IA funciona no plano grátis?',

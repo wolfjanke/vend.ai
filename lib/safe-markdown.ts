@@ -9,14 +9,15 @@ function escapeHtml(s: string): string {
 
 function isSafeHref(href: string): boolean {
   const trimmed = href.trim()
-  return /^https:\/\//i.test(trimmed)
+  if (/^https?:\/\//i.test(trimmed)) return true
+  // Rotas internas da vitrine (/loja/produto/slug)
+  return /^\/(?!\/)[^\s]*\/produto\/[^\s#?]+/.test(trimmed)
 }
 
 /**
  * Renderiza markdown leve (negrito, links, quebras) com escape HTML.
- * Links só permitem protocolo https://.
- */
-export function renderSafeMarkdown(text: string): string {
+ * Links permitem https://, http:// (dev) e rotas /slug/produto/... da vitrine.
+ */export function renderSafeMarkdown(text: string): string {
   const safe = escapeHtml(text)
   return safe
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -24,7 +25,12 @@ export function renderSafeMarkdown(text: string): string {
       /\[([^\]]+)\]\(([^)]+)\)/g,
       (_match, label: string, href: string) => {
         if (!isSafeHref(href)) return label
-        return `<a href="${href.trim()}" target="_blank" rel="noopener noreferrer" class="text-primary underline font-semibold break-all">${label}</a>`
+        const trimmed = href.trim()
+        const isExternal = /^https?:\/\//i.test(trimmed)
+        const rel = isExternal ? ' rel="noopener noreferrer"' : ''
+        const target = isExternal ? ' target="_blank"' : ''
+        const safeHref = trimmed.replace(/"/g, '&quot;')
+        return `<a href="${safeHref}"${target}${rel} class="vi-message-link text-primary underline font-semibold break-all">${label}</a>`
       },
     )
     .replace(/\n/g, '<br />')

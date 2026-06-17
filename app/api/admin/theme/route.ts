@@ -3,10 +3,11 @@ import { z } from 'zod'
 import { sql } from '@/lib/db'
 import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
-import type { PlanSlug } from '@/lib/plans'
 import {
-  canSelectTheme,
-  canUseShimmer,
+  canSelectThemeForStore,
+  canUseShimmerForStore,
+} from '@/lib/store-plan-access'
+import {
   defaultShimmerForTheme,
   getTheme,
   type ThemeBackground,
@@ -48,11 +49,13 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
 
-    const storeRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
-    const plan = (storeRows[0]?.plan ?? 'free') as PlanSlug
+    const storeRows = await sql`
+      SELECT plan, slug, is_demo FROM stores WHERE id = ${session.storeId} LIMIT 1
+    `
+    const storeRow = storeRows[0] ?? {}
     const data = parsed.data
 
-    if (!canSelectTheme(plan, data.theme_name)) {
+    if (!canSelectThemeForStore(storeRow, data.theme_name)) {
       return NextResponse.json(
         { error: 'Tema não disponível no seu plano.' },
         { status: 403 },
@@ -101,7 +104,7 @@ export async function PUT(req: NextRequest) {
     if (shimmer === undefined) {
       shimmer = defaultShimmerForTheme(data.theme_name)
     }
-    if (shimmer && !canUseShimmer(plan)) {
+    if (shimmer && !canUseShimmerForStore(storeRow)) {
       return NextResponse.json(
         { error: 'Efeito shimmer disponível a partir do plano Pro.' },
         { status: 403 },

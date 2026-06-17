@@ -91,6 +91,7 @@ export const storeSettingsPatchSchema = z.object({
     text:      z.string().transform(stripEmojis).pipe(z.string().min(1).max(500)),
     startDate: z.string().optional(),
     endDate:   z.string().optional(),
+    motion:    z.enum(['none', 'pulse']).optional(),
   })).optional(),
   cep:         z.string().optional(),
   logradouro:  z.string().optional(),
@@ -279,7 +280,11 @@ export const checkoutPaymentSchema = z.object({
   storeSlug:        z.string().min(2).max(40).optional(),
   billingType:      z.enum(['PIX', 'CREDIT_CARD']),
   installments:     z.number().int().min(1).max(12).default(1),
+  /** Subtotal dos itens (soma linhas) — validação de catálogo. */
   grossValue:       z.number().positive(),
+  /** Total após cupom e desconto PIX (antes de juros do cartão). */
+  payableValue:     z.number().nonnegative(),
+  couponCode:       z.string().trim().max(64).optional(),
   creditCardToken:  z.string().optional(),
   interestBearer:   z.enum(['customer', 'merchant']).optional().default('customer'),
   cartItems:        z.array(checkoutCartLineSchema).min(1),
@@ -364,6 +369,9 @@ export const billingOwnerSchema = z.object({
   if (data.type === 'pf') {
     if (data.cpfCnpj.length !== 11 || !isValidCpf(data.cpfCnpj)) {
       ctx.addIssue({ code: 'custom', path: ['cpfCnpj'], message: 'CPF inválido' })
+    }
+    if (!data.legalName?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['legalName'], message: 'Nome completo do titular obrigatório' })
     }
   } else {
     if (data.cpfCnpj.length !== 14 || !isValidCnpj(data.cpfCnpj)) {

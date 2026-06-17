@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, type MouseEvent } from 'react'
 import type { ViMessage, StoreContext } from '@/types'
 import { defaultWelcomeMessage, normalizeAssistantGender } from '@/lib/assistant-gender'
 import { renderSafeMarkdown } from '@/lib/safe-markdown'
+import { enrichViProductLinks } from '@/lib/vi-message-links'
 
 function buildViSuggestions(ctx: StoreContext): Array<{ label: string; text: string }> {
   const gf = ctx.genderFocus ?? 'feminine'
@@ -66,6 +67,38 @@ export default function ViChat({
   const [input,         setInput]         = useState('')
   const [loading,       setLoading]       = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const linkProducts = useMemo(
+    () =>
+      storeContext.products
+        .filter(p => p.productUrl)
+        .map(p => ({ name: p.name, productUrl: p.productUrl! })),
+    [storeContext.products],
+  )
+
+  function renderMessageHtml(content: string): string {
+    return renderSafeMarkdown(enrichViProductLinks(content, linkProducts))
+  }
+
+  function handleMessageClick(e: MouseEvent<HTMLDivElement>) {
+    const anchor = (e.target as HTMLElement).closest('a')
+    if (!anchor) return
+    const href = anchor.getAttribute('href')
+    if (!href || !href.includes('/produto/')) return
+
+    let path = href
+    if (/^https?:\/\//i.test(href)) {
+      try {
+        const url = new URL(href)
+        if (url.origin !== window.location.origin) return
+        path = `${url.pathname}${url.search}${url.hash}`
+      } catch {
+        return
+      }
+    }
+
+    e.preventDefault()
+    window.location.assign(path)
+  }
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef       = useRef<HTMLInputElement>(null)
 
@@ -230,7 +263,8 @@ export default function ViChat({
                     ? 'bg-primary/20 border border-primary/30 rounded-br-[4px]'
                     : 'bg-surface2 border border-border rounded-bl-[4px]'
                 }`}
-                dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(msg.content) }}
+                onClick={msg.role === 'assistant' ? handleMessageClick : undefined}
+                dangerouslySetInnerHTML={{ __html: renderMessageHtml(msg.content) }}
               />
               <div className={`text-[10px] text-muted mt-1 ${msg.role === 'user' ? 'text-right' : ''}`}>{now}</div>
             </div>

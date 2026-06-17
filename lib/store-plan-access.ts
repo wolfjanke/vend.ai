@@ -8,6 +8,12 @@ import {
 } from '@/lib/plans'
 import { canUsePdv } from '@/lib/pdv-access'
 import { DEMO_EFFECTIVE_PLAN, isPlatformDemoStore } from '@/lib/demo-store'
+import {
+  canSelectTheme,
+  canUseShimmer,
+  getAvailableThemes,
+  type ThemeName,
+} from '@/lib/themes'
 
 export type StorePlanRow = {
   plan?:          string | null
@@ -46,6 +52,26 @@ export function canUseAssistantFeatureForStore(
 ): boolean {
   if (isPlatformDemoStore(store)) return true
   return canUseAssistantFeature(store.plan ?? 'free', feature)
+}
+
+export function getEffectivePlanForStore(store: StorePlanRow): PlanSlug {
+  return getStorePlanContext(store).plan
+}
+
+export function getAvailableThemesForStore(store: StorePlanRow) {
+  return getAvailableThemes(getEffectivePlanForStore(store))
+}
+
+export function canSelectThemeForStore(store: StorePlanRow, themeName: ThemeName) {
+  return canSelectTheme(getEffectivePlanForStore(store), themeName)
+}
+
+export function canUseShimmerForStore(store: StorePlanRow): boolean {
+  return canUseShimmer(getEffectivePlanForStore(store))
+}
+
+export function canAnalyzeThemeForStore(store: StorePlanRow): boolean {
+  return getEffectivePlanForStore(store) !== 'free'
 }
 
 /** Use em queries superadmin: `AND COALESCE(alias.is_demo, false) = false` */

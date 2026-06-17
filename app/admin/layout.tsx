@@ -60,10 +60,11 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               href={`/${store.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-accent text-xs font-medium hover:bg-accent/20 transition-all"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-accent/10 border border-accent/30 rounded-lg text-accent text-xs font-medium hover:bg-accent/20 transition-all"
+              aria-label="Ver loja pública"
             >
-              <Globe size={14} aria-hidden />
-              Ver loja
+              <Globe size={14} className="shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Ver loja</span>
             </a>
           )}
           <form action="/api/auth/signout-redirect" method="POST">

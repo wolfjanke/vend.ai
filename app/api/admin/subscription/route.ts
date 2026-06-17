@@ -13,6 +13,7 @@ import {
   upgradeSubscription,
 } from '@/lib/payments/subscriptions'
 import { PLAN_PRODUCT_LIMITS, PLANS, PAID_PLAN_SLUGS, getChargeAmountCents, getDisplayMonthlyCents, type PlanSlug, type BillingCycle } from '@/lib/plans'
+import { getTrialDaysForPlan } from '@/lib/billing-trial'
 import { sendUpgradeEmail } from '@/lib/email/send-upgrade'
 import { isPlatformDemoStore } from '@/lib/demo-store'
 import { getStorePlanContext } from '@/lib/store-plan-access'
@@ -92,6 +93,7 @@ export async function GET() {
         slug,
         name: PLANS[slug].name,
         priceCents: PLANS[slug].price,
+        trialDays: getTrialDaysForPlan(slug),
         billing: (['monthly', 'quarterly', 'annual'] as const).reduce((acc, cycle) => {
           acc[cycle] = {
             displayMonthlyCents: getDisplayMonthlyCents(slug, cycle),
@@ -170,13 +172,18 @@ export async function POST(req: NextRequest) {
       `
       const row = storeRows[0] as { name: string; owner_email: string | null } | undefined
       if (row?.owner_email) {
+        const trialDays = getTrialDaysForPlan(plan as PlanSlug)
         void sendUpgradeEmail({
           ownerName: row.name,
           ownerEmail: row.owner_email,
           storeName: row.name,
           oldPlan,
           newPlan: plan,
-          renewalDay: new Date().getDate(),
+          billingCycle,
+          subscriptionStatus: status.subscriptionStatus,
+          trialDaysRemaining: status.trialDaysRemaining,
+          nextChargeAt: status.nextChargeAt,
+          trialDays: status.subscriptionStatus === 'TRIAL' ? trialDays : 0,
         }).catch(err => logServerError('[Email] Falha no upgrade', err))
       }
     }

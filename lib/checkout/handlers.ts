@@ -14,6 +14,8 @@ import { getCheckoutRates } from '@/lib/checkout-rates'
 import { encryptCpf } from '@/lib/crypto/pii'
 import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
 import { resolveCheckoutChannelsFromStore } from '@/lib/checkout-availability'
+import { calculateCheckoutMarketingPricing } from '@/lib/checkout/marketing-pricing'
+import type { StoreSettings } from '@/types'
 
 const ASAAS_CONFIRMED = new Set(['CONFIRMED', 'RECEIVED'])
 
@@ -34,6 +36,8 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
     billingType,
     installments,
     grossValue: clientGrossValue,
+    payableValue: clientPayableValue,
+    couponCode,
     creditCardToken,
     customer,
     cartItems,
@@ -42,7 +46,7 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
 
   const storeRows = await sql`
     SELECT
-      id, slug, plan,
+      id, slug, plan, settings_json,
       asaas_wallet_id,
       asaas_onboarding_status,
       is_demo,
@@ -56,6 +60,7 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
     id: string
     slug: string
     plan: string | null
+    settings_json: StoreSettings | null
     asaas_wallet_id: string | null
     asaas_onboarding_status: string | null
     is_demo: boolean | null
@@ -105,12 +110,30 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
     return orderReject422()
   }
 
+  const settings = (store.settings_json as StoreSettings | null) ?? {}
+  const pricing = calculateCheckoutMarketingPricing({
+    items:       lines,
+    billingType,
+    couponCode,
+    settings,
+  })
+
+  if (!amountsMatch(pricing.subtotal, serverGrossValue)) {
+    return orderReject422()
+  }
+
+  if (!amountsMatch(pricing.totalFinal, clientPayableValue)) {
+    return orderReject422()
+  }
+
+  const payableBase = pricing.totalFinal
+
   const plan = (store.plan ?? 'free') as PlanSlug
   const rates = await getCheckoutRates()
 
   let quote
   try {
-    quote = calculateInstallmentQuote(serverGrossValue, installments, plan, rates, { interestBearer })
+    quote = calculateInstallmentQuote(payableBase, installments, plan, rates, { interestBearer })
   } catch {
     return orderReject422()
   }
@@ -184,6 +207,12 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
         customer_cpf_enc,
         items_json,
         total,
+        subtotal,
+        discount_pix,
+        discount_coupon,
+        discount_total,
+        total_final,
+        coupon_code_applied,
         notes,
         status,
         payment_method,
@@ -210,6 +239,12 @@ export async function handleCheckoutCreate(storeSlug: string, body: unknown) {
         ${customerCpfEnc},
         ${itemsJson}::jsonb,
         ${quote.totalComJuros},
+        ${pricing.subtotal},
+        ${pricing.discountPix},
+        ${pricing.discountCoupon},
+        ${pricing.discountTotal},
+        ${payableBase},
+        ${pricing.couponCodeApplied},
         '',
         'NOVO',
         ${paymentMethod},

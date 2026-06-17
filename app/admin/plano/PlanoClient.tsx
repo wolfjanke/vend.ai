@@ -27,6 +27,7 @@ interface PlanOption {
   slug: PlanSlug
   name: string
   priceCents: number
+  trialDays: number
   billing: Record<BillingCycle, PlanBilling>
 }
 
@@ -40,11 +41,14 @@ interface BillingRow {
 }
 
 interface BillingOwnerData {
-  hasBillingDoc: boolean
-  type: 'pf' | 'pj' | null
-  docMasked: string | null
-  legalName: string | null
-  addressFilled: boolean
+  hasBillingDoc:      boolean
+  type:               'pf' | 'pj' | null
+  docMasked:          string | null
+  legalName:          string | null
+  addressFilled:      boolean
+  ownerEmail:         string | null
+  ownerPhone:         string | null
+  defaultHolderName:  string
 }
 
 interface PlanoClientProps {
@@ -56,6 +60,7 @@ interface SubscriptionData {
   subscriptionEndsAt: string | null
   trialEndsAt: string | null
   trialDaysRemaining: number | null
+  nextChargeAt: string | null
   billingCycle: BillingCycle
   paymentsConfigured: boolean
   billingTestAllowed: boolean
@@ -257,15 +262,24 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
           </>
         )}
         <div>
-          <div className="text-muted text-xs mb-0.5">Renovação</div>
-          <div className="tabular-nums">{formatDate(data.subscriptionEndsAt)}</div>
+          <div className="text-muted text-xs mb-0.5">
+            {data.subscriptionStatus === 'TRIAL' ? 'Primeira cobrança' : 'Renovação'}
+          </div>
+          <div className="tabular-nums">
+            {formatDate(data.subscriptionStatus === 'TRIAL' ? data.nextChargeAt : data.subscriptionEndsAt)}
+          </div>
         </div>
       </div>
 
       {data.subscriptionStatus === 'TRIAL' && data.trialDaysRemaining != null && (
-        <p className="mt-3 text-sm text-accent font-medium">
+        <p className="mt-3 text-sm text-accent font-medium break-words">
           Trial — {data.trialDaysRemaining}{' '}
           {data.trialDaysRemaining === 1 ? 'dia restante' : 'dias restantes'}
+          {data.nextChargeAt && (
+            <span className="text-muted font-normal">
+              {' '}· 1ª cobrança em {formatDate(data.nextChargeAt)}
+            </span>
+          )}
         </p>
       )}
 
@@ -419,6 +433,11 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
                   </span>
                 )}
                 <div className="font-syne font-bold capitalize mb-1">{p.name}</div>
+                {p.trialDays > 0 && (
+                  <p className="text-xs text-accent font-semibold mb-1">
+                    {p.trialDays} dias grátis na 1ª assinatura
+                  </p>
+                )}
                 <div className="text-base sm:text-lg font-extrabold tabular-nums mb-1 min-w-0 truncate">
                   {formatPlanPrice(displayMonthly)}
                   <span className="text-xs font-normal text-muted">/mês</span>
@@ -536,7 +555,7 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
               </button>
             </div>
             <BillingOwnerForm
-              ownerName={ownerName}
+              defaultHolderName={ownerName}
               initial={{
                 type: billingOwner?.type ?? undefined,
                 legalName: billingOwner?.legalName,

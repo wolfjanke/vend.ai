@@ -23,13 +23,18 @@ export { PLAN_PRODUCT_LIMITS, PLANS, getPlan, formatPlanPrice, formatOverageLine
 import type { PlanSlug } from '@/lib/plans'
 
 // ─── Store ────────────────────────────────────────────────────────────────────
+export type BannerMotion = 'none' | 'pulse'
+
 export interface BannerMessage {
   id:        string
-  title:     string
+  /** Legado — não exibido; preferir só `text`. */
+  title?:    string
   text:      string
   startDate?: string
   endDate?:  string
   theme?:    string
+  /** Efeito visual opcional na faixa da vitrine. */
+  motion?:   BannerMotion
 }
 
 export type CouponType = 'percent' | 'fixed'

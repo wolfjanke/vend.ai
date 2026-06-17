@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { Product, Store } from '@/types'
-import type { PlanSlug } from '@/lib/plans'
 import { toStorePreviewProducts } from '@/lib/preview-products'
+import { getStorePlanContext } from '@/lib/store-plan-access'
 import AdminPageError from '@/components/admin/AdminPageError'
 import AparenciaClient from './AparenciaClient'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
@@ -18,7 +18,7 @@ export default async function AparenciaPage() {
   try {
     const rows = await sql`
       SELECT
-        slug, name, plan, logo_url, tagline, assistant_name, settings_json,
+        slug, name, plan, is_demo, logo_url, tagline, assistant_name, settings_json,
         theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
         theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done
       FROM stores
@@ -53,6 +53,11 @@ export default async function AparenciaPage() {
   if (!store) redirect('/cadastro')
 
   const displayLogo = store.theme_logo_url?.trim() || store.logo_url?.trim() || null
+  const plan = getStorePlanContext({
+    plan: store.plan,
+    slug: store.slug,
+    is_demo: store.is_demo,
+  }).plan
 
   return (
     <div className={adminPage}>
@@ -64,7 +69,7 @@ export default async function AparenciaPage() {
       </div>
       <AparenciaClient
         slug={store.slug}
-        plan={(store.plan ?? 'free') as PlanSlug}
+        plan={plan}
         storeName={store.name}
         logoUrl={displayLogo}
         products={previewProducts}

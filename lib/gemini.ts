@@ -24,6 +24,7 @@ export const GEMINI_MODELS = {
   /** Flash: cota estável no free tier; Pro costuma ter limite 0 sem billing. */
   photoAnalysis: 'gemini-2.5-flash',
   themeAnalysis: 'gemini-2.5-flash',
+  bannerText:    'gemini-2.5-flash',
   viChat:        (process.env.GEMINI_MODEL ?? 'gemini-2.5-flash').trim(),
   stockSearch:   'gemini-2.5-flash-lite',
 } as const

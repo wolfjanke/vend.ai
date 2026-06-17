@@ -19,6 +19,7 @@ import {
 } from '@/lib/vi-limits'
 import type { PlanSlug } from '@/lib/plans'
 import { formatPaymentMethodsForVi } from '@/lib/payment-links'
+import { enrichViProductLinks } from '@/lib/vi-message-links'
 
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -138,7 +139,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'A assistente não conseguiu responder. Tente de novo.' }, { status: 502 })
     }
 
-    return NextResponse.json({ text })
+    const linkProducts = dbProducts.map(p => {
+      const slug = p.slug?.trim() || p.id
+      return {
+        name:       p.name,
+        productUrl: `${baseUrl}/${store.slug}/produto/${slug}`,
+      }
+    })
+
+    return NextResponse.json({ text: enrichViProductLinks(text, linkProducts) })
   } catch (error) {
     logServerError('[/api/vi]', error)
     const msg = error instanceof Error ? error.message : ''

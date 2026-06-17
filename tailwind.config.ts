@@ -78,6 +78,10 @@ const config: Config = {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%':      { backgroundPosition: '100% 50%' },
         },
+        bannerPulse: {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%':       { opacity: '0.88', transform: 'scale(1.012)' },
+        },
       },
       animation: {
         'fade-up':     'fadeUp 0.5s ease both',
@@ -89,6 +93,7 @@ const config: Config = {
         'bounce2':     'bounce2 0.5s ease',
         'shimmer-move':'shimmerMove 2.5s linear infinite',
         'grad-shift':  'gradShift 6s ease infinite',
+        'banner-pulse':'bannerPulse 2.8s ease-in-out infinite',
       },
     },
   },

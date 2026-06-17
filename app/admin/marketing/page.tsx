@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import type { Store } from '@/types'
+import { isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
 import MarketingForm from './MarketingForm'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 
@@ -20,7 +21,7 @@ export default async function MarketingPage() {
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Marketing</h1>
         <p className="text-sm text-muted">Gerencie promoções, cupons e banners da loja</p>
       </div>
-      <MarketingForm store={store} />
+      <MarketingForm store={store} checkoutLaunchEnabled={isCheckoutLaunchEnabled()} />
     </div>
   )
 }

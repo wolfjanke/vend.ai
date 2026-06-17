@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { PlanSlug } from '@/types'
+import type { PlanSlug, StoreSettings } from '@/types'
 import type { CheckoutRates } from '@/lib/checkout-rates'
 import CheckoutPageLayout from './CheckoutPageLayout'
 import CheckoutForm from './CheckoutForm'
@@ -17,25 +17,36 @@ interface CartItem {
   photo?:      string
 }
 
+interface CheckoutMeta {
+  couponCode?: string
+}
+
 interface Props {
-  storeSlug:  string
-  storeName:  string
-  storeLogo?: string | null
-  plan:       PlanSlug
-  rates:      CheckoutRates
-  asaasEnv:   'sandbox' | 'production'
+  storeSlug:      string
+  storeName:      string
+  storeLogo?:     string | null
+  plan:           PlanSlug
+  rates:          CheckoutRates
+  asaasEnv:       'sandbox' | 'production'
+  storeSettings?: StoreSettings
 }
 
 export default function CheckoutWrapper({
-  storeSlug, storeName, storeLogo, plan, rates, asaasEnv,
+  storeSlug, storeName, storeLogo, plan, rates, asaasEnv, storeSettings = {},
 }: Props) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [initialCoupon, setInitialCoupon] = useState('')
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(`cart_${storeSlug}`)
       if (raw) setItems(JSON.parse(raw))
+      const metaRaw = sessionStorage.getItem(`checkout_meta_${storeSlug}`)
+      if (metaRaw) {
+        const meta = JSON.parse(metaRaw) as CheckoutMeta
+        if (meta.couponCode) setInitialCoupon(meta.couponCode)
+      }
     } catch {
       // silently ignore
     }
@@ -78,6 +89,8 @@ export default function CheckoutWrapper({
         asaasEnv={asaasEnv}
         items={items}
         grossValue={grossValue}
+        storeSettings={storeSettings}
+        initialCouponCode={initialCoupon}
       />
     </CheckoutPageLayout>
   )

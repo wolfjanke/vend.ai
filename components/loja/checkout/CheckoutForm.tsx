@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { PlanSlug } from '@/types'
+import type { PlanSlug, StoreSettings } from '@/types'
 import type { CheckoutRates } from '@/lib/checkout-rates'
 import { calculateInstallmentQuote, type InterestBearer } from '@/lib/payments/installment-fees'
+import { calculateCheckoutMarketingPricing } from '@/lib/checkout/marketing-pricing'
 import CheckoutCustomerForm, { validateCustomerFields, type FieldErrors } from './CheckoutCustomerForm'
 import CheckoutPaymentSection from './CheckoutPaymentSection'
 import CardPayment, { type CardPaymentHandle } from './CardPayment'
@@ -24,13 +25,15 @@ interface CartItem {
 }
 
 interface Props {
-  storeSlug:  string
-  storeName:  string
-  plan:       PlanSlug
-  rates:      CheckoutRates
-  asaasEnv:   'sandbox' | 'production'
-  items:      CartItem[]
-  grossValue: number
+  storeSlug:          string
+  storeName:          string
+  plan:               PlanSlug
+  rates:              CheckoutRates
+  asaasEnv:           'sandbox' | 'production'
+  items:              CartItem[]
+  grossValue:         number
+  storeSettings?:     StoreSettings
+  initialCouponCode?: string
 }
 
 type PaymentMethod = 'PIX' | 'CREDIT_CARD'
@@ -46,7 +49,15 @@ interface PixData {
 }
 
 export default function CheckoutForm({
-  storeSlug, storeName, plan, rates, asaasEnv, items, grossValue,
+  storeSlug,
+  storeName,
+  plan,
+  rates,
+  asaasEnv,
+  items,
+  grossValue,
+  storeSettings = {},
+  initialCouponCode = '',
 }: Props) {
   const router = useRouter()
   const cardRef = useRef<CardPaymentHandle | null>(null)
@@ -58,6 +69,7 @@ export default function CheckoutForm({
   const [cpf, setCpf]                     = useState('')
   const [email, setEmail]                 = useState('')
   const [phone, setPhone]                 = useState('')
+  const [couponCode, setCouponCode]       = useState(initialCouponCode)
   const [fieldErrors, setFieldErrors]     = useState<FieldErrors>({})
   const [loading, setLoading]             = useState(false)
   const [error, setError]                 = useState<string | null>(null)
@@ -65,7 +77,19 @@ export default function CheckoutForm({
   const [pixData, setPixData]             = useState<PixData | null>(null)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
-  const quote = calculateInstallmentQuote(grossValue, installments, plan, rates, { interestBearer })
+  const pricing = useMemo(
+    () =>
+      calculateCheckoutMarketingPricing({
+        items,
+        billingType: method,
+        couponCode,
+        settings:    storeSettings,
+      }),
+    [items, method, couponCode, storeSettings],
+  )
+
+  const payableBase = pricing.totalFinal
+  const quote = calculateInstallmentQuote(payableBase, installments, plan, rates, { interestBearer })
 
   function runValidation() {
     const errs = validateCustomerFields(name, cpf, email, phone)
@@ -76,6 +100,7 @@ export default function CheckoutForm({
   function goToSuccess(orderNumber: string, total: number) {
     try {
       sessionStorage.removeItem(`cart_${storeSlug}`)
+      sessionStorage.removeItem(`checkout_meta_${storeSlug}`)
     } catch { /* ignore */ }
     const q = new URLSearchParams({
       order: orderNumber,
@@ -117,6 +142,8 @@ export default function CheckoutForm({
           billingType:    method,
           installments,
           grossValue,
+          payableValue:   payableBase,
+          couponCode:     couponCode.trim() || undefined,
           interestBearer,
           creditCardToken,
           cartItems: items.map(i => ({
@@ -194,13 +221,18 @@ export default function CheckoutForm({
     )
   }
 
+  const pixDiscountPercent = Number(storeSettings.pixDiscountPercent ?? 0)
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         <div className="order-1 lg:order-1">
           <OrderSummary
             items={items}
-            grossValue={grossValue}
+            subtotal={pricing.subtotal}
+            discountCoupon={pricing.discountCoupon}
+            discountPix={pricing.discountPix}
+            payableBase={payableBase}
             totalComJuros={quote.totalComJuros}
             cardFeeLabel={method === 'CREDIT_CARD' && interestBearer === 'customer' ? 'Taxa do cartão' : null}
           />
@@ -220,10 +252,29 @@ export default function CheckoutForm({
             onValidate={runValidation}
           />
 
+          <div className="bg-surface border border-border rounded-2xl p-4 space-y-2">
+            <label htmlFor="checkout-coupon" className="text-xs font-bold text-muted uppercase tracking-wider">
+              Cupom (opcional)
+            </label>
+            <input
+              id="checkout-coupon"
+              type="text"
+              value={couponCode}
+              onChange={e => setCouponCode(e.target.value.toUpperCase())}
+              placeholder="Ex: BEMVINDO10"
+              className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface2 border border-border rounded-xl text-sm uppercase"
+            />
+            {method === 'PIX' && pixDiscountPercent > 0 && (
+              <p className="text-[11px] text-muted break-words">
+                Desconto PIX de {pixDiscountPercent}% aplicado automaticamente no total.
+              </p>
+            )}
+          </div>
+
           <CheckoutPaymentSection
             method={method}
             installments={installments}
-            grossValue={grossValue}
+            grossValue={payableBase}
             plan={plan}
             rates={rates}
             interestBearer={interestBearer}

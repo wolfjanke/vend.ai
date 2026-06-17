@@ -5,6 +5,7 @@ import { Heart } from 'lucide-react'
 import type { Product, ProductVariant } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import { getVariantPhotoUrl } from '@/lib/product-media'
+import { resolveProductDisplayPriceRange } from '@/lib/product-pricing'
 import ProductPlaceholder from './ProductPlaceholder'
 
 type Props = {
@@ -18,9 +19,9 @@ type Props = {
   onOpenDetail:     () => void
 }
 
-function discountPercent(price: number, promoPrice: number | null): number | null {
-  if (promoPrice == null || promoPrice <= price) return null
-  return Math.round(((Number(promoPrice) - price) / Number(promoPrice)) * 100)
+function discountPercent(salePrice: number, originalPrice: number | null): number | null {
+  if (originalPrice == null || salePrice >= originalPrice) return null
+  return Math.round(((originalPrice - salePrice) / originalPrice) * 100)
 }
 
 function ColorSwatches({ variants }: { variants: ProductVariant[] }) {
@@ -60,14 +61,14 @@ function FavoriteButton() {
 
 function PriceBlock({
   effectivePrice,
-  promoPrice,
+  compareAtPrice,
   installmentText,
   className = '',
   inverted = false,
   reserveParcelaSpace = false,
 }: {
   effectivePrice:  number
-  promoPrice:      number | null
+  compareAtPrice:  number | null
   installmentText: string | null
   className?:      string
   inverted?:       boolean
@@ -77,15 +78,16 @@ function PriceBlock({
   const mutedCls = inverted ? 'text-white/70' : 'produto-preco-old tabular-nums'
   const parcelaCls = inverted ? 'text-white/70 produto-parcela' : 'produto-parcela text-muted'
   const showParcela = Boolean(installmentText) || reserveParcelaSpace
+  const showCompare = compareAtPrice != null && compareAtPrice > effectivePrice
   return (
     <div className={`flex flex-col gap-0.5 min-w-0 ${className}`}>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
         <span className={priceCls}>
           R${effectivePrice.toFixed(2).replace('.', ',')}
         </span>
-        {promoPrice != null && (
+        {showCompare && (
           <span className={`line-through tabular-nums ${mutedCls}`}>
-            R${Number(promoPrice).toFixed(2).replace('.', ',')}
+            R${compareAtPrice.toFixed(2).replace('.', ',')}
           </span>
         )}
       </div>
@@ -150,6 +152,11 @@ export default function VitrineProductCard({
   onOpenDetail,
 }: Props) {
   const photoUrl = getVariantPhotoUrl(variant)
+  const priceRange = resolveProductDisplayPriceRange(product)
+  const compareAtPrice =
+    product.promo_price != null && !priceRange.hasSkuPrices
+      ? Number(product.price)
+      : null
   const radius = cardTheme.borderRadius
   const isList = cardTheme.catalogLayout === 'list'
   const shadow = cardTheme.shadow
@@ -166,7 +173,7 @@ export default function VitrineProductCard({
     'absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
   const imgClsStatic = 'absolute inset-0 w-full h-full object-cover'
   const discount = cardTheme.showDiscountBadge
-    ? discountPercent(effectivePrice, product.promo_price)
+    ? discountPercent(effectivePrice, compareAtPrice)
     : null
 
   const overlayStyle = cardTheme.overlayGradient
@@ -236,7 +243,7 @@ export default function VitrineProductCard({
             </span>
             <PriceBlock
               effectivePrice={effectivePrice}
-              promoPrice={product.promo_price}
+              compareAtPrice={compareAtPrice}
               installmentText={installmentText}
               inverted
             />
@@ -270,7 +277,7 @@ export default function VitrineProductCard({
           <div className="mt-auto pt-0.5">
             <PriceBlock
               effectivePrice={effectivePrice}
-              promoPrice={product.promo_price}
+              compareAtPrice={compareAtPrice}
               installmentText={installmentText}
               reserveParcelaSpace
             />
@@ -310,7 +317,7 @@ export default function VitrineProductCard({
             <div className="mt-auto pt-0.5">
               <PriceBlock
                 effectivePrice={effectivePrice}
-                promoPrice={product.promo_price}
+                compareAtPrice={compareAtPrice}
                 installmentText={installmentText}
                 reserveParcelaSpace
               />
@@ -338,7 +345,7 @@ export default function VitrineProductCard({
           >
             <div className="min-w-0">
               <span className="produto-nome font-semibold line-clamp-2 break-words block mb-1">{product.name}</span>
-              <PriceBlock effectivePrice={effectivePrice} promoPrice={product.promo_price} installmentText={installmentText} />
+              <PriceBlock effectivePrice={effectivePrice} compareAtPrice={compareAtPrice} installmentText={installmentText} />
             </div>
           </button>
         </div>
@@ -372,7 +379,7 @@ export default function VitrineProductCard({
         <div className="mt-auto pt-0.5">
           <PriceBlock
             effectivePrice={effectivePrice}
-            promoPrice={product.promo_price}
+            compareAtPrice={compareAtPrice}
             installmentText={installmentText}
             reserveParcelaSpace
           />

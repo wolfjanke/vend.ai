@@ -14,13 +14,12 @@ import { maskPhone, formatPhoneDisplay } from '@/lib/masks'
 import { stripEmojis } from '@/lib/strip-emoji'
 import SectionHeader from '@/components/admin/SectionHeader'
 import AdminPrivacySection from '@/components/admin/AdminPrivacySection'
-import BillingOwnerForm from '@/components/admin/BillingOwnerForm'
 import CheckoutModeSection from '@/components/admin/CheckoutModeSection'
 import ConfigSectionNav, { type ConfigSectionId } from '@/components/admin/ConfigSectionNav'
+import ConfigSaveBar from '@/components/admin/ConfigSaveBar'
 import { adminCard } from '@/lib/admin-ui'
 import { normalizeCheckoutMode } from '@/lib/checkout-availability'
 import { activePaymentLinks, MAX_PAYMENT_LINKS } from '@/lib/payment-links'
-import { normalizeStockAlerts } from '@/lib/stock-alerts'
 import type { CheckoutMode } from '@/types'
 import {
   LOGO_SIZE_OPTIONS,
@@ -109,7 +108,6 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
   const [newPwd, setNewPwd] = useState('')
   const [pwdErr, setPwdErr] = useState('')
   const [pwdLoading, setPwdLoading] = useState(false)
-  const [billingSaved, setBillingSaved] = useState(false)
   const [billingDocMasked, setBillingDocMasked] = useState<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoUploading, setLogoUploading] = useState(false)
@@ -128,7 +126,6 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
   }, [pwdOpen])
 
   const plan = (store.plan ?? 'free') as PlanSlug
-  const ownerName = (settings as { ownerName?: string }).ownerName?.trim() || store.name
   const checkoutMode = normalizeCheckoutMode(store.checkout_mode) as CheckoutMode
   const canName = canUseAssistantFeature(plan, 'customName')
   const canWelcome = canUseAssistantFeature(plan, 'customWelcome')
@@ -159,10 +156,6 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
     if (v == null || v === undefined) return ''
     return String(v)
   })
-
-  const initialStockAlerts = normalizeStockAlerts(settings.stockAlerts)
-  const [stockAlertsEnabled, setStockAlertsEnabled] = useState(initialStockAlerts.enabled)
-  const [stockAlertsThresholdStr, setStockAlertsThresholdStr] = useState(String(initialStockAlerts.threshold))
 
   const initialDaily = store.vi_daily_limit
   const [viDailyEnabled, setViDailyEnabled] = useState(() => initialDaily != null && initialDaily > 0)
@@ -320,10 +313,6 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
       assistant_welcome_message: canWelcome ? (assistantWelcome.trim() || null) : undefined,
       assistant_tone:          canTone ? assistantTone : undefined,
       assistant_gender:        assistantGender,
-      stockAlerts: normalizeStockAlerts({
-        enabled:   stockAlertsEnabled,
-        threshold: Math.min(99, Math.max(1, parseInt(stockAlertsThresholdStr.trim(), 10) || 3)),
-      }),
     }
     const parsed = storeSettingsPatchSchema.safeParse(body)
     if (!parsed.success) {
@@ -388,27 +377,15 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
     return () => { cancelled = true }
   }, [activeSection])
 
-  async function handleSaveBilling(data: import('@/lib/validations').BillingOwnerInput) {
-    const res = await fetch('/api/admin/billing-owner', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-    const j = await res.json()
-    if (!res.ok) {
-      throw new Error((j as { error?: string }).error ?? 'Erro ao salvar dados de cobrança')
-    }
-    setBillingDocMasked(j.docMasked ?? null)
-    setBillingSaved(true)
-    setTimeout(() => setBillingSaved(false), 2500)
-  }
-
   function renderViPanel() {
     return (
       <div className={`${adminCard} space-y-4 lg:sticky lg:top-24`}>
         <div>
           <h2 className="font-syne font-bold text-base sm:text-lg text-foreground">Assistente IA</h2>
-          <p className="text-xs text-muted mt-1 break-words">Consumo, limites e personalidade na vitrine.</p>
+          <p className="text-xs text-muted mt-1 break-words">
+            Consumo, limites e personalidade na vitrine.
+            <span className="lg:hidden"> No desktop, estas opções ficam no painel lateral à direita.</span>
+          </p>
         </div>
         {viStats && (
           <div className="rounded-xl border border-border bg-surface2/60 p-4 space-y-3">
@@ -574,14 +551,14 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
         hideViOnDesktop
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-[calc(5.5rem+64px+env(safe-area-inset-bottom,0px))] md:pb-24">
         <div className="lg:col-span-8 flex flex-col gap-6 min-w-0">
         {activeSection === 'config-loja' && (
+        <>
         <ConfigCard
-          title="Informações da loja"
-          subtitle="Dados da vitrine, identidade visual, WhatsApp e endereço."
+          title="Identidade"
+          subtitle="Nome, slogan e logo exibidos na vitrine."
         >
-          <SectionHeader title="Informações básicas" />
           <div className="space-y-4">
             <div>
               <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Nome da loja</label>
@@ -676,11 +653,12 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
               </p>
             </div>
           </div>
+        </ConfigCard>
 
-          <SectionHeader
-            title="Perfil da loja"
-            description="Usado no Assistente IA, na busca da loja e na análise de produtos por IA."
-          />
+        <ConfigCard
+          title="Perfil do catálogo (Vi e IA)"
+          subtitle="Público e faixa etária — usados pela Vi, busca da loja e cadastro de produtos por IA."
+        >
           <div className="flex items-center gap-2 -mt-2 mb-1">
             <span
               className="text-muted shrink-0"
@@ -688,7 +666,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
             >
               <Info size={16} aria-hidden />
             </span>
-            <p className="text-xs text-muted">Público e faixa etária ajudam o Assistente IA e a IA a entenderem seu catálogo.</p>
+            <p className="text-xs text-muted break-words">Define o nicho do seu negócio para a inteligência do catálogo.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -717,24 +695,26 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
               </select>
             </div>
           </div>
+        </ConfigCard>
 
-          <SectionHeader title="WhatsApp" />
-          <div>
-            <MaskedInput
-              mask="phone"
-              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-              placeholder="(11) 99999-9999"
-              value={wpp}
-              onChange={setWpp}
-              autoComplete="tel"
-            />
-            <p className="text-xs text-muted mt-1.5">Número usado na vitrine e para receber pedidos.</p>
-          </div>
+        <ConfigCard
+          title="Contato"
+          subtitle="WhatsApp exibido na vitrine e usado para receber pedidos."
+        >
+          <MaskedInput
+            mask="phone"
+            className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+            placeholder="(11) 99999-9999"
+            value={wpp}
+            onChange={setWpp}
+            autoComplete="tel"
+          />
+        </ConfigCard>
 
-          <SectionHeader title="Endereço da loja (opcional)" />
-          <p className="text-xs text-muted -mt-2 break-words">
-            Exibido na vitrine e mensagens de pedido — não é usado na cobrança do plano vendai.club.
-          </p>
+        <ConfigCard
+          title="Endereço da vitrine"
+          subtitle="Opcional — exibido na loja e em mensagens de pedido. Não é usado na cobrança do plano."
+        >
           <div className="space-y-2">
             <div>
               <label className="text-[11px] text-muted block mb-1">CEP</label>
@@ -792,14 +772,15 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
             </div>
           </div>
         </ConfigCard>
+        </>
         )}
 
         {activeSection === 'config-venda' && (
+        <>
         <ConfigCard
-          title="Venda"
-          subtitle="Frete, pagamento e como o cliente finaliza o pedido na vitrine."
+          title="Entrega e frete"
+          subtitle="Informações de frete, zonas de entrega e frete grátis."
         >
-          <SectionHeader title="Frete e entrega" />
           <div>
             <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Informações de frete</label>
             <textarea
@@ -894,8 +875,12 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
               </p>
             </div>
           </div>
+        </ConfigCard>
 
-          <SectionHeader title="Pagamento" />
+        <ConfigCard
+          title="Pagamento na vitrine"
+          subtitle="PIX, links de pagamento e instruções exibidos ao cliente."
+        >
           <div>
             <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Chave PIX</label>
             <input
@@ -1018,65 +1003,37 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
               placeholder="Ex: Parcele em até 3x sem juros no WhatsApp."
             />
             <p className="text-xs text-muted mt-1.5">O Assistente IA usa esse texto quando o cliente perguntar sobre pagamento.</p>
-            {checkoutLaunchEnabled && (
-            <div className="mt-4">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-                Parcelamento na vitrine (sem juros)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={48}
-                inputMode="numeric"
-                className="w-full min-h-[44px] max-w-[120px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
-                value={installmentsMaxStr}
-                onChange={e => setInstallmentsMaxStr(e.target.value)}
-                placeholder="Ex: 6"
-              />
-              <p className="text-xs text-muted mt-1.5 break-words">
-                Número máximo de parcelas sem juros usado na loja para exibir &quot;Nx R$ …&quot; em cada produto. Deixe em branco para não mostrar essa linha.
-              </p>
-            </div>
-            )}
           </div>
+        </ConfigCard>
 
-          <SectionHeader title="Alertas de estoque" />
-          <div className="space-y-4">
-            <label className="flex items-start gap-3 cursor-pointer min-h-[44px]">
-              <input
-                type="checkbox"
-                checked={stockAlertsEnabled}
-                onChange={e => setStockAlertsEnabled(e.target.checked)}
-                className="mt-1 shrink-0"
-              />
-              <span className="min-w-0">
-                <span className="text-sm font-medium text-foreground block">Avisar estoque baixo no painel</span>
-                <span className="text-xs text-muted break-words">
-                  Aparece no dashboard e na lista de produtos. Por SKU (ex.: Vestido Rosa — M).
-                </span>
-              </span>
-            </label>
+        {checkoutLaunchEnabled && (
+        <ConfigCard
+          title="Exibição de preços"
+          subtitle="Parcelamento sem juros exibido em cada produto da vitrine."
+        >
+          <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
+            Parcelamento na vitrine (sem juros)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={48}
+            inputMode="numeric"
+            className="w-full min-h-[44px] max-w-[120px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
+            value={installmentsMaxStr}
+            onChange={e => setInstallmentsMaxStr(e.target.value)}
+            placeholder="Ex: 6"
+          />
+          <p className="text-xs text-muted mt-1.5 break-words">
+            Número máximo de parcelas sem juros usado na loja para exibir &quot;Nx R$ …&quot; em cada produto. Deixe em branco para não mostrar essa linha.
+          </p>
+        </ConfigCard>
+        )}
 
-            {stockAlertsEnabled && (
-              <div className="min-w-0">
-                <label htmlFor="stock-threshold" className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-                  Avisar quando restar ≤
-                </label>
-                <input
-                  id="stock-threshold"
-                  type="number"
-                  min={1}
-                  max={99}
-                  inputMode="numeric"
-                  className="w-full max-w-[120px] min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
-                  value={stockAlertsThresholdStr}
-                  onChange={e => setStockAlertsThresholdStr(e.target.value)}
-                />
-                <p className="text-xs text-muted mt-1.5 break-words">Peças por tamanho, cor ou volume (1 a 99).</p>
-              </div>
-            )}
-          </div>
-
+        <ConfigCard
+          title="Como finalizar pedido"
+          subtitle="Modo de checkout — como o cliente conclui a compra na vitrine."
+        >
           <CheckoutModeSection
             plan={plan}
             checkoutMode={checkoutMode}
@@ -1084,6 +1041,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
             checkoutLaunchEnabled={checkoutLaunchEnabled}
           />
         </ConfigCard>
+        </>
         )}
 
         {activeSection === 'config-vi' && (
@@ -1093,8 +1051,8 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
         {activeSection === 'config-conta' && (
         <>
         <ConfigCard
-          title="Conta"
-          subtitle="Link público da loja, senha e salvamento das alterações."
+          title="Acesso"
+          subtitle="Link público da loja e senha de acesso ao painel."
         >
           <div>
             <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Link da loja</label>
@@ -1120,48 +1078,30 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
           >
             Alterar senha
           </button>
-
-          {error && <p className="text-sm text-warm">{error}</p>}
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={loading}
-            className={`w-full min-h-[48px] py-3 rounded-[12px] font-syne font-bold text-sm transition-all ${
-              saved ? 'bg-accent text-bg' : 'bg-primary text-white hover:shadow-[0_4px_20px_var(--primary-glow)]'
-            } disabled:opacity-60`}
-          >
-            {loading ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar alterações'}
-          </button>
         </ConfigCard>
 
         <ConfigCard
-          title="Dados de cobrança (plano vendai.club)"
-          subtitle="CPF ou CNPJ exigidos pelo Asaas para assinar um plano pago. Endereço de cobrança é separado do endereço da loja."
+          title="Cobrança do plano"
+          subtitle="CPF ou CNPJ exigidos pelo Asaas para assinar um plano pago do vendai.club."
         >
-          {billingDocMasked && (
-            <p className="text-xs text-accent break-words">
-              Documento cadastrado: <span className="font-mono">{billingDocMasked}</span>
+          {billingDocMasked ? (
+            <p className="text-sm text-foreground break-words">
+              Documento cadastrado: <span className="font-mono text-accent">{billingDocMasked}</span>
+            </p>
+          ) : (
+            <p className="text-sm text-muted break-words">
+              Nenhum documento cadastrado ainda. Necessário para assinar um plano pago.
             </p>
           )}
-          {billingSaved && (
-            <p className="text-sm text-accent font-medium">✓ Dados de cobrança salvos</p>
-          )}
-          <BillingOwnerForm
-            ownerName={ownerName}
-            initial={{
-              type: store.billing_owner_type ?? undefined,
-              legalName: store.billing_legal_name,
-            }}
-            submitLabel={billingDocMasked ? 'Atualizar dados de cobrança' : 'Salvar dados de cobrança'}
-            onSubmit={handleSaveBilling}
-          />
           <p className="text-xs text-muted break-words">
-            Para ver planos e fazer upgrade, acesse{' '}
-            <Link href="/admin/plano" className="text-primary font-semibold hover:underline">
-              Plano
-            </Link>.
+            O formulário completo (titular, endereço de cobrança) fica na página Plano, onde você também faz upgrade e vê o histórico.
           </p>
+          <Link
+            href="/admin/plano"
+            className="inline-flex items-center justify-center min-h-[44px] px-5 py-2.5 bg-primary/10 border border-primary rounded-xl text-primary text-sm font-semibold hover:bg-primary/20 transition-colors"
+          >
+            Gerenciar em Plano
+          </Link>
         </ConfigCard>
 
         <AdminPrivacySection />
@@ -1173,6 +1113,13 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
           {renderViPanel()}
         </div>
       </div>
+
+      <ConfigSaveBar
+        loading={loading}
+        saved={saved}
+        error={error}
+        onSave={() => void handleSave()}
+      />
 
       {pwdOpen && (
         <div

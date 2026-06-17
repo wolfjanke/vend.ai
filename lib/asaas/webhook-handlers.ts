@@ -293,13 +293,17 @@ export async function onPaymentEventWithSubscription(payload: PaymentEventPayloa
 
   if (storeId) {
     await sql`
-      UPDATE stores SET subscription_status = 'ACTIVE'
+      UPDATE stores SET
+        subscription_status = 'ACTIVE',
+        trial_ends_at = CASE WHEN subscription_status = 'TRIAL' THEN NULL ELSE trial_ends_at END
       WHERE id = ${storeId}
         AND subscription_status IN ('TRIAL', 'OVERDUE')
     `
   } else if (subId) {
     await sql`
-      UPDATE stores SET subscription_status = 'ACTIVE'
+      UPDATE stores SET
+        subscription_status = 'ACTIVE',
+        trial_ends_at = CASE WHEN subscription_status = 'TRIAL' THEN NULL ELSE trial_ends_at END
       WHERE asaas_subscription_id = ${subId}
         AND subscription_status IN ('TRIAL', 'OVERDUE')
     `

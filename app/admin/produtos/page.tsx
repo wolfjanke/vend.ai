@@ -9,6 +9,7 @@ import { normalizeStockAlerts, productLowStockMinQty } from '@/lib/stock-alerts'
 import ToggleActiveButton from './ToggleActiveButton'
 import DeleteProductButton from './DeleteProductButton'
 import Pagination from '@/components/ui/Pagination'
+import StockAlertsSettings from '@/components/admin/StockAlertsSettings'
 
 const PAGE_SIZE = 24
 
@@ -37,7 +38,7 @@ function productOutOfStock(p: Product): boolean {
 }
 
 interface Props {
-  searchParams: { page?: string; search?: string; active?: string; sort?: string }
+  searchParams: { page?: string; search?: string; active?: string; sort?: string; category?: string }
 }
 
 export default async function ProdutosPage({ searchParams }: Props) {
@@ -51,6 +52,28 @@ export default async function ProdutosPage({ searchParams }: Props) {
   const searchTerm = params.search?.trim() ?? ''
   const activeFilter = parseActive(params.active)
   const sort = parseSort(params.sort)
+  const categoryParam = params.category?.trim() ?? ''
+
+  const settingsRows = await sql`SELECT settings_json, plan, is_demo, slug, name, whatsapp FROM stores WHERE id = ${storeId} LIMIT 1`
+  const settings = (settingsRows[0]?.settings_json as StoreSettings | null) ?? {}
+  const storeName = String(settingsRows[0]?.name ?? '')
+  const storeWhatsapp = String(settingsRows[0]?.whatsapp ?? '')
+  const customCategories = settings.customCategories ?? []
+
+  const categoryRows = await sql`
+    SELECT category, COUNT(*)::int AS c
+    FROM products
+    WHERE store_id = ${storeId}
+    GROUP BY category
+    ORDER BY category ASC
+  `
+  const categoryOptions = (categoryRows as { category: string; c: number }[]).map(row => ({
+    value: row.category,
+    label: getCategoryDisplayLabel(row.category, customCategories),
+    count: Number(row.c),
+  }))
+  const categoryFilter = categoryOptions.some(o => o.value === categoryParam) ? categoryParam : ''
+  const hasCategory = categoryFilter.length > 0
 
   const hasSearch = searchTerm.length > 0
   const sp = hasSearch ? `%${searchTerm}%` : ''
@@ -62,6 +85,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
     SELECT COUNT(*)::int as c FROM products
     WHERE store_id = ${storeId}
     AND (${!hasSearch} OR name ILIKE ${sp})
+    AND (${!hasCategory} OR category = ${categoryFilter})
     AND (
       ${all} OR (active = true AND ${act}) OR (active = false AND ${inact})
     )
@@ -75,6 +99,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
       SELECT * FROM products
       WHERE store_id = ${storeId}
       AND (${!hasSearch} OR name ILIKE ${sp})
+      AND (${!hasCategory} OR category = ${categoryFilter})
       AND (
         ${all} OR (active = true AND ${act}) OR (active = false AND ${inact})
       )
@@ -86,6 +111,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
       SELECT * FROM products
       WHERE store_id = ${storeId}
       AND (${!hasSearch} OR name ILIKE ${sp})
+      AND (${!hasCategory} OR category = ${categoryFilter})
       AND (
         ${all} OR (active = true AND ${act}) OR (active = false AND ${inact})
       )
@@ -97,6 +123,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
       SELECT * FROM products
       WHERE store_id = ${storeId}
       AND (${!hasSearch} OR name ILIKE ${sp})
+      AND (${!hasCategory} OR category = ${categoryFilter})
       AND (
         ${all} OR (active = true AND ${act}) OR (active = false AND ${inact})
       )
@@ -108,6 +135,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
       SELECT * FROM products
       WHERE store_id = ${storeId}
       AND (${!hasSearch} OR name ILIKE ${sp})
+      AND (${!hasCategory} OR category = ${categoryFilter})
       AND (
         ${all} OR (active = true AND ${act}) OR (active = false AND ${inact})
       )
@@ -116,9 +144,6 @@ export default async function ProdutosPage({ searchParams }: Props) {
     `
   }
 
-  const settingsRows = await sql`SELECT settings_json, plan, is_demo, slug FROM stores WHERE id = ${storeId} LIMIT 1`
-  const settings = (settingsRows[0]?.settings_json as StoreSettings | null) ?? {}
-  const customCategories = settings.customCategories ?? []
   const planCtx = getStorePlanContext(settingsRows[0] ?? {})
   const productLimit = planCtx.productLimit
   const stockAlerts = normalizeStockAlerts(settings.stockAlerts)
@@ -130,6 +155,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
   const basePath = '/admin/produtos'
   const q = new URLSearchParams()
   if (hasSearch) q.set('search', searchTerm)
+  if (hasCategory) q.set('category', categoryFilter)
   if (activeFilter !== 'all') q.set('active', activeFilter)
   if (sort !== 'newest') q.set('sort', sort)
   const paginationQuery = q.toString()
@@ -166,8 +192,14 @@ export default async function ProdutosPage({ searchParams }: Props) {
         </Link>
       </div>
 
-      <form action={basePath} method="GET" className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem_12rem_auto] gap-2 lg:items-end mb-6">
-        <div className="min-w-0">
+      <StockAlertsSettings
+        initial={stockAlerts}
+        storeName={storeName}
+        whatsapp={storeWhatsapp}
+      />
+
+      <form action={basePath} method="GET" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_12rem_12rem_auto] gap-2 lg:items-end mb-6">
+        <div className="min-w-0 sm:col-span-2 lg:col-span-1">
           <div className="flex-1 min-w-0">
             <label htmlFor="prod-search" className="text-[11px] text-muted block mb-1">
               Buscar
@@ -181,6 +213,24 @@ export default async function ProdutosPage({ searchParams }: Props) {
               className="w-full min-h-[44px] px-4 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary placeholder:text-muted"
             />
           </div>
+        </div>
+        <div className="min-w-0">
+          <label htmlFor="prod-category" className="text-[11px] text-muted block mb-1">
+            Categoria
+          </label>
+          <select
+            id="prod-category"
+            name="category"
+            defaultValue={categoryFilter || 'all'}
+            className="w-full min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary"
+          >
+            <option value="all">Todas</option>
+            {categoryOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label} ({opt.count})
+              </option>
+            ))}
+          </select>
         </div>
         <div className="min-w-0">
           <label htmlFor="prod-active" className="text-[11px] text-muted block mb-1">
@@ -215,7 +265,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
         </div>
         <button
           type="submit"
-          className="min-h-[44px] px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 shrink-0"
+          className="min-h-[44px] px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 shrink-0 sm:col-span-2 lg:col-span-1"
         >
           Aplicar
         </button>
@@ -278,11 +328,11 @@ export default async function ProdutosPage({ searchParams }: Props) {
 
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-accent font-bold text-base tabular-nums">
-                      R${Number(p.price).toFixed(2).replace('.', ',')}
+                      R${Number(p.promo_price ?? p.price).toFixed(2).replace('.', ',')}
                     </span>
-                    {p.promo_price && (
+                    {p.promo_price != null && Number(p.promo_price) < Number(p.price) && (
                       <span className="text-xs text-muted line-through tabular-nums">
-                        R${Number(p.promo_price).toFixed(2).replace('.', ',')}
+                        R${Number(p.price).toFixed(2).replace('.', ',')}
                       </span>
                     )}
                   </div>
@@ -324,11 +374,11 @@ export default async function ProdutosPage({ searchParams }: Props) {
           <Shirt className="w-14 h-14 mx-auto mb-3 opacity-40" aria-hidden />
           <p className="font-medium">Nenhum produto encontrado</p>
           <p className="text-sm mt-1 mb-6">
-            {hasSearch || activeFilter !== 'all'
+            {hasSearch || activeFilter !== 'all' || hasCategory
               ? 'Tente outros filtros ou limpe a busca.'
               : 'Cadastre seu primeiro produto com ajuda da IA'}
           </p>
-          {!hasSearch && activeFilter === 'all' ? (
+          {!hasSearch && activeFilter === 'all' && !hasCategory ? (
             <Link
               href="/admin/produtos/novo"
               className="inline-flex items-center gap-2 px-5 py-3 min-h-[44px] bg-primary text-white rounded-xl font-syne font-bold text-sm hover:shadow-[0_4px_20px_var(--primary-glow)] transition-all"

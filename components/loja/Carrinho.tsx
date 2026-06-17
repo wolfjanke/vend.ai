@@ -105,6 +105,10 @@ export default function Carrinho({
     if (!storeSlug || !siteCheckoutActive) return
     try {
       sessionStorage.setItem(`cart_${storeSlug}`, JSON.stringify(cart))
+      sessionStorage.setItem(
+        `checkout_meta_${storeSlug}`,
+        JSON.stringify({ couponCode: couponCode.trim() || '' }),
+      )
     } catch { /* ignora */ }
     window.location.href = `/${storeSlug}/checkout`
   }

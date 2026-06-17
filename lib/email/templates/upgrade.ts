@@ -2,16 +2,54 @@ import { baseTemplate } from './base'
 import { EMAIL_CONFIG } from '../index'
 
 interface UpgradeEmailProps {
-  ownerName: string
-  storeName: string
-  newPlanLabel: string
-  newPlanPrice: string
-  renewalDay: number
-  newFeatures: string[]
+  ownerName:          string
+  storeName:          string
+  newPlanLabel:       string
+  newPlanPrice:       string
+  billingCycleLabel:  string
+  onTrial:            boolean
+  trialDaysRemaining: number | null
+  trialDays:          number
+  firstChargeDate:    string | null
+  newFeatures:        string[]
 }
 
 export function upgradeEmailHtml(props: UpgradeEmailProps): string {
-  const { ownerName, storeName, newPlanLabel, newPlanPrice, renewalDay, newFeatures } = props
+  const {
+    ownerName,
+    storeName,
+    newPlanLabel,
+    newPlanPrice,
+    billingCycleLabel,
+    onTrial,
+    trialDaysRemaining,
+    trialDays,
+    firstChargeDate,
+    newFeatures,
+  } = props
+
+  const trialBlock = onTrial && firstChargeDate
+    ? `
+    <div style="background:#F0FFF8;border:1px solid rgba(0,168,107,0.25);border-radius:12px;
+                padding:16px 20px;margin-bottom:24px;">
+      <p style="margin:0 0 6px;font-size:13px;color:#00A86B;font-weight:700;">
+        Período gratuito ativo
+      </p>
+      <p style="margin:0;font-size:14px;color:#333333;line-height:1.5;">
+        ${trialDaysRemaining != null && trialDaysRemaining > 0
+          ? `Faltam <strong>${trialDaysRemaining}</strong> ${trialDaysRemaining === 1 ? 'dia' : 'dias'} do trial.`
+          : trialDays > 0
+            ? `Você tem <strong>${trialDays} dias grátis</strong> para testar.`
+            : 'Seu trial continua ativo.'}
+        A primeira cobrança será em <strong>${firstChargeDate}</strong> pelo Asaas, se você mantiver o plano.
+      </p>
+    </div>
+    `
+    : ''
+
+  const billingLine = onTrial && firstChargeDate
+    ? `1ª cobrança em ${firstChargeDate} · ${billingCycleLabel}`
+    : `${newPlanPrice} · ${billingCycleLabel}`
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#1A1A1A;">
@@ -21,6 +59,8 @@ export function upgradeEmailHtml(props: UpgradeEmailProps): string {
       Olá, <strong>${ownerName}</strong>! Sua loja
       <strong>${storeName}</strong> agora está no plano ${newPlanLabel}.
     </p>
+
+    ${trialBlock}
 
     <div style="background:linear-gradient(135deg,rgba(123,110,255,0.13),rgba(0,229,160,0.07));
                 border:1px solid rgba(123,110,255,0.27);border-radius:12px;
@@ -33,7 +73,7 @@ export function upgradeEmailHtml(props: UpgradeEmailProps): string {
         ${newPlanLabel}
       </p>
       <p style="margin:0;font-size:14px;color:#666666;">
-        ${newPlanPrice} · Renovação todo dia ${renewalDay}
+        ${billingLine}
       </p>
     </div>
 
@@ -52,11 +92,11 @@ export function upgradeEmailHtml(props: UpgradeEmailProps): string {
     </table>
 
     <div style="text-align:center;margin-bottom:24px;">
-      <a href="${EMAIL_CONFIG.baseUrl}/admin"
+      <a href="${EMAIL_CONFIG.baseUrl}/admin/plano"
          style="display:inline-block;background:linear-gradient(135deg,#7B6EFF,#00E5A0);
                 color:#FFFFFF;font-weight:700;font-size:15px;padding:14px 32px;
                 border-radius:12px;text-decoration:none;">
-        Explorar novos recursos →
+        Ver assinatura →
       </a>
     </div>
 

@@ -6,11 +6,20 @@ describe('billingOwnerSchema', () => {
     const parsed = billingOwnerSchema.safeParse({
       type: 'pf',
       cpfCnpj: '529.982.247-25',
+      legalName: 'João da Silva',
     })
     expect(parsed.success).toBe(true)
     if (parsed.success) {
       expect(parsed.data.cpfCnpj).toBe('52998224725')
     }
+  })
+
+  it('exige nome do titular para PF', () => {
+    const parsed = billingOwnerSchema.safeParse({
+      type: 'pf',
+      cpfCnpj: '529.982.247-25',
+    })
+    expect(parsed.success).toBe(false)
   })
 
   it('rejeita PF com CPF inválido', () => {
@@ -42,6 +51,7 @@ describe('billingOwnerSchema', () => {
     const parsed = billingOwnerSchema.safeParse({
       type: 'pf',
       cpfCnpj: '529.982.247-25',
+      legalName: 'João da Silva',
       address: {
         cep: '01310-100',
         logradouro: 'Av Paulista',

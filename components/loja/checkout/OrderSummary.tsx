@@ -12,20 +12,33 @@ interface CartItem {
 }
 
 interface Props {
-  items:           CartItem[]
-  grossValue:      number
-  totalComJuros?:  number
-  cardFeeLabel?:   string | null
+  items:            CartItem[]
+  subtotal:         number
+  discountCoupon?:  number
+  discountPix?:     number
+  payableBase:      number
+  totalComJuros?:   number
+  cardFeeLabel?:    string | null
+  /** @deprecated use subtotal */
+  grossValue?:      number
 }
 
 function formatCurrency(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export default function OrderSummary({ items, grossValue, totalComJuros, cardFeeLabel }: Props) {
-  const total = totalComJuros ?? grossValue
-  const feeAmount = totalComJuros != null && totalComJuros > grossValue
-    ? totalComJuros - grossValue
+export default function OrderSummary({
+  items,
+  subtotal,
+  discountCoupon = 0,
+  discountPix = 0,
+  payableBase,
+  totalComJuros,
+  cardFeeLabel,
+}: Props) {
+  const total = totalComJuros ?? payableBase
+  const cardFeeAmount = totalComJuros != null && totalComJuros > payableBase
+    ? totalComJuros - payableBase
     : 0
 
   return (
@@ -62,12 +75,24 @@ export default function OrderSummary({ items, grossValue, totalComJuros, cardFee
       <div className="border-t border-border pt-3 space-y-2 text-sm">
         <div className="flex justify-between gap-2">
           <span className="text-muted">Subtotal</span>
-          <span className="tabular-nums">{formatCurrency(grossValue)}</span>
+          <span className="tabular-nums">{formatCurrency(subtotal)}</span>
         </div>
-        {feeAmount > 0 && (
+        {discountCoupon > 0 && (
+          <div className="flex justify-between gap-2">
+            <span className="text-muted">Desconto cupom</span>
+            <span className="tabular-nums text-accent">- {formatCurrency(discountCoupon)}</span>
+          </div>
+        )}
+        {discountPix > 0 && (
+          <div className="flex justify-between gap-2">
+            <span className="text-muted">Desconto PIX</span>
+            <span className="tabular-nums text-accent">- {formatCurrency(discountPix)}</span>
+          </div>
+        )}
+        {cardFeeAmount > 0 && (
           <div className="flex justify-between gap-2">
             <span className="text-muted break-words">{cardFeeLabel ?? 'Taxa do cartão'}</span>
-            <span className="tabular-nums">{formatCurrency(feeAmount)}</span>
+            <span className="tabular-nums">{formatCurrency(cardFeeAmount)}</span>
           </div>
         )}
         <div className="flex justify-between gap-2 font-bold text-base pt-1">

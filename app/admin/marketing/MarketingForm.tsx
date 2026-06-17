@@ -1,16 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Info, Megaphone, Ticket } from 'lucide-react'
+import { Info, Megaphone, Sparkles, Ticket } from 'lucide-react'
 import type { Store, BannerMessage, CouponRule } from '@/types'
 import { getStoreProfile } from '@/types'
 import { storeSettingsPatchSchema } from '@/lib/validations'
+import { BANNER_TEXT_MAX_CHARS, normalizeBannerMotion, type BannerMotion } from '@/lib/banners'
 import SectionHeader from '@/components/admin/SectionHeader'
+import BannerStrip from '@/components/loja/BannerStrip'
 import { adminCard } from '@/lib/admin-ui'
 import { stripEmojis } from '@/lib/strip-emoji'
 
 interface Props {
   store: Store
+  checkoutLaunchEnabled?: boolean
 }
 
 function couponPreview(c: CouponRule): string | null {
@@ -20,24 +23,32 @@ function couponPreview(c: CouponRule): string | null {
   return `${code} → R$ ${Number(c.value).toFixed(2).replace('.', ',')} off`
 }
 
-export default function MarketingForm({ store }: Props) {
+export default function MarketingForm({ store, checkoutLaunchEnabled = false }: Props) {
   const settings = store.settings_json ?? {}
   const [pixDiscountPercent, setPixDiscountPercent] = useState<number>(Number(settings.pixDiscountPercent ?? 0))
   const [couponRules, setCouponRules] = useState<CouponRule[]>(settings.couponRules ?? [])
-  const [bannerMessages, setBannerMessages] = useState<BannerMessage[]>(settings.bannerMessages ?? [])
+  const [bannerMessages, setBannerMessages] = useState<BannerMessage[]>(
+    (settings.bannerMessages ?? []).map(m => ({
+      ...m,
+      title:  m.title ?? '',
+      motion: normalizeBannerMotion(m.motion),
+    })),
+  )
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [bannerSuggestions, setBannerSuggestions] = useState<Record<string, string[]>>({})
 
   function addBanner() {
     setBannerMessages(prev => [
       ...prev,
       {
-        id: crypto.randomUUID(),
-        title: '',
-        text: '',
+        id:        crypto.randomUUID(),
+        text:      '',
         startDate: '',
-        endDate: '',
+        endDate:   '',
+        motion:    'pulse' as BannerMotion,
       },
     ])
   }
@@ -46,9 +57,61 @@ export default function MarketingForm({ store }: Props) {
     setBannerMessages(prev => prev.filter(m => m.id !== id))
   }
 
-  function updateBanner(id: string, field: keyof BannerMessage, value: string) {
-    const cleaned = field === 'title' || field === 'text' ? stripEmojis(value) : value
-    setBannerMessages(prev => prev.map(m => (m.id === id ? { ...m, [field]: cleaned } : m)))
+  function updateBanner(
+    id: string,
+    patch: Partial<Pick<BannerMessage, 'text' | 'startDate' | 'endDate' | 'motion'>>,
+  ) {
+    setBannerMessages(prev =>
+      prev.map(m => {
+        if (m.id !== id) return m
+        const next = { ...m, ...patch }
+        if (patch.text != null) next.text = stripEmojis(patch.text)
+        return next
+      }),
+    )
+    if (patch.text != null) {
+      setBannerSuggestions(prev => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+    }
+  }
+
+  async function generateBannerText(bannerId: string) {
+    const banner = bannerMessages.find(m => m.id === bannerId)
+    if (!banner) return
+
+    setGeneratingId(bannerId)
+    setError('')
+
+    try {
+      const res = await fetch('/api/admin/marketing/banner-text', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hint:               banner.text || undefined,
+          startDate:          banner.startDate,
+          endDate:            banner.endDate,
+          pixDiscountPercent,
+          couponRules:        couponRules.filter(c => c.active && c.code.trim()),
+          freteInfo:          settings.freteInfo,
+          freeShippingMin:    settings.freeShippingMin ?? null,
+        }),
+      })
+      const data = await res.json() as { suggestions?: string[]; error?: string }
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao gerar texto')
+
+      const suggestions = data.suggestions ?? []
+      if (!suggestions.length) throw new Error('Nenhuma sugestão retornada')
+
+      updateBanner(bannerId, { text: suggestions[0] })
+      setBannerSuggestions(prev => ({ ...prev, [bannerId]: suggestions }))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao gerar texto')
+    } finally {
+      setGeneratingId(null)
+    }
   }
 
   function addCoupon() {
@@ -104,7 +167,15 @@ export default function MarketingForm({ store }: Props) {
           maxDiscountValue: c.maxDiscountValue == null ? undefined : Number(c.maxDiscountValue),
         }))
         .filter(c => c.code && c.value >= 0),
-      bannerMessages: bannerMessages.filter(m => m.text.trim()),
+      bannerMessages: bannerMessages
+        .filter(m => m.text.trim())
+        .map(m => ({
+          id:        m.id,
+          text:      m.text.trim(),
+          startDate: m.startDate,
+          endDate:   m.endDate,
+          motion:    normalizeBannerMotion(m.motion),
+        })),
     }
 
     const parsed = storeSettingsPatchSchema.safeParse(body)
@@ -135,10 +206,28 @@ export default function MarketingForm({ store }: Props) {
 
   return (
     <div className="space-y-6">
+      <div className="p-4 rounded-xl border border-primary/25 bg-primary/5 text-sm text-foreground break-words">
+        <p className="font-semibold mb-2">Onde cupons e desconto PIX valem</p>
+        <ul className="space-y-1.5 text-xs sm:text-sm text-muted list-disc pl-4">
+          <li>
+            <strong className="text-foreground font-medium">Carrinho WhatsApp</strong> — cupom digitado no carrinho e desconto PIX ao escolher pagamento PIX.
+          </li>
+          <li>
+            <strong className="text-foreground font-medium">Checkout no site</strong>
+            {checkoutLaunchEnabled
+              ? ' — mesmas regras quando o checkout integrado estiver ativo na loja (Configurações → Venda).'
+              : ' — em breve, com as mesmas regras (checkout integrado ainda não liberado no ambiente).'}
+          </li>
+          <li>
+            <strong className="text-foreground font-medium">Banners</strong> — apenas na vitrine (faixa rotativa no topo da loja).
+          </li>
+        </ul>
+      </div>
+
       <div className={adminCard}>
       <SectionHeader
         title="Desconto PIX"
-        description="Percentual automático quando o cliente escolhe PIX no carrinho ou WhatsApp."
+        description="Percentual automático quando o cliente escolhe PIX no carrinho ou no checkout integrado."
       />
       <div className="flex items-start gap-2 mb-2">
         <label className="text-xs font-bold text-muted uppercase tracking-wider flex-1">Desconto PIX (%)</label>
@@ -160,7 +249,7 @@ export default function MarketingForm({ store }: Props) {
         placeholder="Ex: 5"
       />
       <p className="text-xs text-muted mt-1.5 mb-6">
-        Aplicado automaticamente no carrinho quando o cliente selecionar PIX.
+        Aplicado automaticamente quando o cliente selecionar PIX (carrinho WhatsApp ou checkout no site).
       </p>
 
       </div>
@@ -313,9 +402,12 @@ export default function MarketingForm({ store }: Props) {
       <div className={adminCard}>
       <SectionHeader
         title="Banners da vitrine"
-        description="Aparecem na loja em faixa rotativa. Opcional: datas para épocas (Páscoa, Natal)."
+        description="Faixa de aviso no topo da loja. Várias mensagens ativas alternam a cada 6 segundos."
       />
-      <div className="flex justify-end mb-3">
+      <p className="text-xs text-muted mb-3 break-words">
+        Uma mensagem curta (até {BANNER_TEXT_MAX_CHARS} caracteres). Ative a pulsação leve para destacar no celular.
+      </p>
+      <div className="flex flex-wrap justify-end gap-2 mb-3">
         <button type="button" onClick={addBanner} className="text-xs text-primary font-semibold hover:underline min-h-[44px] px-2">
           + Adicionar mensagem
         </button>
@@ -330,13 +422,34 @@ export default function MarketingForm({ store }: Props) {
       ) : (
         bannerMessages.map(m => (
           <div key={m.id} className="mb-3 p-3 bg-surface2 border border-border rounded-xl">
-            <div className="flex gap-2 mb-2">
-              <input
-                className="flex-1 min-w-0 min-h-[44px] px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary"
-                placeholder="Título (ex: Páscoa)"
-                value={m.title}
-                onChange={e => updateBanner(m.id, 'title', e.target.value)}
-              />
+            <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                  <label htmlFor={`banner-text-${m.id}`} className="text-[10px] text-muted">
+                    Mensagem do banner
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => generateBannerText(m.id)}
+                    disabled={generatingId === m.id}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline min-h-[44px] px-1 disabled:opacity-60"
+                  >
+                    <Sparkles size={14} aria-hidden />
+                    {generatingId === m.id ? 'Gerando…' : 'Gerar com Vi'}
+                  </button>
+                </div>
+                <textarea
+                  id={`banner-text-${m.id}`}
+                  className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary min-h-[60px] resize-y placeholder:text-muted"
+                  placeholder="Ex: Pague com PIX e ganhe 5% de desconto em toda a loja!"
+                  value={m.text}
+                  maxLength={BANNER_TEXT_MAX_CHARS}
+                  onChange={e => updateBanner(m.id, { text: e.target.value })}
+                />
+                <p className="text-[10px] text-muted mt-1 tabular-nums">
+                  {m.text.length}/{BANNER_TEXT_MAX_CHARS}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => removeBanner(m.id)}
@@ -345,12 +458,67 @@ export default function MarketingForm({ store }: Props) {
                 Remover
               </button>
             </div>
-            <textarea
-              className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-foreground text-xs outline-none focus:border-primary min-h-[60px] resize-y mb-2 placeholder:text-muted"
-              placeholder="Texto da mensagem"
-              value={m.text}
-              onChange={e => updateBanner(m.id, 'text', e.target.value)}
-            />
+
+            <div className="mb-2 flex items-center justify-between gap-3 min-h-[44px]">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground">Pulsação leve</p>
+                <p className="text-[10px] text-muted break-words">
+                  {normalizeBannerMotion(m.motion) === 'pulse' ? 'Texto com brilho suave' : 'Texto estático'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={normalizeBannerMotion(m.motion) === 'pulse'}
+                aria-label="Ativar pulsação leve no banner"
+                onClick={() =>
+                  updateBanner(m.id, {
+                    motion: normalizeBannerMotion(m.motion) === 'pulse' ? 'none' : 'pulse',
+                  })
+                }
+                className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${
+                  normalizeBannerMotion(m.motion) === 'pulse' ? 'bg-primary' : 'bg-muted/40'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                    normalizeBannerMotion(m.motion) === 'pulse' ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {(bannerSuggestions[m.id]?.length ?? 0) > 1 && (
+              <div className="mb-2">
+                <p className="text-[10px] text-muted mb-1.5">Outras sugestões da Vi:</p>
+                <div className="flex flex-col gap-1.5">
+                  {bannerSuggestions[m.id].map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => updateBanner(m.id, { text: suggestion })}
+                      className={`text-left text-xs px-3 py-2 rounded-lg border break-words min-h-[44px] ${
+                        m.text === suggestion
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-surface hover:border-primary/40'
+                      }`}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {m.text.trim() && (
+              <div className="mb-2">
+                <p className="text-[10px] text-muted mb-1.5">Prévia na vitrine</p>
+                <BannerStrip
+                  text={m.text}
+                  motion={normalizeBannerMotion(m.motion)}
+                  variant="admin-preview"
+                />
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] text-muted block mb-1">Exibir de</label>
@@ -358,7 +526,7 @@ export default function MarketingForm({ store }: Props) {
                   type="date"
                   className="w-full min-h-[44px] px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground text-xs"
                   value={m.startDate ?? ''}
-                  onChange={e => updateBanner(m.id, 'startDate', e.target.value)}
+                  onChange={e => updateBanner(m.id, { startDate: e.target.value })}
                 />
               </div>
               <div>
@@ -367,7 +535,7 @@ export default function MarketingForm({ store }: Props) {
                   type="date"
                   className="w-full min-h-[44px] px-3 py-1.5 bg-surface border border-border rounded-lg text-foreground text-xs"
                   value={m.endDate ?? ''}
-                  onChange={e => updateBanner(m.id, 'endDate', e.target.value)}
+                  onChange={e => updateBanner(m.id, { endDate: e.target.value })}
                 />
               </div>
             </div>

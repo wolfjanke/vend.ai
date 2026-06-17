@@ -736,6 +736,43 @@ html.js .reveal-none.is-visible {
   box-shadow: 0 0 20px color-mix(in srgb, var(--theme-primary) 45%, transparent);
 }
 
+.store-theme-root .vi-message-link {
+  text-underline-offset: 2px;
+  padding-block: 2px;
+}
+
+/* ─── Faixa de banner (vitrine + admin) ──────────────────────────────────── */
+@keyframes banner-gentle-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.8; transform: scale(1.018); }
+}
+
+@keyframes banner-swap-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.banner-motion-pulse {
+  animation: banner-gentle-pulse 2.6s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.banner-swap-in {
+  animation: banner-swap-in 0.45s ease-out;
+}
+
+.store-theme-root .banner-strip-accent {
+  color: var(--theme-primary);
+  text-shadow: 0 0 20px color-mix(in srgb, var(--theme-primary) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-motion-pulse,
+  .banner-swap-in {
+    animation: none !important;
+  }
+}
+
 /* ─── Admin: highlight de cores no preview da aparência ─────────────────── */
 @keyframes pulse-highlight {
   from { opacity: 1; transform: scale(1); }

@@ -24,6 +24,7 @@ vi.mock('@/lib/payments/wolf-hub', () => ({
   updateCustomer: (...args: unknown[]) => mockUpdateCustomer(...args),
   createPayment: vi.fn(),
   asaasCreateSubscription: vi.fn(),
+  updateSubscriptionAsaas: vi.fn(),
   cancelSubscriptionAsaas: vi.fn(),
 }))
 

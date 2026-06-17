@@ -5,9 +5,6 @@ import {
   CheckCircle2,
   Truck,
   Wallet,
-  Camera,
-  ClipboardList,
-  ExternalLink,
   TrendingUp,
   Calendar,
 } from 'lucide-react'
@@ -177,25 +174,28 @@ export default async function DashboardPage() {
 
       <ViLimitBanner percent={viStats.percent} />
 
-      {/* Metrics */}
-      <div className="grid w-full gap-3 grid-cols-2 lg:grid-cols-4 mb-4">
+      {/* Métricas: 2×2 no mobile; 4 colunas no desktop */}
+      <div className="grid w-full gap-3 grid-cols-1 min-[360px]:grid-cols-2 lg:grid-cols-4 mb-4 auto-rows-fr">
         <MetricCard
           icon={<ShoppingCart size={22} className="text-primary" />}
           value={countNovo}
           label="Novos pedidos"
           valueColor="text-primary"
+          className="h-full"
         />
         <MetricCard
           icon={<CheckCircle2 size={22} className="text-blue-400" />}
           value={countConf}
           label="Confirmados hoje"
           valueColor="text-blue-400"
+          className="h-full"
         />
         <MetricCard
           icon={<Truck size={22} className="text-yellow-400" />}
           value={countEntrega}
           label="Em entrega"
           valueColor="text-yellow-400"
+          className="h-full"
         />
         <MetricCard
           icon={<Wallet size={22} className="text-accent" />}
@@ -203,11 +203,11 @@ export default async function DashboardPage() {
           label="Total hoje"
           valueColor="text-accent"
           highlight
-          className="col-span-2 lg:col-span-1"
+          className="h-full"
         />
       </div>
 
-      <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div className="grid w-full gap-3 grid-cols-1 md:grid-cols-3 mb-8">
         <ViUsageCard used={viStats.used} limit={viStats.limit} percent={viStats.percent} />
         <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 flex items-start gap-3 min-w-0 overflow-hidden">
           <TrendingUp size={20} className="text-muted shrink-0 mt-0.5" aria-hidden />
@@ -279,38 +279,24 @@ export default async function DashboardPage() {
         <div className="text-center py-16 text-muted">
           <ShoppingCart className="w-14 h-14 mx-auto mb-3 opacity-40" aria-hidden />
           <p className="font-medium">Nenhum pedido ainda</p>
-          <p className="text-sm mt-1">Compartilhe sua loja para receber pedidos!</p>
+          <p className="text-sm mt-1 break-words px-4">
+            Compartilhe sua loja para receber pedidos.
+            {storePublicUrl && (
+              <>
+                {' '}
+                <a
+                  href={storePublicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Abrir vitrine
+                </a>
+              </>
+            )}
+          </p>
         </div>
       )}
-
-      {/* Quick actions */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Link
-          href="/admin/produtos/novo"
-          className="flex items-center gap-3 px-4 py-3 min-h-[48px] bg-primary/10 border border-primary/30 rounded-xl text-primary text-sm font-medium hover:bg-primary/20 transition-all"
-        >
-          <Camera size={20} aria-hidden />
-          Novo produto
-        </Link>
-        <Link
-          href="/admin/pedidos"
-          className="flex items-center gap-3 px-4 py-3 min-h-[48px] bg-surface2 border border-border rounded-xl text-foreground text-sm font-medium hover:border-border/60 transition-all"
-        >
-          <ClipboardList size={20} aria-hidden />
-          Todos os pedidos
-        </Link>
-        {store?.slug && (
-          <a
-            href={`/${store.slug}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 px-4 py-3 min-h-[48px] bg-accent/10 border border-accent/30 rounded-xl text-accent text-sm font-medium hover:bg-accent/20 transition-all"
-          >
-            <ExternalLink size={20} aria-hidden />
-            Ver loja
-          </a>
-        )}
-      </div>
     </div>
   )
 }

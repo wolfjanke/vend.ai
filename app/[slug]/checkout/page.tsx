@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import { sql } from '@/lib/db'
-import type { PlanSlug, AsaasOnboardingStatus } from '@/types'
+import type { PlanSlug, AsaasOnboardingStatus, StoreSettings } from '@/types'
 import { getCheckoutRates } from '@/lib/checkout-rates'
 import { getAsaasEnv } from '@/lib/payments/config'
 import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
@@ -15,7 +15,7 @@ export default async function CheckoutPage({ params }: Props) {
 
   const rows = await sql`
     SELECT
-      id, slug, name, plan, logo_url, theme_logo_url,
+      id, slug, name, plan, logo_url, theme_logo_url, settings_json,
       asaas_onboarding_status,
       asaas_wallet_id,
       is_demo
@@ -44,6 +44,8 @@ export default async function CheckoutPage({ params }: Props) {
   const rates = await getCheckoutRates()
   const logo = (store.theme_logo_url ?? store.logo_url) as string | null
 
+  const settings = (store.settings_json as StoreSettings | null) ?? {}
+
   return (
     <CheckoutWrapper
       storeSlug={slug}
@@ -52,6 +54,7 @@ export default async function CheckoutPage({ params }: Props) {
       plan={plan}
       rates={rates}
       asaasEnv={getAsaasEnv()}
+      storeSettings={settings}
     />
   )
 }

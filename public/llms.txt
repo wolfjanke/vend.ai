@@ -17,7 +17,7 @@
 - Assistente com IA chamada **Vi**: atende clientes 24h, sugere produtos por estilo, cor e tamanho, responde dúvidas
 - Pedidos formatados enviados ao WhatsApp do lojista (sem exigir app novo)
 - Controle de estoque por SKU (tamanho, cor ou volume — ex. perfumes)
-- Alertas de estoque baixo no painel (configurável em Configurações → Venda)
+- Alertas de estoque baixo no painel (configurável em Produtos)
 - IA no cadastro de produtos (planos pagos): foto vira nome, descrição e categoria
 - Planos: Grátis, Starter, Pro, Loja, Enterprise — https://vendai.club/#planos
 

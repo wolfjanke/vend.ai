@@ -10,16 +10,19 @@ import {
   isDeliveryAddressEmpty,
   type BillingOwnerInput,
 } from '@/lib/validations'
-import { digitsOnly } from '@/lib/masks'
+import { digitsOnly, formatPhoneDisplay } from '@/lib/masks'
 import { createCustomer, updateCustomer, type UpdateCustomerInput } from '@/lib/payments/wolf-hub'
 import { assertPaymentsConfigured } from '@/lib/payments/config'
 
 export interface BillingOwnerPublic {
-  hasBillingDoc:  boolean
-  type:           BillingOwnerType | null
-  docMasked:      string | null
-  legalName:      string | null
-  addressFilled:  boolean
+  hasBillingDoc:      boolean
+  type:               BillingOwnerType | null
+  docMasked:          string | null
+  legalName:          string | null
+  addressFilled:      boolean
+  ownerEmail:         string | null
+  ownerPhone:         string | null
+  defaultHolderName:  string
 }
 
 interface StoreBillingRow {
@@ -75,25 +78,55 @@ function addressFilled(row: StoreBillingRow): boolean {
   )
 }
 
+function resolveDefaultHolderName(
+  row: Pick<StoreBillingRow, 'name' | 'settings_json'>,
+): string {
+  return row.settings_json?.ownerName?.trim() || row.name.trim()
+}
+
+function buildAccountContext(row: StoreBillingRow | undefined): Pick<
+  BillingOwnerPublic,
+  'ownerEmail' | 'ownerPhone' | 'defaultHolderName' | 'addressFilled'
+> {
+  if (!row) {
+    return {
+      ownerEmail:        null,
+      ownerPhone:        null,
+      defaultHolderName: '',
+      addressFilled:     false,
+    }
+  }
+
+  const phoneDigits = digitsOnly(row.whatsapp)
+  return {
+    ownerEmail:        row.owner_email,
+    ownerPhone:        phoneDigits.length >= 10 ? formatPhoneDisplay(phoneDigits) : null,
+    defaultHolderName: resolveDefaultHolderName(row),
+    addressFilled:     addressFilled(row),
+  }
+}
+
 export async function getBillingOwnerPublic(storeId: string): Promise<BillingOwnerPublic> {
   const row = await loadStoreBillingRow(storeId)
+  const account = buildAccountContext(row)
+
   if (!row?.billing_owner_doc_enc || !row.billing_owner_type) {
     return {
       hasBillingDoc: false,
-      type: null,
-      docMasked: null,
-      legalName: row?.billing_legal_name ?? null,
-      addressFilled: row ? addressFilled(row) : false,
+      type:          null,
+      docMasked:     null,
+      legalName:     row?.billing_legal_name ?? null,
+      ...account,
     }
   }
 
   const digits = await decryptTaxId(row.billing_owner_doc_enc)
   return {
     hasBillingDoc: true,
-    type: row.billing_owner_type,
-    docMasked: maskTaxIdForDisplay(row.billing_owner_type, digits),
-    legalName: row.billing_legal_name,
-    addressFilled: addressFilled(row),
+    type:          row.billing_owner_type,
+    docMasked:     maskTaxIdForDisplay(row.billing_owner_type, digits),
+    legalName:     row.billing_legal_name,
+    ...account,
   }
 }
 
@@ -123,13 +156,12 @@ function normalizeAddress(input: BillingOwnerInput) {
 }
 
 export function resolveBillingCustomerName(
-  row: Pick<StoreBillingRow, 'billing_owner_type' | 'billing_legal_name' | 'name' | 'settings_json'>,
+  row: Pick<StoreBillingRow, 'billing_legal_name' | 'name' | 'settings_json'>,
 ): string {
-  if (row.billing_owner_type === 'pj' && row.billing_legal_name?.trim()) {
+  if (row.billing_legal_name?.trim()) {
     return row.billing_legal_name.trim()
   }
-  const ownerName = row.settings_json?.ownerName?.trim()
-  return ownerName || row.name
+  return resolveDefaultHolderName(row)
 }
 
 export async function buildAsaasCustomerPayload(storeId: string): Promise<UpdateCustomerInput | null> {
@@ -181,9 +213,7 @@ export async function saveBillingOwner(storeId: string, raw: unknown): Promise<B
 
   const input = parsed.data
   const docEnc = await encryptTaxId(input.cpfCnpj)
-  const legalName = input.type === 'pj'
-    ? (input.legalName?.trim() || null)
-    : null
+  const legalName = input.legalName?.trim() || null
   const addr = normalizeAddress(input)
 
   await sql`

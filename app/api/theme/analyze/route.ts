@@ -3,9 +3,11 @@ import { requireSession } from '@/lib/require-session'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { analyzeLogoForTheme, parseThemeAnalysis } from '@/lib/theme-ai'
 import { logServerError } from '@/lib/logger'
-import type { PlanSlug } from '@/lib/plans'
 import { sql } from '@/lib/db'
-import { getAvailableThemes } from '@/lib/themes'
+import {
+  canAnalyzeThemeForStore,
+  getAvailableThemesForStore,
+} from '@/lib/store-plan-access'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -18,9 +20,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GEMINI_API_KEY não configurada' }, { status: 500 })
     }
 
-    const storeRows = await sql`SELECT plan FROM stores WHERE id = ${session.storeId} LIMIT 1`
-    const plan = (storeRows[0]?.plan ?? 'free') as PlanSlug
-    if (plan === 'free') {
+    const storeRows = await sql`
+      SELECT plan, slug, is_demo FROM stores WHERE id = ${session.storeId} LIMIT 1
+    `
+    const storeRow = storeRows[0] ?? {}
+    if (!canAnalyzeThemeForStore(storeRow)) {
       return NextResponse.json({ error: 'Análise de logo disponível em planos pagos.' }, { status: 403 })
     }
 
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
     )
 
     const parsed = parseThemeAnalysis(raw)
-    const allowed = new Set(getAvailableThemes(plan))
+    const allowed = new Set(getAvailableThemesForStore(storeRow))
     parsed.suggestions = (parsed.suggestions ?? []).slice(0, 3).filter(s =>
       allowed.has(s.themeName),
     )

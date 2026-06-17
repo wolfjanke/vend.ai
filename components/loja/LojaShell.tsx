@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import type { Product, Store, CartItem, StoreContext, BannerMessage, DeliveryAddress, CheckoutChannel, CheckoutPaymentMethod } from '@/types'
+import type { Product, Store, CartItem, StoreContext, DeliveryAddress, CheckoutChannel, CheckoutPaymentMethod } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import type { PlanSlug } from '@/lib/plans'
 import { isPaidViPlan } from '@/lib/plans'
@@ -23,26 +23,14 @@ import {
 } from '@/lib/vi-triggers'
 import { normalizeLogoSize, resolveStoreLogoUrl } from '@/lib/store-logo'
 import { normalizeAssistantGender } from '@/lib/assistant-gender'
-
-const BANNER_ROTATE_MS = 6000
+import BannerStrip from '@/components/loja/BannerStrip'
+import { BANNER_ROTATE_MS, filterActiveBanners, normalizeBannerMotion, resolveBannerDisplayText } from '@/lib/banners'
 
 function installmentsMaxFromSettings(raw: unknown): number | null {
   if (raw == null || raw === '') return null
   const n = typeof raw === 'number' ? raw : Number(String(raw).trim())
   if (!Number.isFinite(n) || n < 1 || n > 48) return null
   return Math.floor(n)
-}
-
-function filterActiveBanners(messages: BannerMessage[] | undefined): BannerMessage[] {
-  if (!messages?.length) return []
-  const now = new Date().toISOString().slice(0, 10)
-  return messages.filter(m => {
-    if (!m.text?.trim()) return false
-    if (m.startDate && m.endDate && m.startDate > m.endDate) return false
-    if (m.startDate && m.startDate > now) return false
-    if (m.endDate && m.endDate < now) return false
-    return true
-  }).sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))
 }
 
 function triggerKey(storeSlug: string, type: string): string {
@@ -355,19 +343,12 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
         />
 
         {activeBanners.length > 0 && (
-          <div
-            className="px-4 py-3 border-b"
-            style={{
-              background: 'var(--theme-primary-surface)',
-              borderColor:  'var(--theme-primary-border)',
-            }}
-          >
-            <div className="mx-auto w-full max-w-5xl">
-              <p className="text-sm text-foreground text-center break-words">
-                {vitrineText(activeBanners[bannerIndex]?.text ?? '')}
-              </p>
-            </div>
-          </div>
+          <BannerStrip
+            key={activeBanners[bannerIndex]?.id}
+            swapIn={activeBanners.length > 1}
+            text={vitrineText(resolveBannerDisplayText(activeBanners[bannerIndex] ?? { text: '' }))}
+            motion={normalizeBannerMotion(activeBanners[bannerIndex]?.motion)}
+          />
         )}
 
         {children}

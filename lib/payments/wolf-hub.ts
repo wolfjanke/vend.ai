@@ -178,6 +178,18 @@ export async function asaasCreateSubscription(body: Record<string, unknown>): Pr
   })
 }
 
+export async function updateSubscriptionAsaas(
+  subscriptionId: string,
+  body: Record<string, unknown>,
+): Promise<{ id: string }> {
+  assertPaymentsConfigured()
+  logSandbox('updateSubscriptionAsaas', { id: subscriptionId, ...body })
+  return wolfHubFetch<{ id: string }>(`/subscriptions/${subscriptionId}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
 export async function cancelSubscriptionAsaas(subscriptionId: string): Promise<void> {
   assertPaymentsConfigured()
   await wolfHubFetch(`/subscriptions/${subscriptionId}`, { method: 'DELETE' })
