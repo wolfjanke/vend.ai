@@ -10,6 +10,7 @@ import {
   Timer,
   AlertTriangle,
   TrendingUp,
+  MessageCircle,
   Package,
 } from 'lucide-react'
 import SuperadminMetricCard from '@/components/superadmin/SuperadminMetricCard'
@@ -29,6 +30,7 @@ type DashboardData = {
   totalActive: number
   catalogRiskStores: number
   onboardingRiskStores: number
+  retentionPending: number
   recentStores: Array<{
     id: string
     name: string
@@ -123,7 +125,7 @@ export default function SuperadminDashboardClient() {
         />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         <SuperadminMetricCard
           icon={<Users size={22} className="text-foreground" />}
           value={data.totalActive}
@@ -135,6 +137,12 @@ export default function SuperadminDashboardClient() {
           value={data.activeTrials}
           label="Trials ativos"
           href="/superadmin/trials"
+        />
+        <SuperadminMetricCard
+          icon={<MessageCircle size={22} className="text-primary" />}
+          value={data.retentionPending}
+          label="Retenções pendentes"
+          href="/superadmin/retencao"
         />
         <SuperadminMetricCard
           icon={<AlertTriangle size={22} className="text-warm" />}

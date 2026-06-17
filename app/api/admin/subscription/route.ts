@@ -38,6 +38,14 @@ export async function GET() {
   try {
     const sub = await getSubscriptionStatus(session.storeId)
 
+    const retentionRows = await sql`
+      SELECT retention_bonus_granted_at
+      FROM stores WHERE id = ${session.storeId} LIMIT 1
+    `
+    const retentionBonusGrantedAt =
+      (retentionRows[0] as { retention_bonus_granted_at?: string | null } | undefined)
+        ?.retention_bonus_granted_at ?? null
+
     const productRows = await sql`
       SELECT COUNT(*)::int AS c FROM products
       WHERE store_id = ${session.storeId} AND active = true
@@ -78,6 +86,7 @@ export async function GET() {
 
     return NextResponse.json({
       ...sub,
+      retentionBonusGrantedAt,
       isDemoStore: planCtx.isDemo,
       billingExempt: planCtx.billingExempt,
       paymentsConfigured: !!getVendaiAsaasKey(),

@@ -16,6 +16,10 @@ import {
 import { adminCard } from '@/lib/admin-ui'
 import type { SubscriptionStatus } from '@/types'
 import BillingOwnerForm from '@/components/admin/BillingOwnerForm'
+import CancelRetentionModal from '@/components/admin/CancelRetentionModal'
+import {
+  isRetentionOfferEligible,
+} from '@/lib/churn-retention'
 import type { BillingOwnerInput } from '@/lib/validations'
 
 interface PlanBilling {
@@ -53,6 +57,7 @@ interface BillingOwnerData {
 
 interface PlanoClientProps {
   ownerName?: string
+  storeName?: string
 }
 interface SubscriptionData {
   plan: PlanSlug
@@ -75,6 +80,7 @@ interface SubscriptionData {
   billingHistory: BillingRow[]
   isDemoStore?: boolean
   billingExempt?: boolean
+  retentionBonusGrantedAt?: string | null
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -96,7 +102,7 @@ function formatDaily(cents: number): string {
   return formatPlanPrice(cents)
 }
 
-export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
+export default function PlanoClient({ ownerName = '', storeName = '' }: PlanoClientProps) {
   const [data, setData] = useState<SubscriptionData | null>(null)
   const [billingOwner, setBillingOwner] = useState<BillingOwnerData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -105,6 +111,8 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
   const [showHistory, setShowHistory] = useState(false)
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
   const [billingModalPlan, setBillingModalPlan] = useState<PlanSlug | null>(null)
+  const [showCancelRetention, setShowCancelRetention] = useState(false)
+  const [retentionError, setRetentionError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -183,8 +191,47 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
     await handleUpgrade(plan, billing)
   }
 
-  async function handleCancel() {
-    if (!confirm('Cancelar assinatura e voltar ao plano grátis?')) return
+  function requestCancel() {
+    if (!data) return
+    const eligible = isRetentionOfferEligible({
+      storeName,
+      plan: data.plan,
+      subscriptionStatus: data.subscriptionStatus,
+      billingExempt: data.billingExempt,
+      retentionBonusGrantedAt: data.retentionBonusGrantedAt,
+    })
+    if (eligible) {
+      setRetentionError(null)
+      setShowCancelRetention(true)
+      return
+    }
+    void executeCancel()
+  }
+
+  async function openRetentionWhatsApp() {
+    if (!data) return
+    setRetentionError(null)
+    try {
+      const res = await fetch('/api/admin/subscription/retention-click', { method: 'POST' })
+      const j = await res.json() as { whatsAppUrl?: string; error?: string }
+      if (!res.ok) {
+        setRetentionError(j.error ?? 'Não foi possível registrar. Tente novamente.')
+        return
+      }
+      if (!j.whatsAppUrl) {
+        setRetentionError('Link do WhatsApp indisponível. Tente novamente.')
+        return
+      }
+      window.open(j.whatsAppUrl, '_blank', 'noopener,noreferrer')
+      setShowCancelRetention(false)
+      setRetentionError(null)
+    } catch {
+      setRetentionError('Erro de conexão. Verifique a internet e tente novamente.')
+    }
+  }
+
+  async function executeCancel() {
+    setShowCancelRetention(false)
     setBusy('cancel')
     setError(null)
     try {
@@ -317,7 +364,7 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
       {isPaid && data.subscriptionStatus !== 'CANCELLED' && !data.billingExempt && (
         <button
           type="button"
-          onClick={handleCancel}
+          onClick={requestCancel}
           disabled={!!busy}
           className="mt-4 w-full min-h-[44px] px-4 py-2 rounded-xl border border-warm/40 text-warm text-sm font-semibold hover:bg-warm/10 disabled:opacity-50"
         >
@@ -526,6 +573,21 @@ export default function PlanoClient({ ownerName = '' }: PlanoClientProps) {
       </div>
       )}
       </div>
+
+      {showCancelRetention && data && (
+        <CancelRetentionModal
+          storeName={storeName}
+          plan={data.plan}
+          busy={busy === 'cancel'}
+          error={retentionError}
+          onWhatsApp={openRetentionWhatsApp}
+          onContinueCancel={() => void executeCancel()}
+          onClose={() => {
+            setShowCancelRetention(false)
+            setRetentionError(null)
+          }}
+        />
+      )}
 
       {billingModalPlan && (
         <div

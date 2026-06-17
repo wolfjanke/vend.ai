@@ -46,6 +46,7 @@ export const SUPERADMIN_NAV_GROUPS: SuperadminNavGroup[] = [
     items: [
       navByHref['/superadmin/trials'],
       navByHref['/superadmin/engajamento'],
+      navByHref['/superadmin/retencao'],
     ],
   },
   {

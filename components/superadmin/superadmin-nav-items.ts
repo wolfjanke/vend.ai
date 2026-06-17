@@ -7,6 +7,7 @@ import {
   Crown,
   ScrollText,
   Settings,
+  MessageCircle,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export const SUPERADMIN_NAV: SuperadminNavItem[] = [
   { href: '/superadmin/financeiro',    label: 'Financeiro',     Icon: TrendingUp },
   { href: '/superadmin/trials',        label: 'Trials',         Icon: Timer },
   { href: '/superadmin/engajamento',   label: 'Engajamento',    Icon: Activity },
+  { href: '/superadmin/retencao',      label: 'Retenção',       Icon: MessageCircle },
   { href: '/superadmin/planos',        label: 'Planos',         Icon: Crown },
   { href: '/superadmin/logs',          label: 'Logs',           Icon: ScrollText },
   { href: '/superadmin/configuracoes', label: 'Configurações',  Icon: Settings },

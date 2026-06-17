@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { Eye, EyeOff } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 
 export default function AdminLoginPage() {
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
@@ -48,20 +50,31 @@ export default function AdminLoginPage() {
         <div className="flex flex-col gap-3 mb-5">
           <input
             type="email"
-            className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+            className="w-full min-h-[44px] px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
             placeholder="Seu e-mail"
             value={email}
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
           />
-          <input
-            type="password"
-            className="w-full px-4 py-3.5 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
-            placeholder="Sua senha"
-            value={pass}
-            onChange={e => setPass(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleLogin()}
-          />
+          <div className="relative min-w-0">
+            <input
+              type={showPass ? 'text' : 'password'}
+              className="w-full min-h-[44px] px-4 py-3.5 pr-12 bg-surface2 border border-border rounded-[14px] text-foreground text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-dim)] transition-all placeholder:text-muted"
+              placeholder="Sua senha"
+              value={pass}
+              onChange={e => setPass(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass(v => !v)}
+              className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-muted hover:text-foreground transition-colors"
+              aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'}
+            >
+              {showPass ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+            </button>
+          </div>
         </div>
 
         <button

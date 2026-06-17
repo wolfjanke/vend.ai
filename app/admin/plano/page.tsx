@@ -11,13 +11,16 @@ export default async function PlanoPage() {
   if (!session) redirect('/admin')
 
   let ownerName = ''
+  let storeName = ''
   try {
     const rows = await sql`SELECT name, settings_json FROM stores WHERE id = ${session.storeId} LIMIT 1`
     const store = rows[0] as Pick<Store, 'name' | 'settings_json'> | undefined
     const settings = store?.settings_json as { ownerName?: string } | undefined
-    ownerName = settings?.ownerName?.trim() || store?.name || ''
+    storeName = store?.name?.trim() ?? ''
+    ownerName = settings?.ownerName?.trim() || storeName
   } catch {
     ownerName = ''
+    storeName = ''
   }
 
   return (
@@ -29,7 +32,7 @@ export default async function PlanoPage() {
         </p>
       </div>
       <SandboxBanner />
-      <PlanoClient ownerName={ownerName} />
+      <PlanoClient ownerName={ownerName} storeName={storeName} />
     </div>
   )
 }

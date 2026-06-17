@@ -61,6 +61,21 @@ export async function GET() {
           WHERE p.store_id = s.id AND p.active = true
         ) < 3
     `
+    let retentionPending = 0
+    try {
+      const [retentionPendingRow] = await sql`
+        SELECT COUNT(*)::int AS c FROM stores
+        WHERE retention_offer_clicked_at IS NOT NULL
+          AND retention_bonus_granted_at IS NULL
+          AND retention_bonus_dismissed_at IS NULL
+          AND subscription_status IS DISTINCT FROM 'CANCELLED'
+          AND plan <> 'free'
+          AND COALESCE(is_demo, false) = false
+      `
+      retentionPending = Number(retentionPendingRow?.c ?? 0)
+    } catch {
+      retentionPending = 0
+    }
 
     const recentStores = await sql`
       SELECT s.id, s.name, s.slug, s.plan, s.subscription_status,
@@ -112,6 +127,7 @@ export async function GET() {
       totalActive: Number(totalRow?.c ?? 0),
       catalogRiskStores: Number(catalogRiskRow?.c ?? 0),
       onboardingRiskStores: Number(onboardingRiskRow?.c ?? 0),
+      retentionPending,
       recentStores,
       signupsByMonth: signupsByMonth.map(r => ({
         month: String(r.month),

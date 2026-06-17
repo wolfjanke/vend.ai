@@ -6,6 +6,9 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { SuperadminNavGroup } from './superadmin-nav-groups'
 import { isSuperadminNavItemActive } from './superadmin-nav-groups'
 import { superadminActive } from '@/lib/superadmin-ui'
+import { useRetentionPendingCount } from '@/hooks/useRetentionPendingCount'
+
+const RETENCAO_HREF = '/superadmin/retencao'
 
 type Props = {
   group:   SuperadminNavGroup | null
@@ -15,6 +18,7 @@ type Props = {
 
 export default function SuperadminNavBottomSheet({ group, isOpen, onClose }: Props) {
   const pathname = usePathname() ?? ''
+  const retentionPending = useRetentionPendingCount(isOpen ? 'open' : 'closed')
   const sheetRef = useRef<HTMLDivElement>(null)
   const touchStartY = useRef<number | null>(null)
 
@@ -120,7 +124,12 @@ export default function SuperadminNavBottomSheet({ group, isOpen, onClose }: Pro
                 }`}
               >
                 <ItemIcon size={20} className="shrink-0" aria-hidden />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate flex-1">{item.label}</span>
+                {item.href === RETENCAO_HREF && retentionPending > 0 && (
+                  <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-warm text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+                    {retentionPending > 99 ? '99+' : retentionPending}
+                  </span>
+                )}
               </Link>
             )
           })}
