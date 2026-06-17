@@ -225,7 +225,7 @@ export const THEMES: Record<ThemeName, ThemeDefinition> = {
     cardHover:          'none',
     categoryNavDefault: 'pills',
     shadowStyle:        'none',
-    catalogColsMobile:  2,
+    catalogColsMobile:  3,
     catalogColsDesktop: 5,
     showColorSwatches:  false,
     showFavoriteIcon:   false,

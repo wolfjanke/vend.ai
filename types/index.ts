@@ -121,6 +121,16 @@ export interface StoreSettings {
   categoryNavStyle?: 'pills' | 'circles'
   /** Tamanho da logo no header da vitrine: sm (P), md (M), lg (G). */
   logoSize?: 'sm' | 'md' | 'lg'
+  /** Layout do header: barra lateral ou hero centralizado (Starter+). */
+  headerLayout?: 'bar' | 'centered'
+  /** Formato do container da logo na vitrine. */
+  logoShape?: 'rect' | 'square' | 'circle'
+  /** O que exibir no header: logo+nome, só logo ou só nome. */
+  brandDisplay?: 'logo-and-name' | 'logo-only' | 'name-only'
+  /** Exibir barra de busca no catálogo (default: true). */
+  showSearch?: boolean
+  /** Colunas no grid mobile — só em temas Flash/Pop (Starter+). */
+  mobileGridCols?: 2 | 3
   /** Alertas quando estoque por SKU fica baixo. */
   stockAlerts?: StockAlertsConfig
 }

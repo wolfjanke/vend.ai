@@ -170,7 +170,7 @@ export default function BillingOwnerForm({
           hint={
             <>
               Enviado ao Asaas como celular do titular.{' '}
-              <Link href="/admin/configuracoes" className="text-primary font-semibold hover:underline">
+              <Link href="/admin/loja?secao=conta" className="text-primary font-semibold hover:underline">
                 Alterar em Configurações → Informações da loja
               </Link>
             </>

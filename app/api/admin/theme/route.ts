@@ -111,23 +111,40 @@ export async function PUT(req: NextRequest) {
       )
     }
 
-    const logoUrl =
-      data.theme_logo_url === '' || data.theme_logo_url == null
-        ? null
-        : data.theme_logo_url
+    const updateLogo =
+      typeof body === 'object' && body !== null && 'theme_logo_url' in body
 
-    await sql`
-      UPDATE stores SET
-        theme_name = ${data.theme_name},
-        theme_primary_color = ${data.theme_primary_color ?? null},
-        theme_secondary_color = ${derivedSecondary},
-        theme_accent_color = ${data.theme_accent_color ?? null},
-        theme_background = ${background},
-        theme_shimmer = ${Boolean(shimmer)},
-        theme_logo_url = ${logoUrl},
-        theme_onboarding_done = COALESCE(${data.theme_onboarding_done ?? null}, theme_onboarding_done)
-      WHERE id = ${session.storeId}
-    `
+    if (updateLogo) {
+      const logoUrl =
+        data.theme_logo_url === '' || data.theme_logo_url == null
+          ? null
+          : data.theme_logo_url
+
+      await sql`
+        UPDATE stores SET
+          theme_name = ${data.theme_name},
+          theme_primary_color = ${data.theme_primary_color ?? null},
+          theme_secondary_color = ${derivedSecondary},
+          theme_accent_color = ${data.theme_accent_color ?? null},
+          theme_background = ${background},
+          theme_shimmer = ${Boolean(shimmer)},
+          theme_logo_url = ${logoUrl},
+          theme_onboarding_done = COALESCE(${data.theme_onboarding_done ?? null}, theme_onboarding_done)
+        WHERE id = ${session.storeId}
+      `
+    } else {
+      await sql`
+        UPDATE stores SET
+          theme_name = ${data.theme_name},
+          theme_primary_color = ${data.theme_primary_color ?? null},
+          theme_secondary_color = ${derivedSecondary},
+          theme_accent_color = ${data.theme_accent_color ?? null},
+          theme_background = ${background},
+          theme_shimmer = ${Boolean(shimmer)},
+          theme_onboarding_done = COALESCE(${data.theme_onboarding_done ?? null}, theme_onboarding_done)
+        WHERE id = ${session.storeId}
+      `
+    }
 
     return NextResponse.json({
       ok: true,

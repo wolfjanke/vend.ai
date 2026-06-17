@@ -8,6 +8,7 @@ import LojaShell from '@/components/loja/LojaShell'
 import Catalogo from '@/components/loja/Catalogo'
 import { getStoreProfile } from '@/types'
 import { useLoja } from '@/components/loja/LojaContext'
+import { resolveVitrineLayout } from '@/lib/vitrine-layout'
 
 function installmentsMaxFromSettings(raw: unknown): number | null {
   if (raw == null || raw === '') return null
@@ -23,10 +24,17 @@ function CatalogoView({
   initialCategory?: string
   useCategoryLinks?: boolean
 }) {
-  const { store, products, cardTheme, addToCart, onProductFocus } = useLoja()
+  const { store, products, cardTheme, addToCart, onProductFocus, plan } = useLoja()
   const settings = store.settings_json ?? {}
   const storeProfile = getStoreProfile(settings)
   const categoryNavStyle = (settings.categoryNavStyle ?? 'pills') as CategoryNavStyle
+  const logoUrl = store.logo_url?.trim() || store.theme_logo_url?.trim() || null
+  const vitrineLayout = resolveVitrineLayout(
+    settings,
+    plan,
+    (store.theme_name ?? 'default') as import('@/lib/themes').ThemeName,
+    Boolean(logoUrl),
+  )
 
   return (
     <Catalogo
@@ -41,6 +49,7 @@ function CatalogoView({
       categoryNavStyle={categoryNavStyle}
       storeSlug={store.slug}
       useCategoryLinks={useCategoryLinks}
+      showSearch={vitrineLayout.showSearch}
     />
   )
 }

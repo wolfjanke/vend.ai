@@ -22,7 +22,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
   } = props
 
   const storeUrl = `${EMAIL_CONFIG.baseUrl}/${storeSlug}`
-  const adminUrl = `${EMAIL_CONFIG.baseUrl}/admin`
+  const adminUrl = `${EMAIL_CONFIG.baseUrl}/admin/loja?secao=identidade`
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#1A1A1A;">
@@ -74,7 +74,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
         <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;">
           <span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#7B6EFF;color:#FFFFFF;font-size:12px;font-weight:700;text-align:center;line-height:22px;">1</span>
           <span style="font-size:13px;color:#333333;margin-left:8px;">
-            Cadastre seus produtos — a IA preenche nome e descrição pela foto
+            Configure sua loja em Minha loja — nome, logo e WhatsApp
           </span>
         </td>
       </tr>
@@ -82,7 +82,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
         <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;">
           <span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#7B6EFF;color:#FFFFFF;font-size:12px;font-weight:700;text-align:center;line-height:22px;">2</span>
           <span style="font-size:13px;color:#333333;margin-left:8px;">
-            Compartilhe o link da sua loja no Instagram e WhatsApp
+            Cadastre produtos com foto, preço e estoque — a Vi usa isso no Direct
           </span>
         </td>
       </tr>
@@ -90,7 +90,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
         <td style="padding:8px 0;">
           <span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#7B6EFF;color:#FFFFFF;font-size:12px;font-weight:700;text-align:center;line-height:22px;">3</span>
           <span style="font-size:13px;color:#333333;margin-left:8px;">
-            Receba pedidos organizados direto no seu WhatsApp
+            Compartilhe o link da sua loja no Instagram e WhatsApp
           </span>
         </td>
       </tr>
@@ -112,7 +112,7 @@ export function welcomeEmailHtml(props: WelcomeEmailProps): string {
          style="display:inline-block;background:linear-gradient(135deg,#7B6EFF,#00E5A0);
                 color:#FFFFFF;font-weight:700;font-size:15px;padding:14px 32px;
                 border-radius:12px;text-decoration:none;">
-        Acessar meu painel →
+        Acessar Minha loja →
       </a>
     </div>
 

@@ -612,6 +612,26 @@ html.js .reveal-none.is-visible {
   border-bottom: 1px solid var(--theme-primary-border);
 }
 
+.store-theme-root .loja-header-hero {
+  background: var(--theme-header-bg);
+  border-bottom: 1px solid var(--theme-primary-border);
+}
+
+.store-theme-root[data-catalog-cols-mobile='3'] .catalog-grid:not(.catalog-grid-list):not(.catalog-grid-feed) .produto-nome {
+  font-size: 11px;
+  line-height: 1.25;
+  min-height: 2.5rem;
+}
+
+.store-theme-root[data-catalog-cols-mobile='3'] .catalog-grid:not(.catalog-grid-list):not(.catalog-grid-feed) .produto-preco {
+  font-size: 12px;
+}
+
+.store-theme-root[data-catalog-cols-mobile='3'] .catalog-grid:not(.catalog-grid-list):not(.catalog-grid-feed) .produto-parcela {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
 .store-theme-root .loja-brand-name {
   font-family: var(--theme-font-display);
   font-weight: var(--theme-font-weight-display);

@@ -1,22 +1,36 @@
-import { redirect }  from 'next/navigation'
+import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import AdminPageError from '@/components/admin/AdminPageError'
-import ProdutoForm    from '@/components/admin/ProdutoForm'
-import { adminPage, adminHeader } from '@/lib/admin-ui'
 import type { StoreSettings, PlanSlug } from '@/types'
 import { getStorePlanContext } from '@/lib/store-plan-access'
+import NovoProdutoClient from './NovoProdutoClient'
+import { adminPage } from '@/lib/admin-ui'
 
-export default async function NovoProdutoPage() {
+type Props = {
+  searchParams: { guia?: string }
+}
+
+export default async function NovoProdutoPage({ searchParams }: Props) {
   const session = await getSessionSafe()
   if (!session) redirect('/admin')
 
-  let settings: StoreSettings
+  let settings: StoreSettings = {}
   let plan: PlanSlug = 'free'
+  let productCount = 0
+  let guided = searchParams.guia === '1'
+
   try {
     const storeRows = await sql`SELECT settings_json, plan, is_demo, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`
     settings = (storeRows[0]?.settings_json as StoreSettings | null) ?? {}
     plan = getStorePlanContext(storeRows[0] ?? {}).plan
+
+    const countRows = await sql`
+      SELECT COUNT(*)::int AS c FROM products WHERE store_id = ${session.storeId} AND active = true
+    `
+    productCount = Number(countRows[0]?.c ?? 0)
+    if (productCount === 0) guided = true
   } catch (e) {
     console.error('[admin/produtos/novo]', e)
     return (
@@ -28,13 +42,15 @@ export default async function NovoProdutoPage() {
 
   return (
     <div className={adminPage}>
-      <div className={adminHeader}>
-        <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Novo produto</h1>
-        <p className="text-sm text-muted break-words">
-          Monte um bloco por produto — as fotos do bloco são as variações (cores, volumes). A IA analisa tudo e você revisa antes de publicar.
-        </p>
-      </div>
-      <ProdutoForm storeId={session.storeId} customCategories={settings.customCategories ?? []} plan={plan} />
+      <Suspense fallback={<p className="text-sm text-muted animate-pulse py-4">Carregando…</p>}>
+        <NovoProdutoClient
+          storeId={session.storeId}
+          customCategories={settings.customCategories ?? []}
+          plan={plan}
+          guidedFirstProduct={guided}
+          isFirstProduct={productCount === 0}
+        />
+      </Suspense>
     </div>
   )
 }

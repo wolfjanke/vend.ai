@@ -4,10 +4,7 @@ import {
   Wallet,
   Crown,
   LayoutDashboard,
-  Megaphone,
   Monitor,
-  Palette,
-  Settings,
   Settings2,
   Shirt,
   ShoppingBag,
@@ -38,10 +35,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: 'Loja',
     Icon:  Store,
     items: [
-      { label: 'Produtos',   href: '/admin/produtos',   Icon: Shirt,    match: 'prefix' },
-      { label: 'Categorias', href: '/admin/categorias', Icon: Tag,      match: 'exact' },
-      { label: 'Aparência',  href: '/admin/aparencia',  Icon: Palette,  match: 'exact' },
-      { label: 'Marketing',  href: '/admin/marketing',  Icon: Megaphone, match: 'exact' },
+      { label: 'Produtos',    href: '/admin/produtos',   Icon: Shirt, match: 'prefix' },
+      { label: 'Categorias',  href: '/admin/categorias', Icon: Tag,   match: 'exact' },
+      { label: 'Minha loja',  href: '/admin/loja',       Icon: Store, match: 'prefix' },
     ],
   },
   {
@@ -52,28 +48,30 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { label: 'Dashboard',   href: '/admin/dashboard',    Icon: LayoutDashboard, match: 'exact' },
       { label: 'Pedidos',     href: '/admin/pedidos',      Icon: ShoppingBag,     match: 'prefix' },
       { label: 'PDV',         href: '/admin/pdv',          Icon: Monitor,         match: 'prefix', planOnly: 'loja' },
-      { label: 'Assistente IA este mês', href: '/admin/dashboard#vi', Icon: Bot, match: 'exact' },
+      { label: 'Assistente IA este mês', href: '/admin/loja?secao=vi', Icon: Bot, match: 'prefix' },
       { label: 'Plano',       href: '/admin/plano',        Icon: Crown,           match: 'exact' },
     ],
   },
   {
-    id:    'config',
-    label: 'Configurações',
+    id:    'conta',
+    label: 'Conta',
     Icon:  Settings2,
     items: [
-      { label: 'Configurações', href: '/admin/configuracoes', Icon: Settings,   match: 'exact' },
       { label: 'Como receber', href: '/admin/pagamentos', Icon: Wallet, match: 'prefix' },
-      { label: 'Plano',         href: '/admin/plano',         Icon: Crown,      match: 'exact' },
+      { label: 'Plano',        href: '/admin/plano',      Icon: Crown,  match: 'exact' },
     ],
   },
 ]
 
 export function navItemPath(href: string): string {
-  return href.split('#')[0]
+  return href.split('#')[0].split('?')[0]
 }
 
 export function isNavItemActive(pathname: string, href: string, match: 'exact' | 'prefix'): boolean {
   const path = navItemPath(href)
+  if (path === '/admin/loja') {
+    return pathname === '/admin/loja' || pathname.startsWith('/admin/loja/')
+  }
   if (match === 'exact') return pathname === path
   return pathname === path || pathname.startsWith(`${path}/`)
 }

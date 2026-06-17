@@ -92,10 +92,10 @@ export default function ViReadinessCard({ report, storeUrl, hasLogo }: Props) {
       label: 'Adicionar logo da loja (opcional)',
       action: !hasLogo ? (
         <Link
-          href="/admin/configuracoes"
+          href="/admin/loja?secao=identidade"
           className="mt-2 inline-block text-xs text-primary font-semibold hover:underline min-h-[44px]"
         >
-          Ir em Configurações
+          Ir em Identidade
         </Link>
       ) : undefined,
     },
@@ -116,6 +116,14 @@ export default function ViReadinessCard({ report, storeUrl, hasLogo }: Props) {
           <p className="text-xs text-muted break-words leading-relaxed">
             A Vi só responde bem quando o catálogo tem foto, preço e estoque. Complete os passos abaixo para não perder vendas no Direct.
           </p>
+          {report.level !== 'ready' && (
+            <Link
+              href="/admin/loja?secao=identidade"
+              className="mt-2 inline-flex items-center min-h-[44px] text-xs text-primary font-semibold hover:underline"
+            >
+              Completar minha loja →
+            </Link>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${LEVEL_STYLES[report.level]}`}>
@@ -177,7 +185,7 @@ export default function ViReadinessCard({ report, storeUrl, hasLogo }: Props) {
           )}
           {report.activeProductCount < report.minProducts && (
             <Link
-              href="/admin/produtos/novo"
+              href="/admin/produtos/novo?guia=1"
               className="mt-2 inline-flex items-center text-xs text-primary font-semibold hover:underline min-h-[44px]"
             >
               Cadastrar outro produto →

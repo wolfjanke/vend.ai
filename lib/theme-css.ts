@@ -1,3 +1,5 @@
+import { resolveCatalogColsMobile } from '@/lib/vitrine-layout'
+import type { PlanSlug } from '@/lib/plans'
 import {
   getTheme,
   themeToCardConfig,
@@ -20,6 +22,12 @@ export type StoreThemeRow = {
   theme_shimmer?:           boolean | null
   theme_logo_url?:          string | null
   logo_url?:                string | null
+  plan?:                    string | null
+  settings_json?:           import('@/types').StoreSettings | null
+}
+
+export type ThemeCssOverrides = {
+  catalogColsMobile?: number
 }
 
 export function generateThemeCss(
@@ -30,6 +38,7 @@ export function generateThemeCss(
   },
   background: ThemeBackground,
   shimmer: boolean,
+  overrides?: ThemeCssOverrides,
 ): string {
   const primary = customColors.primary?.trim() || theme.defaultColors.primary
   const accent = customColors.accent?.trim() || theme.defaultColors.accent
@@ -51,6 +60,8 @@ export function generateThemeCss(
   const accentGradient =
     theme.accentGradient ??
     `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`
+
+  const catalogColsMobile = overrides?.catalogColsMobile ?? theme.catalogColsMobile
 
   return `
     --theme-primary: ${c.primary};
@@ -109,7 +120,7 @@ export function generateThemeCss(
     --theme-card-gap: ${theme.spacing.cardGap};
     --theme-section-gap: ${theme.spacing.sectionGap};
     --theme-page-padding: ${theme.spacing.pagePadding};
-    --theme-catalog-cols-mobile: ${theme.catalogColsMobile};
+    --theme-catalog-cols-mobile: ${catalogColsMobile};
     --theme-catalog-cols-desktop: ${theme.catalogColsDesktop};
     --theme-catalog-layout: ${theme.catalogLayout};
 
@@ -147,11 +158,18 @@ export function resolveStoreTheme(row: StoreThemeRow): {
   fontUrl:     string
   cardTheme:   StoreThemeConfig
   displayLogo: string | null
+  catalogColsMobile: number
 } {
   const themeName = (row.theme_name ?? 'default') as ThemeName
   const theme = getTheme(themeName)
   const background = (row.theme_background ?? theme.defaultBackground) as ThemeBackground
   const shimmer = Boolean(row.theme_shimmer)
+  const plan = (row.plan ?? 'free') as PlanSlug
+  const catalogColsMobile = resolveCatalogColsMobile(
+    themeName,
+    row.settings_json ?? undefined,
+    plan,
+  )
 
   const css = generateThemeCss(
     theme,
@@ -161,6 +179,7 @@ export function resolveStoreTheme(row: StoreThemeRow): {
     },
     background,
     shimmer,
+    { catalogColsMobile },
   )
 
   return {
@@ -172,5 +191,6 @@ export function resolveStoreTheme(row: StoreThemeRow): {
     fontUrl:     getGoogleFontsUrl(theme),
     cardTheme:   themeToCardConfig(theme, shimmer),
     displayLogo: row.logo_url?.trim() || row.theme_logo_url?.trim() || null,
+    catalogColsMobile,
   }
 }

@@ -36,7 +36,7 @@ function RecebimentoWhatsApp() {
           <li>✓ A Vi informa as formas de pagamento aos clientes</li>
         </ul>
         <Link
-          href="/admin/configuracoes"
+          href="/admin/loja?secao=conta"
           className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90"
         >
           Configurar em Configurações → Venda
@@ -159,7 +159,7 @@ export default async function PagamentosPage() {
               Ver vendas →
             </Link>
             <Link
-              href="/admin/configuracoes"
+              href="/admin/loja?secao=conta"
               className="inline-flex min-h-[44px] items-center justify-center px-4 py-2 border border-border text-sm font-semibold rounded-xl hover:border-primary hover:text-primary transition-colors"
             >
               Configurações →

@@ -32,6 +32,7 @@ interface Props {
   categoryNavStyle?: CategoryNavStyle
   storeSlug?: string
   useCategoryLinks?: boolean
+  showSearch?: boolean
 }
 
 const SMALL_CATEGORY_MAX = 2
@@ -120,6 +121,7 @@ export default function Catalogo({
   categoryNavStyle = 'pills',
   storeSlug,
   useCategoryLinks = false,
+  showSearch = true,
 }: Props) {
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState(initialCategory)
@@ -194,6 +196,7 @@ export default function Catalogo({
   return (
     <div>
       <div className="mx-auto w-full max-w-5xl">
+        {showSearch && (
         <div className="relative z-10 px-4 md:px-6 pt-8 pb-0 animate-fade-up">
           <div className="relative">
             <svg
@@ -218,8 +221,9 @@ export default function Catalogo({
             />
           </div>
         </div>
+        )}
 
-        <div className="relative z-10 px-4 md:px-6 pt-5 pb-0" style={{ animationDelay: '0.2s' }}>
+        <div className={`relative z-10 px-4 md:px-6 pb-0 ${showSearch ? 'pt-5' : 'pt-8'}`} style={{ animationDelay: '0.2s' }}>
           <CategoryFilterBar
             filters={availableFilters}
             activeValue={catFilter}

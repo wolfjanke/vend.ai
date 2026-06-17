@@ -7,9 +7,7 @@ import {
   ShoppingBag,
   Shirt,
   Tag,
-  Megaphone,
-  Palette,
-  Settings,
+  Store,
   Wallet,
   ShoppingCart,
   Crown,
@@ -26,19 +24,20 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/admin/dashboard',    label: 'Dashboard',  Icon: LayoutDashboard, match: 'exact' },
-  { href: '/admin/pedidos',      label: 'Pedidos',    Icon: ShoppingBag,     match: 'prefix' },
-  { href: '/admin/produtos',     label: 'Produtos',   Icon: Shirt,           match: 'prefix' },
-  { href: '/admin/categorias',   label: 'Categorias', Icon: Tag,             match: 'exact' },
-  { href: '/admin/marketing',    label: 'Marketing',  Icon: Megaphone,       match: 'exact' },
-  { href: '/admin/aparencia',    label: 'Aparência',  Icon: Palette,         match: 'exact' },
-  { href: '/admin/pagamentos',   label: 'Como receber', Icon: Wallet,           match: 'prefix' },
-  { href: '/admin/pdv',          label: 'PDV',        Icon: ShoppingCart,    match: 'prefix', planOnly: 'loja' },
-  { href: '/admin/plano',        label: 'Plano',      Icon: Crown,           match: 'exact' },
-  { href: '/admin/configuracoes', label: 'Configurações', Icon: Settings, match: 'exact' },
+  { href: '/admin/dashboard',  label: 'Dashboard',    Icon: LayoutDashboard, match: 'exact' },
+  { href: '/admin/pedidos',    label: 'Pedidos',      Icon: ShoppingBag,     match: 'prefix' },
+  { href: '/admin/produtos',   label: 'Produtos',     Icon: Shirt,           match: 'prefix' },
+  { href: '/admin/categorias', label: 'Categorias',   Icon: Tag,             match: 'exact' },
+  { href: '/admin/loja',       label: 'Minha loja',   Icon: Store,           match: 'prefix' },
+  { href: '/admin/pagamentos', label: 'Como receber', Icon: Wallet,          match: 'prefix' },
+  { href: '/admin/pdv',        label: 'PDV',          Icon: ShoppingCart,    match: 'prefix', planOnly: 'loja' },
+  { href: '/admin/plano',      label: 'Plano',        Icon: Crown,           match: 'exact' },
 ]
 
 function isActive(pathname: string, href: string, match: 'exact' | 'prefix') {
+  if (href === '/admin/loja') {
+    return pathname === '/admin/loja' || pathname.startsWith('/admin/loja/')
+  }
   if (match === 'exact') return pathname === href
   return pathname === href || pathname.startsWith(`${href}/`)
 }

@@ -30,6 +30,7 @@ import {
   fileFingerprint,
 } from '@/lib/product-photo-blocks'
 import Link from 'next/link'
+import FirstProductGuide from '@/components/admin/FirstProductGuide'
 
 interface Props {
   storeId:           string
@@ -37,6 +38,8 @@ interface Props {
   initialProduct?:  Product
   customCategories?: CustomCategory[]
   plan?:            PlanSlug
+  /** Guia Foto → Preço → Estoque para o primeiro produto */
+  guidedFirstProduct?: boolean
 }
 
 interface VariantState {
@@ -159,13 +162,20 @@ function BlockPhotoThumb({ src, onRemove }: { src: string; onRemove: () => void 
   )
 }
 
-function WizardStepIndicator({ step }: { step: CadastroStep }) {
-  const items: Array<{ n: CadastroStep; label: string }> = [
-    { n: 1, label: 'Produtos' },
-    { n: 2, label: 'IA' },
-    { n: 3, label: 'Revisar' },
-    { n: 4, label: 'Publicar' },
-  ]
+function WizardStepIndicator({ step, guided }: { step: CadastroStep; guided?: boolean }) {
+  const items: Array<{ n: CadastroStep; label: string }> = guided
+    ? [
+        { n: 1, label: 'Foto' },
+        { n: 2, label: 'Detalhes' },
+        { n: 3, label: 'Preço' },
+        { n: 4, label: 'Estoque' },
+      ]
+    : [
+        { n: 1, label: 'Produtos' },
+        { n: 2, label: 'IA' },
+        { n: 3, label: 'Revisar' },
+        { n: 4, label: 'Publicar' },
+      ]
   return (
     <nav className="mb-5 flex gap-1 min-w-0" aria-label="Etapas do cadastro">
       {items.map(({ n, label }) => {
@@ -256,7 +266,14 @@ function VariantPhotoThumb({ file, onRemove }: { file: File; onRemove: () => voi
   )
 }
 
-export default function ProdutoForm({ storeId: _storeId, productId, initialProduct, customCategories = [], plan = 'free' }: Props) {
+export default function ProdutoForm({
+  storeId: _storeId,
+  productId,
+  initialProduct,
+  customCategories = [],
+  plan = 'free',
+  guidedFirstProduct = false,
+}: Props) {
   const photoAiEnabled = canUsePhotoAnalysis(plan)
   const router  = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -1132,7 +1149,8 @@ export default function ProdutoForm({ storeId: _storeId, productId, initialProdu
 
   return (
     <div className="min-w-0">
-      {!isEdit && <WizardStepIndicator step={step} />}
+      {!isEdit && guidedFirstProduct && <FirstProductGuide formStep={step} />}
+      {!isEdit && <WizardStepIndicator step={step} guided={guidedFirstProduct} />}
 
       {/* Etapa 1 — blocos de produto */}
       {!isEdit && step === 1 && (

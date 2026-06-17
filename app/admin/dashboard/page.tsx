@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -14,6 +15,7 @@ import MetricCard from '@/components/admin/MetricCard'
 import PedidoCard from '@/components/admin/PedidoCard'
 import RecoveryCard from '@/components/admin/RecoveryCard'
 import RecoveryInfoModal from '@/components/admin/RecoveryInfoModal'
+import DashboardHashRedirect from '@/components/admin/DashboardHashRedirect'
 import ViReadinessCard from '@/components/admin/ViReadinessCard'
 import ViUsageCard from '@/components/admin/ViUsageCard'
 import ViLimitBanner from '@/components/admin/ViLimitBanner'
@@ -72,7 +74,7 @@ export default async function DashboardPage() {
   const week = weekRange()
   const month = monthRange()
 
-  let store: { name: string; plan?: PlanSlug; logo_url: string | null; slug: string; settings_json?: StoreSettings | null } | undefined
+  let store: { name: string; plan?: PlanSlug; logo_url: string | null; slug: string; settings_json?: StoreSettings | null; created_at?: string } | undefined
   let viStats: Awaited<ReturnType<typeof getViUsageStats>>
   let novoRows: { c: number }[]
   let confirmadoRows: { c: number }[]
@@ -85,7 +87,7 @@ export default async function DashboardPage() {
   let activeProducts: Product[]
 
   try {
-    const storeRows = await sql`SELECT name, plan, logo_url, slug, settings_json FROM stores WHERE id = ${storeId} LIMIT 1`
+    const storeRows = await sql`SELECT name, plan, logo_url, slug, settings_json, created_at FROM stores WHERE id = ${storeId} LIMIT 1`
     store = storeRows[0] as typeof store
     const plan = store?.plan ?? 'free'
     const showRecovery = plan === 'pro' || plan === 'loja' || plan === 'enterprise'
@@ -145,6 +147,13 @@ export default async function DashboardPage() {
   const totalHoje = (todayRows as { total: number }[]).reduce((s, o) => s + Number(o.total), 0)
   const totalSemana = (weekRows as { total: number }[]).reduce((s, o) => s + Number(o.total), 0)
   const totalMes = (monthRows as { total: number }[]).reduce((s, o) => s + Number(o.total), 0)
+  const activeProductCount = (activeProducts ?? []).length
+  const createdAt = store?.created_at ? new Date(store.created_at).getTime() : 0
+  const isNewStore = createdAt > 0 && Date.now() - createdAt < 3 * 24 * 60 * 60 * 1000
+  if (isNewStore && activeProductCount === 0) {
+    redirect('/admin/loja?secao=identidade')
+  }
+
   const hasLogo = Boolean(store?.logo_url?.trim())
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''
   const storePublicUrl = baseUrl && store?.slug ? `${baseUrl}/${store.slug}` : ''
@@ -158,6 +167,9 @@ export default async function DashboardPage() {
 
   return (
     <div className={adminPage}>
+      <Suspense fallback={null}>
+        <DashboardHashRedirect />
+      </Suspense>
       <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">
           {greeting()}, {store?.name ?? 'loja'}!

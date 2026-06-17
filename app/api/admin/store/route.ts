@@ -7,6 +7,17 @@ import { isPaidPlan, type PlanSlug } from '@/lib/plans'
 import { canUseAssistantFeatureForStore, getStorePlanContext } from '@/lib/store-plan-access'
 import { sanitizePaymentLinks } from '@/lib/payment-links'
 import { normalizeLogoSize } from '@/lib/store-logo'
+import {
+  canUseCenteredHeader,
+  canUseMobileGridColsOverride,
+  normalizeBrandDisplay,
+  normalizeHeaderLayout,
+  normalizeLogoShape,
+  normalizeMobileGridCols,
+  normalizeShowSearch,
+  themeSupportsMobileGridOverride,
+} from '@/lib/vitrine-layout'
+import { getTheme, type ThemeName } from '@/lib/themes'
 import { normalizeAssistantGender } from '@/lib/assistant-gender'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -66,11 +77,16 @@ export async function PATCH(req: NextRequest) {
       assistant_tone,
       assistant_gender,
       logoSize,
+      logoShape,
+      brandDisplay,
+      headerLayout,
+      showSearch,
+      mobileGridCols,
       stockAlerts,
     } = parsed.data
 
     const storeRows = await sql`
-      SELECT settings_json, plan, tagline, assistant_name, assistant_welcome_message, assistant_tone, assistant_gender, logo_url, theme_logo_url, is_demo, slug
+      SELECT settings_json, plan, tagline, assistant_name, assistant_welcome_message, assistant_tone, assistant_gender, logo_url, theme_logo_url, is_demo, slug, theme_name
       FROM stores WHERE id = ${session.storeId} LIMIT 1
     `
     const storeRow = storeRows[0] ?? {}
@@ -101,6 +117,36 @@ export async function PATCH(req: NextRequest) {
         { error: 'Links de pagamento disponíveis a partir do plano Starter.' },
         { status: 403 },
       )
+    }
+
+    if (headerLayout === 'centered' && !canUseCenteredHeader(plan)) {
+      return NextResponse.json(
+        { error: 'Header centralizado disponível a partir do plano Starter.' },
+        { status: 403 },
+      )
+    }
+
+    const themeName = ((storeRow.theme_name as string) ?? 'default') as ThemeName
+    const theme = getTheme(themeName)
+    const hasLogo = Boolean(
+      (storeRow.logo_url as string | null)?.trim() ||
+      (storeRow.theme_logo_url as string | null)?.trim() ||
+      (logo_url && String(logo_url).trim()),
+    )
+
+    if (mobileGridCols === 3) {
+      if (!canUseMobileGridColsOverride(plan)) {
+        return NextResponse.json(
+          { error: 'Grid de 3 colunas no mobile disponível a partir do plano Starter.' },
+          { status: 403 },
+        )
+      }
+      if (!themeSupportsMobileGridOverride(themeName, theme.catalogLayout)) {
+        return NextResponse.json(
+          { error: 'Este tema não suporta 3 colunas no mobile.' },
+          { status: 400 },
+        )
+      }
     }
 
     const assistantName =
@@ -141,6 +187,15 @@ export async function PATCH(req: NextRequest) {
       ...(freeShippingMin !== undefined && { freeShippingMin }),
       ...(installmentsMaxNoInterest !== undefined && { installmentsMaxNoInterest }),
       ...(logoSize !== undefined && { logoSize: normalizeLogoSize(logoSize) }),
+      ...(logoShape !== undefined && { logoShape: normalizeLogoShape(logoShape) }),
+      ...(brandDisplay !== undefined && {
+        brandDisplay: normalizeBrandDisplay(brandDisplay, hasLogo),
+      }),
+      ...(headerLayout !== undefined && { headerLayout: normalizeHeaderLayout(headerLayout) }),
+      ...(showSearch !== undefined && { showSearch: normalizeShowSearch(showSearch) }),
+      ...(mobileGridCols !== undefined && {
+        mobileGridCols: normalizeMobileGridCols(mobileGridCols),
+      }),
       ...(stockAlerts !== undefined && { stockAlerts }),
     }
 

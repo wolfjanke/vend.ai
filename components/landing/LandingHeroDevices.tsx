@@ -7,7 +7,6 @@ import {
   ShoppingBag,
   type LucideIcon,
 } from 'lucide-react'
-import BrandLogo from '@/components/BrandLogo'
 import { BRAND } from '@/lib/brand'
 
 const ROTATE_MS = 5500
@@ -89,11 +88,11 @@ export default function LandingHeroDevices() {
               </div>
               {/* Área “desktop” */}
               <div className="aspect-[16/10] p-2.5 sm:p-3 bg-bg flex flex-col gap-2 min-h-0">
-                <div className="flex items-center justify-between gap-2 min-w-0">
-                  <BrandLogo size="xs" href={null} />
-                  <span className="text-[10px] text-muted truncate" title={v.storeName}>
-                    {v.storeName}
-                  </span>
+                <div className="text-center min-w-0 shrink-0">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center text-[10px] font-bold text-primary mb-1">
+                    SM
+                  </div>
+                  <div className="text-[10px] font-semibold text-foreground truncate">{v.storeName}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5 flex-1 min-h-0">
                   {v.cards.map(({ Icon, name, price }) => (
@@ -128,21 +127,23 @@ export default function LandingHeroDevices() {
         <div className="absolute left-0 bottom-0 z-10 w-52 drop-shadow-[0_20px_50px_rgba(0,0,0,0.55)]">
           <div className="w-full bg-surface border border-border rounded-[32px] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.5),0_0_0_1px_#7B6EFF22]">
             <div className="bg-surface2 rounded-[20px] p-3 overflow-hidden">
-              <div className="flex justify-between items-center mb-2.5 min-w-0 gap-2">
-                <BrandLogo size="xs" href={null} />
-                <span className="text-[10px] text-muted truncate min-w-0" title={v.storeName}>
+              <div className="text-center mb-2.5 min-w-0">
+                <div className="w-12 h-12 mx-auto rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center text-[10px] font-bold text-primary mb-1.5">
+                  SM
+                </div>
+                <span className="text-[10px] text-foreground font-semibold truncate block px-1" title={v.storeName}>
                   {v.storeName}
                 </span>
               </div>
-              <div className="flex gap-2 mb-2.5" key={`m-cards-${index}`}>
-                {v.cards.slice(0, 2).map(({ Icon, name, price }) => (
+              <div className="grid grid-cols-3 gap-1.5 mb-2.5 min-w-0" key={`m-cards-${index}`}>
+                {v.cards.map(({ Icon, name, price }) => (
                   <div
                     key={name}
-                    className="flex-1 min-w-0 bg-surface rounded-[10px] p-2 border border-border text-center"
+                    className="min-w-0 bg-surface rounded-[10px] p-1.5 border border-border text-center"
                   >
-                    <Icon size={22} className="text-muted mx-auto mb-1 shrink-0" aria-hidden />
-                    <div className="text-[10px] text-foreground truncate">{name}</div>
-                    <div className="text-accent text-[11px] font-bold">{price}</div>
+                    <Icon size={18} className="text-muted mx-auto mb-0.5 shrink-0" aria-hidden />
+                    <div className="text-[9px] text-foreground truncate">{name}</div>
+                    <div className="text-accent text-[10px] font-bold tabular-nums">{price}</div>
                   </div>
                 ))}
               </div>

@@ -22,6 +22,7 @@ import {
   productToTrigger,
 } from '@/lib/vi-triggers'
 import { normalizeLogoSize, resolveStoreLogoUrl } from '@/lib/store-logo'
+import { resolveVitrineLayout } from '@/lib/vitrine-layout'
 import { normalizeAssistantGender } from '@/lib/assistant-gender'
 import BannerStrip from '@/components/loja/BannerStrip'
 import { BANNER_ROTATE_MS, filterActiveBanners, normalizeBannerMotion, resolveBannerDisplayText } from '@/lib/banners'
@@ -326,6 +327,13 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
   }
 
   const totalQty = cart.reduce((s, c) => s + c.qty, 0)
+  const logoUrl = resolveStoreLogoUrl(store.logo_url, store.theme_logo_url)
+  const vitrineLayout = resolveVitrineLayout(
+    settings,
+    plan,
+    (store.theme_name ?? 'default') as import('@/lib/themes').ThemeName,
+    Boolean(logoUrl),
+  )
 
   return (
     <LojaProvider value={lojaValue}>
@@ -334,10 +342,12 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
           slug={store.slug}
           storeName={store.name}
           whatsapp={store.whatsapp}
-          logoUrl={resolveStoreLogoUrl(store.logo_url, store.theme_logo_url)}
+          logoUrl={logoUrl}
           logoSize={normalizeLogoSize(settings.logoSize)}
+          logoShape={vitrineLayout.logoShape}
+          brandDisplay={vitrineLayout.brandDisplay}
+          headerLayout={vitrineLayout.headerLayout}
           tagline={store.tagline}
-          themeName={store.theme_name as import('@/lib/themes').ThemeName}
           cartQty={totalQty}
           onOpenCart={() => setCartOpen(true)}
         />
@@ -410,7 +420,15 @@ export default function LojaShell({ store, products, cardTheme, plan = 'free', c
         )}
 
         <div
-          className={`fixed bottom-24 left-1/2 z-[400] w-[min(100vw-2rem,28rem)] -translate-x-1/2 bg-surface2 border border-accent/30 rounded-xl px-4 py-3 text-sm font-medium text-accent text-center pointer-events-none transition-all duration-300 break-words ${toastVisible ? 'opacity-100' : 'opacity-0'}`}
+          className={[
+            'fixed left-1/2 z-[400] w-[min(100vw-2rem,28rem)] max-w-[calc(100vw-16px)] -translate-x-1/2',
+            'bg-surface2 border border-accent/30 rounded-xl px-4 py-3 text-sm font-medium text-accent text-center',
+            'pointer-events-none transition-all duration-300 break-words',
+            viOpen
+              ? 'bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(7rem+env(safe-area-inset-bottom,0px))]'
+              : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))]',
+            toastVisible ? 'opacity-100' : 'opacity-0',
+          ].join(' ')}
         >
           {toast}
         </div>

@@ -41,7 +41,7 @@ export default function ViUsageCard({ used, limit, percent }: Props) {
         </Link>
         <span className="text-muted hidden sm:inline" aria-hidden>·</span>
         <Link
-          href="/admin/configuracoes"
+          href="/admin/loja?secao=vi"
           className="text-muted hover:text-primary hover:underline min-h-[44px] inline-flex items-center"
         >
           Ver detalhes

@@ -62,11 +62,12 @@ export default function ViChat({
     storeContext.ageGroup,
     storeContext.segmentLabel,
   ])
-  const [messages,      setMessages]      = useState<ViMessage[]>([])
-  const [apiMessages,   setApiMessages]   = useState<ViMessage[]>([])
-  const [input,         setInput]         = useState('')
-  const [loading,       setLoading]       = useState(false)
+  const [messages, setMessages] = useState<ViMessage[]>([])
+  const [apiMessages, setApiMessages] = useState<ViMessage[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [keyboardInset, setKeyboardInset] = useState(0)
   const linkProducts = useMemo(
     () =>
       storeContext.products
@@ -99,12 +100,48 @@ export default function ViChat({
     e.preventDefault()
     window.location.assign(path)
   }
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef       = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setKeyboardInset(0)
+      return
+    }
+
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const updateInset = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      setKeyboardInset(inset)
+    }
+
+    updateInset()
+    vv.addEventListener('resize', updateInset)
+    vv.addEventListener('scroll', updateInset)
+    return () => {
+      vv.removeEventListener('resize', updateInset)
+      vv.removeEventListener('scroll', updateInset)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const isMobile = window.matchMedia('(max-width: 639px)').matches
+    if (!isMobile) return
+
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -122,7 +159,7 @@ export default function ViChat({
       setTimeout(() => setMessages([welcome]), 400)
     }
     if (isOpen) inputRef.current?.focus()
-  }, [isOpen, messages.length, storeContext.name, storeContext.welcomeMessage, assistantName])
+  }, [isOpen, messages.length, storeContext.name, storeContext.welcomeMessage, assistantName, storeContext.assistantGender])
 
   useEffect(() => {
     if (!pendingMessage?.trim()) return
@@ -190,7 +227,7 @@ export default function ViChat({
       const assistantMsg: ViMessage = { role: 'assistant', content: '' }
       setMessages([...displayNext, assistantMsg])
 
-      const reader  = response.body.getReader()
+      const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let accumulated = ''
 
@@ -219,42 +256,86 @@ export default function ViChat({
 
   const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
+  const panelBottom =
+    keyboardInset > 0 && typeof window !== 'undefined' && window.innerWidth < 640
+      ? keyboardInset
+      : undefined
+
   return (
     <>
-      {/* FAB */}
+      {isOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-[149] bg-bg/50 sm:hidden border-0 p-0 cursor-default"
+          aria-label="Fechar chat"
+          onClick={onToggle}
+        />
+      )}
+
+      {/* FAB — oculto com painel aberto */}
       <button
         type="button"
         onClick={onToggle}
         title={`Conversar com ${assistantName}`}
         aria-label={`Abrir chat com ${assistantName}`}
-        className="vi-chat-fab fixed z-[150] w-14 h-14 min-h-[44px] min-w-[44px] bg-grad rounded-full border-none flex items-center justify-center shadow-[0_4px_20px_var(--primary-glow)] hover:scale-110 hover:shadow-[0_6px_30px_var(--primary-glow)] transition-all right-4 sm:right-7 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))]"
-        style={{ animation: 'floatIn 0.6s 0.5s both' }}
+        aria-expanded={isOpen}
+        className={[
+          'vi-chat-fab fixed z-[150] w-14 h-14 min-h-[44px] min-w-[44px] bg-grad rounded-full border-none flex items-center justify-center shadow-[0_4px_20px_var(--primary-glow)] transition-all duration-300',
+          'right-4 sm:right-7 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))]',
+          isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'opacity-100 scale-100 hover:scale-110 hover:shadow-[0_6px_30px_var(--primary-glow)]',
+        ].join(' ')}
+        style={{ animation: isOpen ? undefined : 'floatIn 0.6s 0.5s both' }}
       >
-        <div className="absolute inset-[-4px] rounded-full border-2 border-primary animate-pulse2 opacity-0" />
         <span className="text-2xl">✦</span>
       </button>
 
-      {/* Panel */}
-      <div className={`fixed z-[150] w-[340px] max-w-[min(340px,calc(100vw-24px))] bg-surface border border-border rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5),0_0_0_1px_var(--primary-dim)] transition-all duration-300 origin-bottom-right right-3 sm:right-7 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] ${isOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-90 pointer-events-none'}`}>
-
+      {/* Panel — drawer no mobile, card no desktop */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Chat com ${assistantName}`}
+        className={[
+          'vi-chat-panel fixed z-[150] bg-surface border border-border overflow-hidden flex flex-col min-h-0 max-w-full',
+          'shadow-[0_20px_60px_rgba(0,0,0,0.5),0_0_0_1px_var(--primary-dim)] transition-all duration-300',
+          'inset-x-0 bottom-0 rounded-t-3xl border-b-0',
+          'max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))]',
+          'sm:inset-x-auto sm:right-7 sm:bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] sm:w-[340px] sm:max-w-[min(340px,calc(100vw-24px))] sm:rounded-3xl sm:border-b sm:max-h-none sm:origin-bottom-right',
+          isOpen
+            ? 'translate-y-0 opacity-100 pointer-events-auto sm:scale-100'
+            : 'translate-y-full opacity-0 pointer-events-none sm:translate-y-0 sm:opacity-0 sm:scale-90',
+        ].join(' ')}
+        style={panelBottom != null ? { bottom: panelBottom } : undefined}
+      >
         {/* Header */}
         <div
-          className="flex items-center gap-2.5 px-4 py-3.5 border-b border-border"
-          style={{ background: 'linear-gradient(135deg, var(--theme-primary-surface), var(--accent-dim))' }}
+          className="flex items-center gap-2.5 px-4 py-3.5 sm:py-3.5 border-b border-border shrink-0 pt-[max(0.875rem,env(safe-area-inset-top,0px))] sm:pt-3.5"
+          style={{
+            background: 'linear-gradient(135deg, var(--theme-primary-surface), var(--accent-dim))',
+          }}
         >
-          <div className="w-9 h-9 bg-grad rounded-full flex items-center justify-center text-lg">✦</div>
-          <div>
+          <div className="w-9 h-9 bg-grad rounded-full flex items-center justify-center text-lg shrink-0">✦</div>
+          <div className="min-w-0">
             <div className="font-syne font-bold text-sm truncate">{assistantName} — Assistente</div>
             <div className="flex items-center gap-1 text-accent text-[11px]">
-              <span className="w-1.5 h-1.5 bg-accent rounded-full animate-blink" />
+              <span className="w-1.5 h-1.5 bg-accent rounded-full animate-blink shrink-0" />
               Online agora
             </div>
           </div>
-          <button onClick={onToggle} className="ml-auto text-muted hover:text-foreground text-xl transition-colors">×</button>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="Fechar chat"
+            className="ml-auto min-h-[44px] min-w-[44px] flex items-center justify-center text-muted hover:text-foreground text-2xl transition-colors shrink-0"
+          >
+            ×
+          </button>
         </div>
 
         {/* Messages */}
-        <div className="h-[280px] overflow-y-auto p-3.5 flex flex-col gap-2.5" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}>
+        <div
+          className="flex-1 min-h-[180px] sm:h-[280px] sm:flex-none overflow-y-auto p-3.5 flex flex-col gap-2.5"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}
+        >
           {messages.map((msg, i) => (
             <div key={i} className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
               <div
@@ -282,9 +363,14 @@ export default function ViChat({
 
         {/* Suggestions */}
         {showSuggestions && messages.length <= 1 && (
-          <div className="flex gap-1.5 flex-wrap px-3.5 py-2 border-t border-border">
+          <div className="flex gap-2 flex-wrap px-3.5 py-2 border-t border-border shrink-0">
             {suggestions.map(s => (
-              <button key={`${s.label}-${s.text}`} type="button" onClick={() => sendMessage(s.text)} className="px-2.5 py-1 bg-primary/10 border border-primary/30 rounded-lg text-primary text-[11px] hover:bg-primary hover:text-white transition-all">
+              <button
+                key={`${s.label}-${s.text}`}
+                type="button"
+                onClick={() => sendMessage(s.text)}
+                className="min-h-[44px] px-3 py-2 bg-primary/10 border border-primary/30 rounded-xl text-primary text-xs font-medium hover:bg-primary hover:text-white transition-all"
+              >
                 {s.label}
               </button>
             ))}
@@ -292,21 +378,29 @@ export default function ViChat({
         )}
 
         {/* Input */}
-        <div className="flex gap-2 px-3.5 py-3 border-t border-border">
+        <div
+          className="flex gap-2 px-3.5 py-3 border-t border-border shrink-0"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+        >
           <input
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            className="flex-1 px-3 py-2 bg-surface2 border border-border rounded-[10px] text-foreground text-[13px] outline-none focus:border-primary transition-all placeholder:text-muted"
+            className="flex-1 min-h-[44px] px-3 py-2.5 bg-surface2 border border-border rounded-xl text-foreground text-sm outline-none focus:border-primary transition-all placeholder:text-muted min-w-0"
             placeholder={`Pergunte para a ${assistantName}…`}
           />
           <button
+            type="button"
             onClick={() => sendMessage()}
             disabled={loading || !input.trim()}
-            className="w-9 h-9 bg-primary rounded-[10px] flex items-center justify-center text-white hover:bg-primary/80 hover:shadow-[0_0_15px_var(--primary-glow)] transition-all disabled:opacity-50 flex-shrink-0"
+            aria-label="Enviar mensagem"
+            className="min-h-[44px] min-w-[44px] bg-primary rounded-xl flex items-center justify-center text-white hover:bg-primary/80 hover:shadow-[0_0_15px_var(--primary-glow)] transition-all disabled:opacity-50 shrink-0"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
           </button>
         </div>
       </div>

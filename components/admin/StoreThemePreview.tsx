@@ -3,26 +3,46 @@
 import { useEffect, useRef } from 'react'
 import { generateThemeCss } from '@/lib/theme-css'
 import { getGoogleFontsUrl } from '@/lib/theme-fonts'
-import { getStoreInitials } from '@/lib/store-brand'
 import type { CustomCategory } from '@/types'
 import { previewChipFilters, type StorePreviewProduct } from '@/lib/preview-products'
 import { getTheme, themeToCardConfig, type ThemeBackground, type ThemeName } from '@/lib/themes'
 import CategoryFilterBar from '@/components/loja/CategoryFilterBar'
+import LojaBrand from '@/components/loja/LojaBrand'
+import { normalizeLogoSize, type LogoSize } from '@/lib/store-logo'
+import {
+  normalizeBrandDisplay,
+  normalizeHeaderLayout,
+  normalizeLogoShape,
+  normalizeShowSearch,
+  resolveCatalogColsMobile,
+  type BrandDisplay,
+  type HeaderLayout,
+  type LogoShape,
+} from '@/lib/vitrine-layout'
+import type { PlanSlug } from '@/lib/plans'
 
 type Props = {
-  themeName:     ThemeName
-  primary:       string
-  accent:        string
-  background:    ThemeBackground
-  shimmer:       boolean
-  storeName:     string
-  logoUrl:       string | null
-  products:      StorePreviewProduct[]
-  assistantName: string
-  tagline?:      string | null
-  categoryNavStyle?: 'pills' | 'circles'
-  customCategories?: CustomCategory[]
-  highlightedColor?: 'primary' | 'accent' | null
+  themeName:          ThemeName
+  primary:            string
+  accent:             string
+  background:         ThemeBackground
+  shimmer:            boolean
+  storeName:          string
+  logoUrl:            string | null
+  products:           StorePreviewProduct[]
+  assistantName:      string
+  tagline?:           string | null
+  categoryNavStyle?:  'pills' | 'circles'
+  customCategories?:  CustomCategory[]
+  highlightedColor?:  'primary' | 'accent' | null
+  plan?:              PlanSlug
+  headerLayout?:      HeaderLayout
+  logoShape?:         LogoShape
+  brandDisplay?:      BrandDisplay
+  showSearch?:        boolean
+  logoSize?:          LogoSize
+  mobileGridCols?:    2 | 3
+  storeSlug?:         string
 }
 
 function formatPrice(value: number): string {
@@ -58,14 +78,34 @@ export default function StoreThemePreview({
   categoryNavStyle = 'pills',
   customCategories = [],
   highlightedColor = null,
+  plan = 'free',
+  headerLayout: headerLayoutProp,
+  logoShape: logoShapeProp,
+  brandDisplay: brandDisplayProp,
+  showSearch: showSearchProp,
+  logoSize: logoSizeProp,
+  mobileGridCols: mobileGridColsProp,
+  storeSlug = 'sua-loja',
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const theme = getTheme(themeName)
   const card = themeToCardConfig(theme, shimmer)
   const chipFilters = previewChipFilters(products, customCategories)
-  const displayProducts = products.length > 0 ? products.slice(0, 4) : []
-  const placeholders = displayProducts.length === 0 ? 2 : 0
+  const displayProducts = products.length > 0 ? products.slice(0, 6) : []
+  const placeholders = displayProducts.length === 0 ? 3 : 0
   const navStyle = categoryNavStyle ?? theme.categoryNavDefault
+
+  const hasLogo = Boolean(logoUrl?.trim())
+  const headerLayout = normalizeHeaderLayout(headerLayoutProp)
+  const logoShape = normalizeLogoShape(logoShapeProp)
+  const brandDisplay = normalizeBrandDisplay(brandDisplayProp, hasLogo)
+  const showSearch = normalizeShowSearch(showSearchProp)
+  const logoSize = normalizeLogoSize(logoSizeProp)
+  const catalogColsMobile = resolveCatalogColsMobile(
+    themeName,
+    { mobileGridCols: mobileGridColsProp },
+    plan,
+  )
 
   useEffect(() => {
     const el = rootRef.current
@@ -75,8 +115,9 @@ export default function StoreThemePreview({
       { primary, accent },
       background,
       shimmer,
+      { catalogColsMobile },
     )
-  }, [theme, themeName, primary, accent, background, shimmer])
+  }, [theme, themeName, primary, accent, background, shimmer, catalogColsMobile])
 
   useEffect(() => {
     const id = 'store-theme-preview-fonts'
@@ -99,6 +140,36 @@ export default function StoreThemePreview({
         ? 'highlight-accent'
         : ''
 
+  const previewHeader =
+    headerLayout === 'centered' ? (
+      <div className="loja-header-hero px-3 pt-4 pb-4 border-b border-border text-center">
+        <LojaBrand
+          slug={storeSlug}
+          storeName={storeName}
+          logoUrl={logoUrl}
+          logoSize={logoSize}
+          logoShape={logoShape}
+          brandDisplay={brandDisplay}
+          tagline={tagline}
+          variant="hero"
+        />
+      </div>
+    ) : (
+      <header className="loja-header px-3 py-2.5 border-b border-border flex items-center gap-2 min-w-0">
+        <LojaBrand
+          slug={storeSlug}
+          storeName={storeName}
+          logoUrl={logoUrl}
+          logoSize={logoSize}
+          logoShape={logoShape}
+          brandDisplay={brandDisplay}
+          tagline={tagline}
+          variant="bar"
+          className="flex-1 min-w-0"
+        />
+      </header>
+    )
+
   return (
     <div
       ref={rootRef}
@@ -107,42 +178,21 @@ export default function StoreThemePreview({
       data-info-position={card.infoPosition}
       data-card-hover={card.cardHover}
       data-catalog-layout={card.catalogLayout}
+      data-catalog-cols-mobile={catalogColsMobile}
       style={{ fontFamily: `var(--theme-font-body), sans-serif` }}
     >
-      <header className="loja-header px-3 py-2.5 border-b border-border flex items-center gap-[10px] min-w-0">
-        {logoUrl ? (
-          <img
-            src={logoUrl}
-            alt=""
-            className="h-10 w-auto max-w-[120px] shrink-0 rounded-lg object-contain"
-          />
-        ) : (
-          <div
-            className="preview-vi-avatar w-10 h-10 shrink-0 rounded-[10px] flex items-center justify-center text-xs font-bold text-white"
-            style={{ background: 'var(--theme-vi-avatar)' }}
-            aria-hidden
-          >
-            {getStoreInitials(storeName)}
-          </div>
-        )}
-        <div className="min-w-0">
-          <span
-            className="loja-brand-name block truncate font-bold"
-            style={{
-              fontFamily: 'var(--theme-font-display), sans-serif',
-              fontSize:   '18px',
-              fontWeight: 700,
-            }}
-          >
-            {storeName}
-          </span>
-          {tagline?.trim() && (
-            <span className="block text-[10px] text-muted truncate">{tagline.trim()}</span>
-          )}
-        </div>
-      </header>
+      {previewHeader}
 
-      <div className="px-3 py-2 min-w-0">
+      {showSearch && (
+        <div className="px-3 pt-3 min-w-0">
+          <div className="h-10 rounded-2xl border border-border bg-surface2/80 flex items-center px-3 gap-2 min-w-0">
+            <span className="text-muted text-xs shrink-0" aria-hidden>⌕</span>
+            <span className="text-[11px] text-muted truncate">Buscar produtos…</span>
+          </div>
+        </div>
+      )}
+
+      <div className={`px-3 min-w-0 ${showSearch ? 'pt-2 pb-2' : 'py-2'}`}>
         <CategoryFilterBar
           filters={chipFilters}
           activeValue={chipFilters[1]?.value ?? chipFilters[0]?.value ?? ''}
@@ -153,30 +203,13 @@ export default function StoreThemePreview({
         />
       </div>
 
-      <div className="px-3 pb-2 flex flex-wrap gap-2 items-center">
-        <button
-          type="button"
-          className="preview-btn-primary min-h-[36px] px-3 rounded-lg text-[10px] font-semibold shrink-0"
-          style={{
-            background: 'var(--theme-btn-bg)',
-            color:      'var(--theme-btn-text)',
-            borderRadius: 'var(--theme-btn-radius)',
-          }}
-        >
-          Adicionar ao carrinho
-        </button>
-        <span className="preview-badge px-2 py-0.5 rounded-full text-[9px] font-bold text-white shrink-0" style={{ background: 'var(--theme-accent)' }}>
-          Promoção
-        </span>
-      </div>
-
       {displayProducts.length === 0 ? (
         <div className="px-3 pb-2">
           <p className="text-[11px] text-muted break-words mb-2">
             Cadastre produtos com foto para ver o preview real do catálogo.
           </p>
           <div className={gridClass}>
-            {Array.from({ length: placeholders || 2 }).map((_, i) => (
+            {Array.from({ length: placeholders || 3 }).map((_, i) => (
               <div
                 key={i}
                 className="produto-card border overflow-hidden opacity-60 min-w-0"

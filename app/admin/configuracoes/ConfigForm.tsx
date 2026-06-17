@@ -5,6 +5,7 @@ import { Info, Loader2 } from 'lucide-react'
 import type { Store, AgeGroup, GenderFocus, DeliveryZone, PaymentLink } from '@/types'
 import { canUseAssistantFeature, isPaidPlan, type PlanSlug } from '@/lib/plans'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Lock } from 'lucide-react'
 import { getStoreProfile } from '@/types'
 import MaskedInput from '@/components/ui/MaskedInput'
@@ -27,6 +28,22 @@ import {
   normalizeLogoSize,
   type LogoSize,
 } from '@/lib/store-logo'
+import {
+  canUseCenteredHeader,
+  canUseMobileGridColsOverride,
+  normalizeBrandDisplay,
+  normalizeHeaderLayout,
+  normalizeLogoShape,
+  normalizeMobileGridCols,
+  normalizeShowSearch,
+  themeHasNativeThreeCols,
+  themeSupportsMobileGridOverride,
+  type BrandDisplay,
+  type HeaderLayout,
+  type LogoShape,
+  type MobileGridCols,
+} from '@/lib/vitrine-layout'
+import { getTheme, type ThemeName } from '@/lib/themes'
 import {
   ASSISTANT_GENDER_OPTIONS,
   assistantNameFieldLabel,
@@ -77,9 +94,19 @@ interface Props {
   viStats?:                 ViStats
   checkoutEligible:         boolean
   checkoutLaunchEnabled?:   boolean
+  /** Em Minha loja: exibe só uma seção, sem nav interna */
+  embeddedSection?:         ConfigSectionId
 }
 
-export default function ConfigForm({ store, viStats, checkoutEligible, checkoutLaunchEnabled = false }: Props) {
+export default function ConfigForm({
+  store,
+  viStats,
+  checkoutEligible,
+  checkoutLaunchEnabled = false,
+  embeddedSection,
+}: Props) {
+  const router = useRouter()
+  const isEmbedded = embeddedSection != null
   const settings = store.settings_json ?? {}
   const initialProfile = getStoreProfile(settings)
   const [genderFocus, setGenderFocus] = useState<GenderFocus>(initialProfile.genderFocus)
@@ -114,6 +141,24 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
   const [logoSaving, setLogoSaving] = useState(false)
   const [logoSavedFlash, setLogoSavedFlash] = useState(false)
   const [logoSize, setLogoSize] = useState<LogoSize>(() => normalizeLogoSize(settings.logoSize))
+  const hasLogo = Boolean(logoUrl.trim() || store.logo_url?.trim())
+  const themeName = (store.theme_name ?? 'default') as ThemeName
+  const storeTheme = getTheme(themeName)
+  const [vitrineLogoShape, setVitrineLogoShape] = useState<LogoShape>(() =>
+    normalizeLogoShape(settings.logoShape),
+  )
+  const [vitrineBrandDisplay, setVitrineBrandDisplay] = useState<BrandDisplay>(() =>
+    normalizeBrandDisplay(settings.brandDisplay, hasLogo),
+  )
+  const [vitrineHeaderLayout, setVitrineHeaderLayout] = useState<HeaderLayout>(() =>
+    normalizeHeaderLayout(settings.headerLayout),
+  )
+  const [vitrineShowSearch, setVitrineShowSearch] = useState(() =>
+    normalizeShowSearch(settings.showSearch),
+  )
+  const [vitrineMobileGridCols, setVitrineMobileGridCols] = useState<MobileGridCols | undefined>(() =>
+    normalizeMobileGridCols(settings.mobileGridCols),
+  )
   const logoUrlPersistedRef = useRef(store.logo_url ?? '')
 
   useEffect(() => {
@@ -172,7 +217,36 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
     'friendly' | 'formal' | 'playful' | 'professional'
   >((store.assistant_tone as 'friendly' | 'formal' | 'playful' | 'professional') ?? 'friendly')
 
+  async function persistVitrineLayout(patch: Record<string, unknown>) {
+    setLogoSaving(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/store/vitrine-layout', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(patch),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data?.error ?? 'Erro ao salvar layout da vitrine.')
+        return false
+      }
+      setLogoSavedFlash(true)
+      setTimeout(() => setLogoSavedFlash(false), 2000)
+      router.refresh()
+      return true
+    } catch {
+      setError('Erro ao salvar layout da vitrine.')
+      return false
+    } finally {
+      setLogoSaving(false)
+    }
+  }
+
   async function persistLogoSettings(patch: { logo_url?: string | null; logoSize?: LogoSize }) {
+    if (patch.logoSize !== undefined) {
+      return persistVitrineLayout({ logoSize: patch.logoSize })
+    }
     setLogoSaving(true)
     setError('')
     try {
@@ -191,6 +265,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
       }
       setLogoSavedFlash(true)
       setTimeout(() => setLogoSavedFlash(false), 2000)
+      router.refresh()
       return true
     } catch {
       setError('Erro ao salvar logo.')
@@ -220,7 +295,12 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
           return
         }
         setLogoUrl(data.url)
-        await persistLogoSettings({ logo_url: data.url })
+        const shouldUpgradeDisplay = vitrineBrandDisplay === 'name-only'
+        if (shouldUpgradeDisplay) setVitrineBrandDisplay('logo-and-name')
+        const ok = await persistLogoSettings({ logo_url: data.url })
+        if (ok && shouldUpgradeDisplay) {
+          await persistVitrineLayout({ brandDisplay: 'logo-and-name' })
+        }
       } catch {
         setError('Falha no upload da logo')
       } finally {
@@ -230,6 +310,11 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
     reader.readAsDataURL(file)
   }
 
+  const canCenteredHeader = canUseCenteredHeader(plan)
+  const canMobileGridOverride = canUseMobileGridColsOverride(plan)
+  const supportsMobileGrid = themeSupportsMobileGridOverride(themeName, storeTheme.catalogLayout)
+  const nativeThreeCols = themeHasNativeThreeCols(themeName)
+
   async function handleLogoSizeChange(size: LogoSize) {
     setLogoSize(size)
     await persistLogoSettings({ logoSize: size })
@@ -238,7 +323,12 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
   async function handleLogoUrlBlur() {
     const trimmed = logoUrl.trim()
     if (trimmed === logoUrlPersistedRef.current.trim()) return
-    await persistLogoSettings({ logo_url: trimmed || null })
+    const shouldUpgradeDisplay = Boolean(trimmed) && vitrineBrandDisplay === 'name-only'
+    if (shouldUpgradeDisplay) setVitrineBrandDisplay('logo-and-name')
+    const ok = await persistLogoSettings({ logo_url: trimmed || null })
+    if (ok && shouldUpgradeDisplay) {
+      await persistVitrineLayout({ brandDisplay: 'logo-and-name' })
+    }
   }
 
   function addDeliveryZone() {
@@ -288,6 +378,11 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
       whatsapp:       wpp,
       logo_url:       logoUrl.trim() || null,
       logoSize,
+      logoShape:      vitrineLogoShape,
+      brandDisplay:   vitrineBrandDisplay,
+      headerLayout:   vitrineHeaderLayout,
+      showSearch:     vitrineShowSearch,
+      ...(vitrineMobileGridCols != null ? { mobileGridCols: vitrineMobileGridCols } : {}),
       freteInfo:      freteInfo.trim(),
       pagamentoInfo:  pagamentoInfo.trim(),
       pixKey:         pixKey.trim(),
@@ -362,10 +457,14 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
   }
 
   const baseUrl = typeof process.env.NEXT_PUBLIC_APP_URL === 'string' ? process.env.NEXT_PUBLIC_APP_URL : ''
-  const [activeSection, setActiveSection] = useState<ConfigSectionId>('config-loja')
+  const [activeSection, setActiveSection] = useState<ConfigSectionId>(embeddedSection ?? 'config-loja')
 
   useEffect(() => {
-    if (activeSection !== 'config-conta') return
+    if (embeddedSection) setActiveSection(embeddedSection)
+  }, [embeddedSection])
+
+  useEffect(() => {
+    if (activeSection !== 'config-conta' && embeddedSection !== 'config-conta') return
     let cancelled = false
     void fetch('/api/admin/billing-owner')
       .then(r => r.ok ? r.json() : null)
@@ -375,7 +474,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
       })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [activeSection])
+  }, [activeSection, embeddedSection])
 
   function renderViPanel() {
     return (
@@ -545,14 +644,18 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
 
   return (
     <>
-      <ConfigSectionNav
-        active={activeSection}
-        onChange={setActiveSection}
-        hideViOnDesktop
-      />
+      {!isEmbedded && (
+        <ConfigSectionNav
+          active={activeSection}
+          onChange={setActiveSection}
+          hideViOnDesktop
+        />
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-[calc(5.5rem+64px+env(safe-area-inset-bottom,0px))] md:pb-24">
-        <div className="lg:col-span-8 flex flex-col gap-6 min-w-0">
+      <div className={`grid grid-cols-1 gap-6 items-start pb-[calc(5.5rem+64px+env(safe-area-inset-bottom,0px))] md:pb-24 ${
+        isEmbedded ? '' : 'lg:grid-cols-12'
+      }`}>
+        <div className={`flex flex-col gap-6 min-w-0 ${isEmbedded ? '' : 'lg:col-span-8'}`}>
         {activeSection === 'config-loja' && (
         <>
         <ConfigCard
@@ -595,7 +698,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
                 <img
                   src={logoUrl.trim()}
                   alt=""
-                  className={`${logoHeaderClassName(logoSize)} border border-border bg-surface2`}
+                  className={`${logoHeaderClassName(logoSize, vitrineLogoShape)} border border-border bg-surface2`}
                 />
               ) : (
                 <div className="w-11 h-11 rounded-lg border border-dashed border-border bg-surface2 shrink-0" aria-hidden />
@@ -651,6 +754,157 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
               <p className="text-[11px] text-muted mt-2 break-words">
                 P = compacta · M = padrão (recomendado) · G = destaque grande. Salva na hora — teste G na vitrine.
               </p>
+            </div>
+
+            <SectionHeader title="Layout da vitrine" />
+            <div className="space-y-4">
+              <div>
+                <p className="text-[11px] text-muted mb-2">Formato da logo</p>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: 'rect' as const, label: 'Retangular' },
+                    { value: 'square' as const, label: 'Quadrada' },
+                    { value: 'circle' as const, label: 'Redonda' },
+                  ]).map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={logoSaving}
+                      onClick={() => {
+                        setVitrineLogoShape(opt.value)
+                        void persistVitrineLayout({ logoShape: opt.value })
+                      }}
+                      className={`min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors ${
+                        vitrineLogoShape === opt.value
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {vitrineLogoShape === 'circle' && (
+                  <p className="text-[11px] text-muted mt-2 break-words">
+                    Formato redondo funciona melhor com logos quadradas ou ícones.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-[11px] text-muted mb-2">Exibir na vitrine</p>
+                <select
+                  className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[12px] text-foreground text-sm outline-none focus:border-primary"
+                  value={vitrineBrandDisplay}
+                  disabled={logoSaving}
+                  onChange={e => {
+                    const value = e.target.value as BrandDisplay
+                    setVitrineBrandDisplay(value)
+                    void persistVitrineLayout({ brandDisplay: value })
+                  }}
+                >
+                  <option value="logo-and-name">Logo + nome da loja</option>
+                  <option value="logo-only">Somente logo</option>
+                  <option value="name-only">Somente nome</option>
+                </select>
+              </div>
+
+              <div>
+                <p className="text-[11px] text-muted mb-2">Posição do header</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={logoSaving}
+                    onClick={() => {
+                      setVitrineHeaderLayout('bar')
+                      void persistVitrineLayout({ headerLayout: 'bar' })
+                    }}
+                    className={`min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors ${
+                      vitrineHeaderLayout === 'bar'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                    }`}
+                  >
+                    Barra lateral
+                  </button>
+                  <button
+                    type="button"
+                    disabled={logoSaving || !canCenteredHeader}
+                    onClick={() => {
+                      setVitrineHeaderLayout('centered')
+                      void persistVitrineLayout({ headerLayout: 'centered' })
+                    }}
+                    className={`min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors inline-flex items-center gap-1.5 ${
+                      vitrineHeaderLayout === 'centered'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                    } ${!canCenteredHeader ? 'opacity-60' : ''}`}
+                  >
+                    Centralizado
+                    {!canCenteredHeader && <Lock size={14} aria-hidden />}
+                  </button>
+                </div>
+                {!canCenteredHeader && (
+                  <p className="text-[11px] text-muted mt-2 break-words">
+                    Header centralizado disponível a partir do plano Starter.{' '}
+                    <Link href="/admin/plano" className="text-primary underline">Ver planos</Link>
+                  </p>
+                )}
+              </div>
+
+              <label className="flex items-center gap-3 min-h-[44px] cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 rounded accent-primary shrink-0"
+                  checked={vitrineShowSearch}
+                  disabled={logoSaving}
+                  onChange={e => {
+                    setVitrineShowSearch(e.target.checked)
+                    void persistVitrineLayout({ showSearch: e.target.checked })
+                  }}
+                />
+                <span className="text-sm text-foreground break-words">Exibir barra de busca no catálogo</span>
+              </label>
+
+              {(supportsMobileGrid || nativeThreeCols) && (
+                <div>
+                  <p className="text-[11px] text-muted mb-2">Produtos por linha no celular</p>
+                  {nativeThreeCols ? (
+                    <p className="text-sm text-muted break-words">
+                      O tema atual já usa 3 colunas no mobile.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {([2, 3] as const).map(cols => (
+                          <button
+                            key={cols}
+                            type="button"
+                            disabled={logoSaving || (cols === 3 && !canMobileGridOverride)}
+                            onClick={() => {
+                              setVitrineMobileGridCols(cols)
+                              void persistVitrineLayout({ mobileGridCols: cols })
+                            }}
+                            className={`min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors inline-flex items-center gap-1.5 ${
+                              (vitrineMobileGridCols ?? storeTheme.catalogColsMobile) === cols
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-surface2 text-muted hover:border-primary/40'
+                            } ${cols === 3 && !canMobileGridOverride ? 'opacity-60' : ''}`}
+                          >
+                            {cols} colunas
+                            {cols === 3 && !canMobileGridOverride && <Lock size={14} aria-hidden />}
+                          </button>
+                        ))}
+                      </div>
+                      {!canMobileGridOverride && (
+                        <p className="text-[11px] text-muted mt-2 break-words">
+                          3 colunas no mobile disponível a partir do plano Starter.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </ConfigCard>
@@ -1045,7 +1299,7 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
         )}
 
         {activeSection === 'config-vi' && (
-          <div className="lg:hidden">{renderViPanel()}</div>
+          <div className={isEmbedded ? '' : 'lg:hidden'}>{renderViPanel()}</div>
         )}
 
         {activeSection === 'config-conta' && (
@@ -1109,9 +1363,11 @@ export default function ConfigForm({ store, viStats, checkoutEligible, checkoutL
         )}
         </div>
 
-        <div className="hidden lg:block lg:col-span-4 min-w-0">
-          {renderViPanel()}
-        </div>
+        {!isEmbedded && (
+          <div className="hidden lg:block lg:col-span-4 min-w-0">
+            {renderViPanel()}
+          </div>
+        )}
       </div>
 
       <ConfigSaveBar

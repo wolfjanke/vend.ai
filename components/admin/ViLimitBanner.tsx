@@ -10,7 +10,7 @@ export default function ViLimitBanner({ percent }: { percent: number }) {
         <AlertTriangle size={16} className="shrink-0 text-warm mt-0.5" aria-hidden />
         <span>
           Você usou <strong>{percent}%</strong> das mensagens do Assistente IA este mês.{' '}
-          <Link href="/admin/configuracoes" className="text-primary underline">
+          <Link href="/admin/loja?secao=vi" className="text-primary underline">
             Ver uso detalhado
           </Link>
           {' · '}

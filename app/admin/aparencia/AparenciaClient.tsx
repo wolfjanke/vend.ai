@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Camera, Image } from 'lucide-react'
+import { Image, Sparkles } from 'lucide-react'
 import {
   THEMES,
   THEME_NAMES,
@@ -14,7 +14,7 @@ import {
   type ThemeName,
 } from '@/lib/themes'
 import type { PlanSlug } from '@/lib/plans'
-import type { CustomCategory } from '@/types'
+import type { CustomCategory, StoreSettings } from '@/types'
 import StoreThemePreview from '@/components/admin/StoreThemePreview'
 import ColorHelpButton from '@/components/admin/ColorHelpButton'
 import ThemeSuggestionCards from '@/components/admin/ThemeSuggestionCards'
@@ -31,7 +31,6 @@ type Initial = {
   theme_accent_color:    string | null
   theme_background:      ThemeBackground
   theme_shimmer:         boolean
-  theme_logo_url:        string | null
 }
 
 type Props = {
@@ -44,6 +43,10 @@ type Props = {
   tagline?:       string | null
   categoryNavStyle?: 'pills' | 'circles'
   customCategories?: CustomCategory[]
+  vitrineSettings?:  Pick<
+    StoreSettings,
+    'headerLayout' | 'logoShape' | 'brandDisplay' | 'showSearch' | 'logoSize' | 'mobileGridCols'
+  >
   initial:        Initial
 }
 
@@ -201,6 +204,7 @@ export default function AparenciaClient({
   tagline,
   categoryNavStyle = 'pills',
   customCategories = [],
+  vitrineSettings = {},
   initial,
 }: Props) {
   const available  = getAvailableThemes(plan)
@@ -215,8 +219,6 @@ export default function AparenciaClient({
   const [accent,  setAccent]  = useState(initial.theme_accent_color  || themeDef.defaultColors.accent)
   const [background, setBackground] = useState<ThemeBackground>(initial.theme_background)
   const [shimmer,   setShimmer]   = useState(initial.theme_shimmer)
-  const [logoUrl,   setLogoUrl]   = useState<string | null>(initial.theme_logo_url)
-  const [fileName,  setFileName]  = useState<string | null>(null)
 
   const [saving,  setSaving]  = useState(false)
   const [message, setMessage] = useState('')
@@ -231,29 +233,7 @@ export default function AparenciaClient({
   const [analyzePhase, setAnalyzePhase] = useState(0)
   const [suggestions,  setSuggestions]  = useState<ThemeAnalysisSuggestion[]>([])
   const [logoHarmony,    setLogoHarmony]  = useState<LogoBackgroundAnalysis | null>(null)
-  const [uploadConfigured, setUploadConfigured] = useState<boolean | null>(null)
   const [highlightedColor, setHighlightedColor] = useState<'primary' | 'accent' | null>(null)
-
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const showLogoSection = canAnalyze && uploadConfigured === true
-
-  useEffect(() => {
-    if (!canAnalyze) {
-      setUploadConfigured(false)
-      return
-    }
-    let cancelled = false
-    fetch('/api/upload/status')
-      .then(res => res.json())
-      .then((data: { configured?: boolean }) => {
-        if (!cancelled) setUploadConfigured(Boolean(data.configured))
-      })
-      .catch(() => {
-        if (!cancelled) setUploadConfigured(false)
-      })
-    return () => { cancelled = true }
-  }, [canAnalyze])
 
   useEffect(() => {
     if (!analyzing) {
@@ -272,7 +252,7 @@ export default function AparenciaClient({
   // Debounce de 300ms nos inputs hex para não recalcular preview a cada tecla
   const previewPrimary = useDebounce(primary, 300)
   const previewAccent  = useDebounce(accent,  300)
-  const previewLogo = logoUrl ?? storeLogoUrl
+  const previewLogo = storeLogoUrl
 
   const pageBgHex =
     background === 'dark'
@@ -314,10 +294,18 @@ export default function AparenciaClient({
     categoryNavStyle,
     customCategories,
     highlightedColor,
+    plan,
+    storeSlug:       slug,
+    headerLayout:    vitrineSettings.headerLayout,
+    logoShape:       vitrineSettings.logoShape,
+    brandDisplay:    vitrineSettings.brandDisplay,
+    showSearch:      vitrineSettings.showSearch,
+    logoSize:        vitrineSettings.logoSize,
+    mobileGridCols:  vitrineSettings.mobileGridCols,
   }), [
     themeName, previewPrimary, previewAccent, background, shimmer, canShimmer,
     storeName, previewLogo, products, assistantName, tagline, categoryNavStyle,
-    customCategories, highlightedColor,
+    customCategories, highlightedColor, plan, slug, vitrineSettings,
   ])
 
   const segmentOptions = useMemo(() => {
@@ -360,47 +348,15 @@ export default function AparenciaClient({
     setAnalyzeOpen(false)
   }
 
-  async function handleLogoUpload(file: File) {
-    const fd = new FormData()
-    fd.append('file', file)
-    const res  = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json() as { url?: string; error?: string }
-    if (!res.ok) {
-      // Erro de configuração do servidor — não expor ao lojista
-      if (data.error === 'cloudinary_not_configured' || res.status === 503) {
-        throw new Error('upload_config_error')
-      }
-      throw new Error(data.error ?? 'Falha no upload')
-    }
-    setLogoUrl(data.url!)
-    return data.url!
-  }
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
-    if (!f) return
-    setFileName(f.name)
-    setError('')
-    try {
-      await handleLogoUpload(f)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Upload falhou'
-      if (msg === 'upload_config_error') {
-        // Erro de configuração: mostrar só no console, nunca para o lojista
-        console.warn('[upload] Cloudinary não configurado no servidor.')
-        setError('Upload temporariamente indisponível. Tente novamente mais tarde.')
-      } else {
-        setError(msg)
-      }
-    }
-  }
-
   async function runAnalyze() {
-    if (!logoUrl) { setError('Envie um logo antes de analisar.'); return }
+    if (!storeLogoUrl) {
+      setError('Cadastre a logo em Identidade antes de analisar.')
+      return
+    }
     setAnalyzing(true)
     setError('')
     try {
-      const imgRes = await fetch(logoUrl)
+      const imgRes = await fetch(storeLogoUrl)
       const blob   = await imgRes.blob()
       const b64    = await new Promise<string>((resolve, reject) => {
         const r = new FileReader()
@@ -444,7 +400,6 @@ export default function AparenciaClient({
           theme_accent_color:  accent,
           theme_background:      background,
           theme_shimmer:         canShimmer ? shimmer : false,
-          theme_logo_url:        logoUrl,
           theme_onboarding_done: true,
         }),
       })
@@ -689,44 +644,37 @@ export default function AparenciaClient({
 
         </section>
 
-        {/* ── Logo & IA — plano pago + Cloudinary configurado no servidor ── */}
-        {showLogoSection ? (
-          <section className={`${adminCard} space-y-2`}>
+        {/* ── Logo & IA — usa a logo cadastrada em Identidade ── */}
+        {canAnalyze ? (
+          <section className={`${adminCard} space-y-3`}>
             <h2 className="font-syne font-bold text-sm uppercase tracking-wide text-muted">Logo & IA</h2>
-            <p className="text-xs text-muted break-words rounded-lg border border-border bg-surface2/80 px-3 py-2">
-              A logo principal da loja (WhatsApp e compartilhamentos) fica em{' '}
-              <Link href="/admin/configuracoes" className="text-primary underline">
-                Configurações
+            <p className="text-xs text-muted break-words">
+              A IA usa a logo cadastrada em{' '}
+              <Link href="/admin/loja?secao=identidade" className="text-primary underline">
+                Identidade
               </Link>
-              . Aqui você envia uma versão para análise de tema e preview.
+              {' '}para sugerir cores e tema.
             </p>
 
-            {/* Input de arquivo customizado */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={e => e.key === 'Enter' && fileInputRef.current?.click()}
-              className="flex items-center gap-3 p-3 bg-surface2 border border-dashed border-border rounded-xl cursor-pointer hover:border-primary/60 transition-colors min-h-[44px]"
-            >
-              <Camera size={24} className="shrink-0 text-muted" aria-hidden />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">
-                  {fileName ?? 'Clique para escolher a logo'}
-                </div>
-                <div className="text-xs text-muted">PNG, JPG ou SVG — recomendado 200×200 px</div>
+            {storeLogoUrl ? (
+              <div className="flex items-center gap-3 p-3 bg-surface2 border border-border rounded-xl min-w-0">
+                <img
+                  src={storeLogoUrl}
+                  alt="Logo da loja"
+                  className="h-12 w-12 shrink-0 object-contain rounded"
+                />
+                <p className="text-xs text-muted break-words min-w-0">
+                  Preview da logo atual. Para trocar, edite em Identidade.
+                </p>
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </div>
-
-            {logoUrl && (
-              <img src={logoUrl} alt="Logo atual" className="h-12 w-auto max-w-full object-contain rounded" />
+            ) : (
+              <p className="text-xs text-muted break-words rounded-lg border border-dashed border-border bg-surface2/80 px-3 py-3">
+                Nenhuma logo cadastrada.{' '}
+                <Link href="/admin/loja?secao=identidade" className="text-primary underline">
+                  Envie em Identidade
+                </Link>
+                {' '}para habilitar a análise com IA.
+              </p>
             )}
 
             {analyzing && !analyzeOpen && (
@@ -736,20 +684,21 @@ export default function AparenciaClient({
             <button
               type="button"
               onClick={() => setAnalyzeOpen(true)}
-              disabled={!logoUrl || analyzing}
-              className="w-full min-h-[44px] rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10 disabled:opacity-50"
+              disabled={!storeLogoUrl || analyzing}
+              className="w-full min-h-[44px] rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/10 disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
+              <Sparkles size={16} className="shrink-0" aria-hidden />
               {analyzing ? 'Analisando seu logo…' : 'Analisar com IA'}
             </button>
           </section>
-        ) : !canAnalyze ? (
+        ) : (
           <div className={adminCard}>
             <div className="flex items-center gap-2 text-sm text-muted">
               <Image size={16} className="shrink-0" aria-hidden />
-              <span>Upload de logo disponível nos planos pagos</span>
+              <span>Análise de tema com IA disponível nos planos pagos</span>
             </div>
           </div>
-        ) : null}
+        )}
 
         {suggestions.length > 0 && (
           <ThemeSuggestionCards suggestions={suggestions} onApply={applySuggestion} />
@@ -806,7 +755,11 @@ export default function AparenciaClient({
 
       {/* ── Preview ao vivo ── props memoizadas para evitar re-render desnecessário */}
       <div className="lg:col-span-3 min-w-0 sticky top-20 self-start">
-        <p className="text-xs text-muted mb-2">Preview ao vivo</p>
+        <p className="text-xs text-muted mb-1">Preview ao vivo</p>
+        <p className="text-[11px] text-muted mb-2 break-words">
+          Header, busca e grid refletem as opções em{' '}
+          <Link href="/admin/loja?secao=identidade" className="text-primary underline">Identidade</Link>.
+        </p>
         <StoreThemePreview {...previewProps} />
       </div>
 

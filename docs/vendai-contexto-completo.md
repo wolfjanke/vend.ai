@@ -172,8 +172,10 @@ lib/checkout/marketing-pricing.ts
 lib/banners.ts                  # Banners + roadmap imagem
 lib/banner-ai.ts                # Geração texto Vi
 components/landing/*            # Hero, plans, sticky CTA
-lib/vi-readiness.ts            # Score catálogo / Vi pronta
-app/admin/marketing/            # Painel marketing
+lib/vi-readiness.ts             # Score catálogo / Vi pronta
+lib/admin-loja-sections.ts      # Abas Minha loja
+app/admin/loja/                 # Minha loja (unificado)
+app/admin/marketing/            # Redirect → loja?secao=promocoes
 ```
 
 ---

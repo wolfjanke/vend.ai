@@ -1,13 +1,13 @@
 'use client'
 
 import { Shirt } from 'lucide-react'
-import BrandLogo from '@/components/BrandLogo'
 
 /** Prévia compacta da vitrine no hero — visível só abaixo de `lg`. */
 export default function LandingHeroMobile() {
   const cards = [
-    { name: 'Saia', price: 'R$109' },
-    { name: 'Camiseta', price: 'R$79' },
+    { name: 'Tênis', price: 'R$129' },
+    { name: 'Saia', price: 'R$89' },
+    { name: 'Bolsa', price: 'R$149' },
   ]
 
   return (
@@ -18,16 +18,23 @@ export default function LandingHeroMobile() {
     >
       <div className="w-full max-w-[280px] bg-surface border border-border rounded-[28px] p-3 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
         <div className="bg-surface2 rounded-[20px] p-3 overflow-hidden">
-          <div className="flex justify-between items-center gap-2 mb-3 min-w-0">
-            <BrandLogo size="xs" href={null} />
-            <span className="text-[10px] text-muted truncate">Urban Mix</span>
+          <div className="text-center mb-3 min-w-0">
+            <div className="w-14 h-14 mx-auto rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm mb-2">
+              SM
+            </div>
+            <div className="text-xs font-semibold text-foreground truncate px-2">Sua Marca Store</div>
+            <div className="text-[10px] text-muted truncate px-2 mt-0.5">Qualidade que você confia</div>
           </div>
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="h-8 rounded-xl bg-surface border border-border mb-3 flex items-center px-3 gap-2 min-w-0">
+            <span className="text-muted text-[10px]" aria-hidden>⌕</span>
+            <span className="text-[10px] text-muted truncate">Buscar produtos…</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 mb-3 min-w-0">
             {cards.map(({ name, price }) => (
-              <div key={name} className="bg-surface rounded-[10px] p-2 border border-border text-center min-w-0">
-                <Shirt size={20} className="text-muted mx-auto mb-0.5 shrink-0" aria-hidden />
-                <div className="text-[10px] text-foreground truncate">{name}</div>
-                <div className="text-accent text-[11px] font-bold tabular-nums">{price}</div>
+              <div key={name} className="bg-surface rounded-[10px] p-1.5 border border-border text-center min-w-0">
+                <Shirt size={16} className="text-muted mx-auto mb-0.5 shrink-0" aria-hidden />
+                <div className="text-[9px] text-foreground truncate">{name}</div>
+                <div className="text-accent text-[10px] font-bold tabular-nums">{price}</div>
               </div>
             ))}
           </div>
