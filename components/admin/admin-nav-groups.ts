@@ -48,8 +48,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { label: 'Dashboard',   href: '/admin/dashboard',    Icon: LayoutDashboard, match: 'exact' },
       { label: 'Pedidos',     href: '/admin/pedidos',      Icon: ShoppingBag,     match: 'prefix' },
       { label: 'PDV',         href: '/admin/pdv',          Icon: Monitor,         match: 'prefix', planOnly: 'loja' },
-      { label: 'Assistente IA este mês', href: '/admin/loja?secao=vi', Icon: Bot, match: 'prefix' },
-      { label: 'Plano',       href: '/admin/plano',        Icon: Crown,           match: 'exact' },
+      { label: 'Assistente de IA', href: '/admin/loja?secao=vi', Icon: Bot, match: 'prefix' },
     ],
   },
   {
