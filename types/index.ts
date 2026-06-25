@@ -563,6 +563,66 @@ export function stockKeysForAxes(
   return [...preset, ...extra]
 }
 
+/** Ordena chaves de estoque do menor para o maior (roupa, numérico, volume). */
+export function sortStockKeys(
+  keys: string[],
+  opts?: { stockAxis?: StockAxis; stock?: Record<string, number> | null },
+): string[] {
+  const unique = [...new Set(keys)]
+  if (opts?.stockAxis) {
+    const ordered = stockKeysForAxes(
+      opts.stockAxis,
+      opts.stock ?? Object.fromEntries(unique.map(k => [k, 1])),
+    )
+    const rank = new Map(ordered.map((k, i) => [k, i]))
+    return unique.sort((a, b) => {
+      const ra = rank.get(a) ?? 9999
+      const rb = rank.get(b) ?? 9999
+      if (ra !== rb) return ra - rb
+      return a.localeCompare(b, 'pt-BR')
+    })
+  }
+
+  const rank = (key: string): number => {
+    const k = String(key ?? '').trim()
+    const clothingIdx = CLOTHING_SIZES.indexOf(k)
+    if (clothingIdx >= 0) return clothingIdx
+
+    const numericIdx = NUMERIC_SIZES.indexOf(k)
+    if (numericIdx >= 0) return 100 + numericIdx
+
+    const volIdx = VOLUME_PRESETS.indexOf(k)
+    if (volIdx >= 0) return 200 + volIdx
+
+    const volMatch = k.match(/(\d+)\s*ml/i)
+    if (volMatch) return 250 + Number(volMatch[1])
+
+    const numOnly = k.match(/^(\d+)$/)
+    if (numOnly) return 100 + Number(numOnly[1])
+
+    if (k === 'Único') return 9000
+    return 5000
+  }
+
+  return unique.sort((a, b) => {
+    const ra = rank(a)
+    const rb = rank(b)
+    if (ra !== rb) return ra - rb
+    return a.localeCompare(b, 'pt-BR')
+  })
+}
+
+/** Chaves de stock com quantidade > 0, ordenadas do menor para o maior. */
+export function availableStockKeys(
+  stock: Record<string, number> | null | undefined,
+  opts?: { stockAxis?: StockAxis },
+): string[] {
+  const keys = Object.entries(stock ?? {})
+    .filter(([, q]) => Number(q) > 0)
+    .map(([k]) => k)
+  return sortStockKeys(keys, { stockAxis: opts?.stockAxis, stock })
+}
+
 export function isVolumeStockKey(key: string): boolean {
   return VOLUME_KEY_PATTERN.test(String(key ?? '').trim())
 }

@@ -24,7 +24,7 @@ function PickerContent({
   const variants = product.variants_json ?? []
   const [colorIdx, setColorIdx] = useState(0)
   const selected = variants[colorIdx] ?? variants[0]
-  const sizes = selected ? stockKeysWithQty(selected) : []
+  const sizes = selected ? stockKeysWithQty(selected, product) : []
 
   useEffect(() => {
     setColorIdx(0)

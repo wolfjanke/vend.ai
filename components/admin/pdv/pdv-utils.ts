@@ -1,16 +1,15 @@
 import type { Product, ProductVariant } from '@/types'
+import { availableStockKeys } from '@/types'
+import { getCatalogAxes } from '@/lib/catalog-axes'
 import { getVariantPhotoUrl } from '@/lib/product-media'
 
 export function formatPdvCurrency(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export function stockKeysWithQty(v: ProductVariant): string[] {
-  return Object.entries(v.stock ?? {})
-    .filter(([, q]) => Number(q) > 0)
-    .map(([k]) => k)
+export function stockKeysWithQty(v: ProductVariant, product: Product): string[] {
+  return availableStockKeys(v.stock, { stockAxis: getCatalogAxes(product).stockAxis })
 }
-
 export function getProductThumbUrl(product: Product): string | null {
   for (const v of product.variants_json ?? []) {
     const url = getVariantPhotoUrl(v)

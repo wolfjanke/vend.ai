@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { Image, Sparkles } from 'lucide-react'
 import {
@@ -234,6 +235,25 @@ export default function AparenciaClient({
   const [suggestions,  setSuggestions]  = useState<ThemeAnalysisSuggestion[]>([])
   const [logoHarmony,    setLogoHarmony]  = useState<LogoBackgroundAnalysis | null>(null)
   const [highlightedColor, setHighlightedColor] = useState<'primary' | 'accent' | null>(null)
+  const [portalMounted, setPortalMounted] = useState(false)
+
+  useEffect(() => {
+    setPortalMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!analyzeOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !analyzing) setAnalyzeOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [analyzeOpen, analyzing])
 
   useEffect(() => {
     if (!analyzing) {
@@ -763,56 +783,62 @@ export default function AparenciaClient({
         <StoreThemePreview {...previewProps} />
       </div>
 
-      {/* ── Modal IA ── */}
-      {analyzeOpen && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-bg/80"
-            aria-label="Fechar"
-            disabled={analyzing}
-            onClick={() => !analyzing && setAnalyzeOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-md max-w-[calc(100vw-16px)] max-h-[calc(100dvh-32px)] overflow-y-auto rounded-2xl bg-surface border border-border p-4 space-y-3">
-            <h3 className="font-syne font-bold text-lg">Contexto da loja</h3>
-            {analyzing ? (
-              <AnalyzeAiFeedback phase={analyzePhase} />
-            ) : (
-              <p className="text-xs text-muted break-words">
-                Toque em uma sugestão ou personalize no campo abaixo.
-              </p>
-            )}
-            <div className={analyzing ? 'opacity-50 pointer-events-none space-y-3' : 'space-y-3'}>
-            <ContextField
-              label="Segmento"
-              value={segment}
-              onChange={setSegment}
-              suggestions={STORE_CONTEXT_SUGGESTIONS.segment}
-            />
-            <ContextField
-              label="Público"
-              value={audience}
-              onChange={setAudience}
-              suggestions={STORE_CONTEXT_SUGGESTIONS.audience}
-            />
-            <ContextField
-              label="Personalidade"
-              value={personality}
-              onChange={setPersonality}
-              suggestions={STORE_CONTEXT_SUGGESTIONS.personality}
-            />
-            </div>
-            <button
-              type="button"
-              onClick={runAnalyze}
-              disabled={analyzing}
-              className="w-full min-h-[44px] rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-70"
+      {portalMounted && analyzeOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-bg/80 backdrop-blur-[2px] overscroll-none"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="analyze-ai-dialog-title"
+              onClick={() => !analyzing && setAnalyzeOpen(false)}
             >
-              {analyzing ? 'Aguarde a análise…' : 'Gerar sugestões'}
-            </button>
-          </div>
-        </div>
-      )}
+              <div
+                className="relative z-10 w-full max-w-md max-w-[calc(100vw-16px)] max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-bottom,0px)))] overflow-y-auto overscroll-contain rounded-2xl bg-surface border border-border p-4 space-y-3 shadow-xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 id="analyze-ai-dialog-title" className="font-syne font-bold text-lg">
+                  Contexto da loja
+                </h3>
+                {analyzing ? (
+                  <AnalyzeAiFeedback phase={analyzePhase} />
+                ) : (
+                  <p className="text-xs text-muted break-words">
+                    Toque em uma sugestão ou personalize no campo abaixo.
+                  </p>
+                )}
+                <div className={analyzing ? 'opacity-50 pointer-events-none space-y-3' : 'space-y-3'}>
+                  <ContextField
+                    label="Segmento"
+                    value={segment}
+                    onChange={setSegment}
+                    suggestions={STORE_CONTEXT_SUGGESTIONS.segment}
+                  />
+                  <ContextField
+                    label="Público"
+                    value={audience}
+                    onChange={setAudience}
+                    suggestions={STORE_CONTEXT_SUGGESTIONS.audience}
+                  />
+                  <ContextField
+                    label="Personalidade"
+                    value={personality}
+                    onChange={setPersonality}
+                    suggestions={STORE_CONTEXT_SUGGESTIONS.personality}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={runAnalyze}
+                  disabled={analyzing}
+                  className="w-full min-h-[44px] rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-70"
+                >
+                  {analyzing ? 'Aguarde a análise…' : 'Gerar sugestões'}
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

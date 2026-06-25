@@ -53,6 +53,8 @@ export function quoteDelivery(input: DeliveryQuoteInput): DeliveryQuote {
   const zones = input.settings?.deliveryZones ?? []
   const freeMin = input.settings?.freeShippingMin
   const base = Math.max(0, Number(input.subtotalAfterCoupon.toFixed(2)))
+  const cidade = String(input.cidade ?? '').trim()
+  const uf = String(input.uf ?? '').trim().toUpperCase().slice(0, 2)
 
   if (!zones.length) {
     const free =
@@ -65,7 +67,12 @@ export function quoteDelivery(input: DeliveryQuoteInput): DeliveryQuote {
     }
   }
 
-  const zone = findDeliveryZone(input.cidade, input.uf, zones)
+  // Endereço incompleto: entrega é opcional no checkout — não bloquear como fora da zona.
+  if (!cidade || uf.length !== 2) {
+    return { fee: 0, freeShipping: false, zoneMatched: false, outOfZone: false }
+  }
+
+  const zone = findDeliveryZone(cidade, uf, zones)
   if (!zone) {
     return { fee: 0, freeShipping: false, zoneMatched: false, outOfZone: true }
   }

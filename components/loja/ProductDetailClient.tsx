@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { Product } from '@/types'
-import { getCategoryDisplayLabel } from '@/types'
+import { getCategoryDisplayLabel, availableStockKeys } from '@/types'
 import ProductPlaceholder from '@/components/loja/ProductPlaceholder'
 import { useLoja } from '@/components/loja/LojaContext'
 import { findSimilarInStock, soldOutMessage } from '@/lib/vi-triggers'
@@ -22,14 +22,14 @@ export default function ProductDetailClient({ product }: Props) {
   const [size, setSize] = useState<string | null>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
 
+  const catalogAxes = getCatalogAxes(product)
+  const axisLabels = getAxisLabels(catalogAxes)
   const variant = product.variants_json[variantIdx]
   const allSizes = variant
-    ? Object.entries(variant.stock).filter(([, q]) => Number(q) > 0).map(([s]) => s)
+    ? availableStockKeys(variant.stock, { stockAxis: catalogAxes.stockAxis })
     : []
   const isSoldOut = !variant || Object.values(variant.stock).every(q => Number(q) === 0)
   const effectiveSize = size ?? (allSizes.length === 1 ? allSizes[0] : null)
-  const catalogAxes = getCatalogAxes(product)
-  const axisLabels = getAxisLabels(catalogAxes)
   const priceRange = resolveProductDisplayPriceRange(product)
   const price = effectiveSize && variant
     ? resolveSkuUnitPrice(product, variant, effectiveSize)

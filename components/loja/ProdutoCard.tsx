@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { Product, CartItem, CustomCategory } from '@/types'
-import { getCategoryDisplayLabel } from '@/types'
+import { getCategoryDisplayLabel, availableStockKeys } from '@/types'
 import type { StoreThemeConfig } from '@/lib/themes'
 import { getTheme, themeToCardConfig } from '@/lib/themes'
 import { getVariantPhotoUrl } from '@/lib/product-media'
@@ -128,13 +128,15 @@ export default function ProdutoCard({
     setLightboxIndex(0)
   }, [selectedVariantIdx, product.id])
 
+  const catalogAxes = getCatalogAxes(product)
+  const axisLabels = getAxisLabels(catalogAxes)
   const variant  = product.variants_json[selectedVariantIdx]
   const variantPhotoUrl = getVariantPhotoUrl(variant)
   const variantPhotos = (variant?.photos ?? []).filter(
     (u): u is string => typeof u === 'string' && u.trim().length > 0,
   )
   const allSizes = variant
-    ? Object.entries(variant.stock).filter(([, q]) => Number(q) > 0).map(([s]) => s)
+    ? availableStockKeys(variant.stock, { stockAxis: catalogAxes.stockAxis })
     : []
 
   const variantTotalStock = variant
@@ -151,8 +153,6 @@ export default function ProdutoCard({
   // Se só há um tamanho, ele é considerado implicitamente selecionado.
   const effectiveSize = selectedSize ?? (allSizes.length === 1 ? allSizes[0] : null)
   const canAdd = !isSoldOut && !!variant && !!effectiveSize
-  const catalogAxes = getCatalogAxes(product)
-  const axisLabels = getAxisLabels(catalogAxes)
   const showPrimary = shouldShowPrimarySelector(product)
   const showSecondary = shouldShowSecondarySelector(product) && allSizes.length > 0
   const priceRange = resolveProductDisplayPriceRange(product)
