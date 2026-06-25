@@ -261,7 +261,7 @@ export default function StoreThemePreview({
         </div>
       )}
 
-      <div className={`px-3 min-w-0 ${showSearch ? 'pt-2 pb-2' : 'py-2'}`}>
+      <div className={`px-4 min-w-0 ${showSearch ? 'pt-2 pb-2' : 'py-2'}`}>
         <CategoryFilterBar
           filters={chipFilters}
           activeValue={chipFilters[1]?.value ?? chipFilters[0]?.value ?? ''}

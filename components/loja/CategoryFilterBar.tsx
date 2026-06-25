@@ -67,13 +67,15 @@ export default function CategoryFilterBar({
 
   const scrollWrap = isCircles ? 'category-nav-circles-scroll' : 'category-nav-pills-scroll'
 
+  const pillTrack = 'category-nav-pills-track flex gap-2 w-max min-w-full'
+
   return (
     <div className={`min-w-0 w-full ${scrollWrap}`} ref={scrollRef}>
       <div
         className={
           isCircles
             ? 'category-nav-circles-track'
-            : 'flex gap-2 w-max min-w-full'
+            : pillTrack
         }
         role="tablist"
         aria-label="Filtrar por categoria"

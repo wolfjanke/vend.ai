@@ -512,9 +512,6 @@ html.js .reveal-none.is-visible {
   .store-theme-root .filter-chip.active {
     transform: none;
   }
-  .store-theme-root .category-nav-circle.active {
-    transform: none;
-  }
 }
 
 .store-theme-root .category-nav-pills-scroll,
@@ -525,10 +522,24 @@ html.js .reveal-none.is-visible {
   padding-right: 1rem;
   overflow-x: auto;
   overflow-y: hidden;
+  scroll-padding-inline: 1rem;
+  scroll-padding-inline-end: max(1rem, env(safe-area-inset-right, 0px));
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
+}
+
+.store-theme-root .category-nav-circles-scroll {
+  /* scale/box-shadow nos círculos ativos não podem ser cortados no topo */
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+.store-theme-root .category-nav-pills-scroll {
+  /* ring + scale leve nos chips ativos */
+  padding-top: 0.125rem;
+  padding-bottom: 0.25rem;
 }
 .store-theme-root .category-nav-pills-scroll::-webkit-scrollbar,
 .store-theme-root .category-nav-circles-scroll::-webkit-scrollbar {
@@ -550,6 +561,12 @@ html.js .reveal-none.is-visible {
   width: max-content;
   min-width: 100%;
   padding-bottom: 0.25rem;
+  padding-inline-end: max(0.75rem, env(safe-area-inset-right, 0px));
+  align-items: flex-start;
+}
+
+.store-theme-root .category-nav-pills-track {
+  padding-inline-end: max(0.75rem, env(safe-area-inset-right, 0px));
 }
 
 .store-theme-root .category-nav-circle-item {
@@ -578,13 +595,13 @@ html.js .reveal-none.is-visible {
 
 .store-theme-root .category-nav-circle.active {
   border-color: var(--theme-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  transform: scale(1.05);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--theme-primary) 40%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .store-theme-root .category-nav-circle-item:hover .category-nav-circle:not(.active) {
   border-color: var(--theme-primary-border);
-  transform: scale(1.03);
 }
 
 .store-theme-root .category-nav-circle-label {
