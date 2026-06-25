@@ -5,6 +5,8 @@ import type { Product, ProductVariant } from '@/types'
 export type StorePublicRow = Record<string, unknown>
 
 const QUERY_TIMEOUT_MS = 12_000
+/** Catálogo traz `variants_json` com fotos — lojas com payload grande + cold start Neon podem passar de 12s. */
+const PRODUCTS_QUERY_TIMEOUT_MS = 30_000
 
 async function withQueryTimeout<T>(
   promise: Promise<T>,
@@ -82,6 +84,7 @@ function fetchActiveProducts(storeId: string): Promise<Product[]> {
     ORDER BY created_at DESC
   ` as Promise<Product[]>,
     `fetchActiveProducts(${storeId})`,
+    PRODUCTS_QUERY_TIMEOUT_MS,
   )
 }
 

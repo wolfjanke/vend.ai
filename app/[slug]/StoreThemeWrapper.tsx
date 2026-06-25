@@ -31,6 +31,7 @@ export default async function StoreThemeWrapper({ slug, children }: Props) {
           data-card-hover={resolved.cardTheme.cardHover}
           data-catalog-layout={resolved.cardTheme.catalogLayout}
           data-catalog-cols-mobile={resolved.catalogColsMobile}
+          data-shadow-style={resolved.theme.shadowStyle}
         >
           {children}
         </div>

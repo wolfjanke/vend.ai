@@ -4,10 +4,11 @@ import { useEffect, useRef } from 'react'
 import { generateThemeCss } from '@/lib/theme-css'
 import { getGoogleFontsUrl } from '@/lib/theme-fonts'
 import type { CustomCategory } from '@/types'
-import { previewChipFilters, type StorePreviewProduct } from '@/lib/preview-products'
-import { getTheme, themeToCardConfig, type ThemeBackground, type ThemeName } from '@/lib/themes'
+import { getPreviewProductLimit, previewChipFilters, toMockProductForPreview, type StorePreviewProduct } from '@/lib/preview-products'
+import { getTheme, themeToCardConfig, type ThemeBackground, type ThemeName, type StoreThemeConfig } from '@/lib/themes'
 import CategoryFilterBar from '@/components/loja/CategoryFilterBar'
 import LojaBrand from '@/components/loja/LojaBrand'
+import VitrineProductCard from '@/components/loja/VitrineProductCard'
 import { normalizeLogoSize, type LogoSize } from '@/lib/store-logo'
 import {
   normalizeBrandDisplay,
@@ -45,8 +46,74 @@ type Props = {
   storeSlug?:         string
 }
 
-function formatPrice(value: number): string {
-  return `R$${value.toFixed(2).replace('.', ',')}`
+function PreviewCatalogCards({
+  products,
+  card,
+  gridClass,
+}: {
+  products: StorePreviewProduct[]
+  card:     StoreThemeConfig
+  gridClass: string
+}) {
+  const isList = card.catalogLayout === 'list'
+  const isStrip = card.catalogLayout === 'strip'
+
+  if (isStrip) {
+    return (
+      <div className={`${gridClass} px-3 pb-2`}>
+        {products.map((p, i) => {
+          const product = toMockProductForPreview(p, i, card)
+          const variant = product.variants_json[0]
+          return (
+            <div
+              key={product.id}
+              className="shrink-0 w-[42%] min-w-[100px] max-w-[140px] min-w-0 self-stretch"
+            >
+              <VitrineProductCard
+                product={product}
+                variant={variant}
+                effectivePrice={Number(product.promo_price ?? product.price)}
+                installmentText={null}
+                isSoldOut={false}
+                isLowStock={false}
+                cardTheme={card}
+                onOpenDetail={() => {}}
+              />
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`${gridClass} p-3`}>
+      {products.map((p, i) => {
+        const product = toMockProductForPreview(p, i, card)
+        const variant = product.variants_json[0]
+        return (
+          <div
+            key={product.id}
+            className={[
+              'min-w-0 flex flex-col self-stretch',
+              isList ? 'catalog-grid-list-item' : 'h-full',
+            ].join(' ')}
+          >
+            <VitrineProductCard
+              product={product}
+              variant={variant}
+              effectivePrice={Number(product.promo_price ?? product.price)}
+              installmentText={isList ? '3x sem juros' : null}
+              isSoldOut={false}
+              isLowStock={false}
+              cardTheme={card}
+              onOpenDetail={() => {}}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 function previewGridClass(layout: ReturnType<typeof themeToCardConfig>['catalogLayout']): string {
@@ -91,8 +158,9 @@ export default function StoreThemePreview({
   const theme = getTheme(themeName)
   const card = themeToCardConfig(theme, shimmer)
   const chipFilters = previewChipFilters(products, customCategories)
-  const displayProducts = products.length > 0 ? products.slice(0, 6) : []
-  const placeholders = displayProducts.length === 0 ? 3 : 0
+  const previewLimit = getPreviewProductLimit(themeName, plan, mobileGridColsProp)
+  const displayProducts = products.length > 0 ? products.slice(0, previewLimit) : []
+  const placeholders = displayProducts.length === 0 ? previewLimit : 0
   const navStyle = categoryNavStyle ?? theme.categoryNavDefault
 
   const hasLogo = Boolean(logoUrl?.trim())
@@ -179,6 +247,7 @@ export default function StoreThemePreview({
       data-card-hover={card.cardHover}
       data-catalog-layout={card.catalogLayout}
       data-catalog-cols-mobile={catalogColsMobile}
+      data-shadow-style={theme.shadowStyle}
       style={{ fontFamily: `var(--theme-font-body), sans-serif` }}
     >
       {previewHeader}
@@ -232,65 +301,12 @@ export default function StoreThemePreview({
             ))}
           </div>
         </div>
-      ) : card.catalogLayout === 'strip' ? (
-        <div className={`${gridClass} px-3 pb-2`}>
-          {displayProducts.map(p => (
-            <div
-              key={p.name}
-              className="produto-card overflow-hidden shrink-0 w-[42%] min-w-[100px] max-w-[140px]"
-              data-shimmer={shimmer ? 'true' : 'false'}
-              style={{ borderRadius: card.borderRadius }}
-            >
-              {p.photo ? (
-                <img src={p.photo} alt="" className="produto-card-media w-full object-cover" style={{ aspectRatio: card.aspectRatio }} />
-              ) : (
-                <div
-                  className="produto-card-media w-full"
-                  style={{
-                    aspectRatio: card.aspectRatio,
-                    background: `linear-gradient(145deg, var(--primary-dim), var(--accent-dim))`,
-                  }}
-                />
-              )}
-              <div className="card-info-below p-2 min-w-0">
-                <p className="produto-nome text-[10px] font-semibold truncate">{p.name}</p>
-                <p className="preview-price produto-preco text-[10px] tabular-nums">{formatPrice(p.price)}</p>
-              </div>
-            </div>
-          ))}
-        </div>
       ) : (
-        <div className={`${gridClass} p-3`}>
-          {displayProducts.map(p => (
-            <div
-              key={p.name}
-              className="produto-card overflow-hidden min-w-0"
-              data-shimmer={shimmer ? 'true' : 'false'}
-              style={{ borderRadius: card.borderRadius }}
-            >
-              {p.photo ? (
-                <img
-                  src={p.photo}
-                  alt=""
-                  className="produto-card-media w-full object-cover"
-                  style={{ aspectRatio: card.aspectRatio }}
-                />
-              ) : (
-                <div
-                  className="produto-card-media w-full"
-                  style={{
-                    aspectRatio: card.aspectRatio,
-                    background: `linear-gradient(145deg, var(--primary-dim), var(--accent-dim))`,
-                  }}
-                />
-              )}
-              <div className="card-info-below p-2 min-w-0">
-                <p className="produto-nome text-[10px] font-semibold truncate">{p.name}</p>
-                <p className="preview-price produto-preco text-[10px] tabular-nums">{formatPrice(p.price)}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <PreviewCatalogCards
+          products={displayProducts}
+          card={card}
+          gridClass={gridClass}
+        />
       )}
 
       <div

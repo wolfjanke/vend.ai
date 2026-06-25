@@ -1,6 +1,6 @@
-import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import {
   ShoppingCart,
   CheckCircle2,
@@ -15,8 +15,6 @@ import MetricCard from '@/components/admin/MetricCard'
 import PedidoCard from '@/components/admin/PedidoCard'
 import RecoveryCard from '@/components/admin/RecoveryCard'
 import RecoveryInfoModal from '@/components/admin/RecoveryInfoModal'
-import DashboardHashRedirect from '@/components/admin/DashboardHashRedirect'
-import ViReadinessCard from '@/components/admin/ViReadinessCard'
 import ViUsageCard from '@/components/admin/ViUsageCard'
 import ViLimitBanner from '@/components/admin/ViLimitBanner'
 import AdminPageError from '@/components/admin/AdminPageError'
@@ -27,6 +25,16 @@ import { formatPlanPrice } from '@/lib/plans'
 import { adminPage, adminHeader } from '@/lib/admin-ui'
 import type { Order, Product, StoreSettings, PlanSlug } from '@/types'
 import { assessStoreViReadiness } from '@/lib/vi-readiness'
+
+/** Só browser (hash / localStorage) — evita Invalid hook call no SSR dev. */
+const DashboardHashRedirect = dynamic(
+  () => import('@/components/admin/DashboardHashRedirect'),
+  { ssr: false },
+)
+const ViReadinessCard = dynamic(
+  () => import('@/components/admin/ViReadinessCard'),
+  { ssr: false },
+)
 
 function todayRange() {
   const start = new Date()
@@ -167,9 +175,7 @@ export default async function DashboardPage() {
 
   return (
     <div className={adminPage}>
-      <Suspense fallback={null}>
-        <DashboardHashRedirect />
-      </Suspense>
+      <DashboardHashRedirect />
       <div className={adminHeader}>
         <h1 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">
           {greeting()}, {store?.name ?? 'loja'}!

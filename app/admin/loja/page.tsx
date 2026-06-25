@@ -6,7 +6,7 @@ import type { Product, Store } from '@/types'
 import type { PlanSlug } from '@/lib/plans'
 import { getViUsageStats } from '@/lib/vi-limits'
 import { isCheckoutEnabledForStore, isCheckoutLaunchEnabled } from '@/lib/checkout-enabled'
-import { toStorePreviewProducts } from '@/lib/preview-products'
+import { PREVIEW_PRODUCT_MAX, toStorePreviewProducts } from '@/lib/preview-products'
 import { getStorePlanContext } from '@/lib/store-plan-access'
 import AdminPageError from '@/components/admin/AdminPageError'
 import LojaClient from './LojaClient'
@@ -43,7 +43,7 @@ export default async function MinhaLojaPage() {
       ORDER BY created_at DESC
       LIMIT 12
     `) as Product[]
-    previewProducts = toStorePreviewProducts(products, 4)
+    previewProducts = toStorePreviewProducts(products, PREVIEW_PRODUCT_MAX)
   } catch (e) {
     console.error('[admin/loja]', e)
     return (

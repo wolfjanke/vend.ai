@@ -746,12 +746,11 @@ html.js .reveal-none.is-visible {
   line-height: 1.2;
 }
 
-.store-theme-root[data-theme='social'] .vi-chat-fab,
 .store-theme-root[data-catalog-layout='grid-feed'] .vi-chat-fab {
   background: var(--theme-accent-gradient);
 }
 
-.store-theme-root[data-theme='street'] .vi-chat-fab {
+.store-theme-root[data-shadow-style='glow'] .vi-chat-fab {
   background: var(--theme-primary);
   box-shadow: 0 0 20px color-mix(in srgb, var(--theme-primary) 45%, transparent);
 }
