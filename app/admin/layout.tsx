@@ -1,5 +1,7 @@
 import { Globe } from 'lucide-react'
+import { redirect } from 'next/navigation'
 import { getSessionSafe } from '@/lib/auth'
+import { isAdminEmailVerified } from '@/lib/authenticate-admin'
 import { getAdminShellData } from '@/lib/admin-layout-data'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import MobileNav from '@/components/admin/MobileNav'
@@ -21,7 +23,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
 async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const session = await getSessionSafe()
-  if (!session?.storeId) return <AuthSessionProvider>{children}</AuthSessionProvider>
+  const sessionExpired = session && new Date(session.expires) <= new Date()
+  if (!session?.storeId || sessionExpired) {
+    return <AuthSessionProvider>{children}</AuthSessionProvider>
+  }
+
+  if (session.user?.id && session.user.email) {
+    const verified = await isAdminEmailVerified(session.user.id)
+    if (!verified) {
+      redirect(`/verificar-email/aguardando?email=${encodeURIComponent(session.user.email)}`)
+    }
+  }
 
   let store: { name: string; slug: string; plan?: string; isDemo?: boolean } | undefined
   let newOrdersCount = 0

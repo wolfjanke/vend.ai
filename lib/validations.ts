@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { normalizeEmail } from '@/lib/email-normalize'
+import { passwordSchema } from '@/lib/password-policy'
 import { digitsOnly, isValidBrazilPhoneDigits, isValidCpf, isValidCnpj } from '@/lib/masks'
 import { MAX_PAYMENT_LINKS } from '@/lib/payment-links'
 import { stripEmojis } from '@/lib/strip-emoji'
@@ -41,8 +43,8 @@ const themeNameRegister = z.enum([
 
 export const registerSchema = z.object({
   ownerName: noEmoji(1, 200),
-  email:     z.string().email('E-mail inválido'),
-  password:  z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
+  email:     z.string().email('E-mail inválido').transform(normalizeEmail),
+  password:  passwordSchema,
   storeName: noEmoji(1, 200),
   whatsapp:  phoneDigits,
   termsAccepted: z.literal(true, { message: 'Aceite os termos de uso para continuar' }),

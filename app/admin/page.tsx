@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import Link from 'next/link'
+import { loginWithCredentials } from '@/lib/client-login'
 import { Eye, EyeOff } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 
@@ -11,20 +12,21 @@ export default function AdminLoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState('')
 
   async function handleLogin() {
     if (!email || !pass) { setError('Preencha e-mail e senha.'); return }
     setLoading(true)
     setError('')
+    setPendingVerifyEmail('')
 
-    const res = await signIn('credentials', {
-      email,
-      password: pass,
-      redirect: false,
-    })
+    const res = await loginWithCredentials(email, pass)
 
-    if (res?.error) {
-      setError('E-mail ou senha inválidos.')
+    if (!res.ok) {
+      setError(res.error)
+      if (res.emailNotVerified) {
+        setPendingVerifyEmail(email.trim())
+      }
       setLoading(false)
       return
     }
@@ -44,7 +46,19 @@ export default function AdminLoginPage() {
         <p className="text-sm text-muted mb-6">Acesse o painel da sua loja</p>
 
         {error && (
-          <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm">{error}</div>
+          <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm break-words">
+            {error}
+            {pendingVerifyEmail && (
+              <p className="mt-2 text-foreground/90">
+                <Link
+                  href={`/verificar-email/aguardando?email=${encodeURIComponent(pendingVerifyEmail)}`}
+                  className="text-primary font-medium hover:underline"
+                >
+                  Reenviar e-mail de confirmação →
+                </Link>
+              </p>
+            )}
+          </div>
         )}
 
         <div className="flex flex-col gap-3 mb-5">

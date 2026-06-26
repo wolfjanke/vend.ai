@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { PASSWORD_MIN_LENGTH } from '@/lib/password-policy'
+import { normalizeEmail } from '@/lib/email-normalize'
 import { z } from 'zod'
 import { Camera, LayoutDashboard, Store, CheckCircle2 } from 'lucide-react'
 import { stripEmojis } from '@/lib/strip-emoji'
@@ -31,7 +33,7 @@ type CadastroDraft = {
 
 function passwordStrength(pass: string): { score: number; label: string } {
   let score = 0
-  if (pass.length >= 6) score++
+  if (pass.length >= PASSWORD_MIN_LENGTH) score++
   if (pass.length >= 10) score++
   if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score++
   if (/\d/.test(pass)) score++
@@ -44,10 +46,11 @@ function passwordStrength(pass: string): { score: number; label: string } {
 const step1Schema = z.object({
   name:  z.string().min(1, 'Informe seu nome'),
   email: z.string().email('E-mail inválido'),
-  pass:  z.string().min(6, 'Senha mínimo 6 caracteres'),
+  pass:  z.string().min(PASSWORD_MIN_LENGTH, `Senha mínimo ${PASSWORD_MIN_LENGTH} caracteres`),
 })
 
 function CadastroPage() {
+  const router = useRouter()
   const [step,      setStep]      = useState<Step>(1)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
@@ -179,7 +182,12 @@ function CadastroPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro ao criar conta.')
 
-      await signIn('credentials', { email, password: pass, redirect: false })
+      if (data.needsVerification) {
+        router.push(
+          `/verificar-email/aguardando?email=${encodeURIComponent(normalizeEmail(email))}`,
+        )
+        return
+      }
 
       setFinalSlug(data.slug)
       setStep(3)

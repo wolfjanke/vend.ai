@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+import { passwordSchema } from '@/lib/password-policy'
 import { sql } from '@/lib/db'
 import { getSessionSafe } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
@@ -8,7 +9,7 @@ export { dynamic } from '@/lib/route-dynamic'
 
 
 const schema = z.object({
-  password: z.string().min(6),
+  password: passwordSchema,
 })
 
 export async function POST(req: NextRequest) {

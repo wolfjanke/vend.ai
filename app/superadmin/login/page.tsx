@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn, signOut } from 'next-auth/react'
+import { signOut } from 'next-auth/react'
+import { loginWithCredentials } from '@/lib/client-login'
 import BrandLogo from '@/components/BrandLogo'
 import { superadminBtnPrimary } from '@/lib/superadmin-ui'
 
@@ -19,14 +20,10 @@ export default function SuperadminLoginPage() {
     setLoading(true)
     setError('')
 
-    const res = await signIn('credentials', {
-      email,
-      password: pass,
-      redirect: false,
-    })
+    const res = await loginWithCredentials(email, pass)
 
-    if (res?.error) {
-      setError('E-mail ou senha inválidos.')
+    if (!res.ok) {
+      setError(res.error)
       setLoading(false)
       return
     }

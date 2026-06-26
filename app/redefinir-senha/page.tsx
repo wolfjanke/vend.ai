@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { PASSWORD_MIN_LENGTH } from '@/lib/password-policy'
 
 function RedefinirForm() {
   const router = useRouter()
@@ -17,7 +18,10 @@ function RedefinirForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (pass !== pass2) { setError('As senhas não coincidem.'); return }
-    if (pass.length < 6) { setError('Mínimo 6 caracteres.'); return }
+    if (pass.length < PASSWORD_MIN_LENGTH) {
+      setError(`Mínimo ${PASSWORD_MIN_LENGTH} caracteres.`)
+      return
+    }
     if (!token) { setError('Link inválido.'); return }
 
     setLoading(true)
@@ -43,7 +47,7 @@ function RedefinirForm() {
       <input
         type="password"
         required
-        minLength={6}
+        minLength={PASSWORD_MIN_LENGTH}
         className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[14px] text-sm outline-none focus:border-primary"
         placeholder="Nova senha"
         value={pass}
@@ -52,7 +56,7 @@ function RedefinirForm() {
       <input
         type="password"
         required
-        minLength={6}
+        minLength={PASSWORD_MIN_LENGTH}
         className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[14px] text-sm outline-none focus:border-primary"
         placeholder="Confirmar nova senha"
         value={pass2}

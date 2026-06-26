@@ -5,7 +5,7 @@ import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
-import { sendWelcomeEmail } from '@/lib/email/send-welcome'
+import { createAndSendEmailVerification } from '@/lib/email-verification'
 import { getGlobalConfig } from '@/lib/global-config'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -115,21 +115,11 @@ export async function POST(req: NextRequest) {
 
     await sql`UPDATE admin_users SET store_id = ${store.id} WHERE id = ${newUser.id}`
 
-    const acceptedAt = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    void createAndSendEmailVerification(newUser.id as string, email).catch(err =>
+      logServerError('[register] verificação de e-mail', err),
+    )
 
-    void sendWelcomeEmail({
-      ownerName: ownerName.trim(),
-      ownerEmail: email,
-      storeName,
-      storeSlug: store.slug,
-      plan: 'free',
-      assistantName: 'Vi',
-      acceptedAt,
-      acceptedIp,
-      termsVersion,
-    }).catch(err => logServerError('[Email] Falha no boas-vindas', err))
-
-    return NextResponse.json({ slug: store.slug })
+    return NextResponse.json({ needsVerification: true, email, slug: store.slug })
   } catch (error) {
     logServerError('[POST /api/auth/register]', error)
     return NextResponse.json({ error: 'Erro ao criar conta' }, { status: 500 })

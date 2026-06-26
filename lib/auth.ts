@@ -1,7 +1,8 @@
 import { getServerSession, type NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import bcrypt from 'bcryptjs'
 import { sql } from './db'
+import { authenticateAdminUser, isAdminEmailVerified } from './authenticate-admin'
+import { checkLoginRateLimit } from './auth-rate-limit'
 import { isSuperadminEmail } from './superadmin-allowlist'
 
 /** NextAuth aceita NEXTAUTH_SECRET ou AUTH_SECRET (alguns hosts documentam só um dos nomes). */
@@ -15,17 +16,18 @@ if (process.env.NODE_ENV === 'production' && !authSecret()) {
   )
 }
 
-async function touchStoreLogin(storeId: string, email: string | null | undefined) {
-  try {
-    await sql`
-      UPDATE stores
-      SET last_login_at = NOW(),
-          owner_email = COALESCE(owner_email, ${email ?? null})
-      WHERE id = ${storeId}
-    `
-  } catch (e) {
-    console.error('[auth] touchStoreLogin:', e)
-  }
+type AuthorizeRequest = {
+  headers?: Record<string, string | string[] | undefined>
+}
+
+function ipFromAuthorizeRequest(req: AuthorizeRequest | undefined): string {
+  const forwarded = req?.headers?.['x-forwarded-for']
+  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded
+  return (
+    first?.split(',')[0]?.trim() ??
+    (req?.headers?.['x-real-ip'] as string | undefined) ??
+    'unknown'
+  )
 }
 
 export const authOptions: NextAuthOptions = {
@@ -36,35 +38,24 @@ export const authOptions: NextAuthOptions = {
         email:    { label: 'Email',  type: 'email'    },
         password: { label: 'Senha', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null
+
+        const ip = ipFromAuthorizeRequest(req as AuthorizeRequest | undefined)
+        if (!(await checkLoginRateLimit(ip, credentials.email))) {
+          throw new Error('RATE_LIMITED')
+        }
+
         try {
-          const rows = await sql`
-            SELECT id, email, password_hash, store_id
-            FROM admin_users
-            WHERE email = ${credentials.email}
-            LIMIT 1
-          `
-          const user = rows[0]
+          const user = await authenticateAdminUser(credentials.email, credentials.password)
           if (!user) return null
-          const hash = user.password_hash as string | null
-          if (!hash) return null
-
-          const valid = await bcrypt.compare(credentials.password, hash)
-          if (!valid) return null
-
-          const storeId = user.store_id as string
-          if (storeId) {
-            await touchStoreLogin(storeId, user.email as string)
+          if (!(await isAdminEmailVerified(user.id))) {
+            throw new Error('EMAIL_NOT_VERIFIED')
           }
-
-          return {
-            id:      user.id as string,
-            email:   user.email as string,
-            storeId,
-          }
+          return user
         } catch (e) {
-          console.error('[auth] authorize (banco ou bcrypt):', e)
+          if (e instanceof Error && e.message === 'EMAIL_NOT_VERIFIED') throw e
+          console.error('[auth] authorize:', e)
           return null
         }
       },
@@ -78,6 +69,25 @@ export const authOptions: NextAuthOptions = {
         token.email = u.email
         token.impersonating = false
         token.realStoreId = undefined
+        token.sessionRevoked = false
+      }
+
+      if (token.sub && !user && !token.sessionRevoked) {
+        try {
+          const rows = await sql`
+            SELECT password_changed_at FROM admin_users WHERE id = ${token.sub} LIMIT 1
+          `
+          const changedAt = rows[0]?.password_changed_at as string | Date | undefined
+          if (changedAt && token.iat) {
+            const changedMs = new Date(changedAt).getTime()
+            const issuedMs = (token.iat as number) * 1000
+            if (changedMs > issuedMs) {
+              token.sessionRevoked = true
+            }
+          }
+        } catch (e) {
+          console.error('[auth] jwt password_changed_at:', e)
+        }
       }
 
       if (trigger === 'update' && session) {
@@ -105,6 +115,14 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
+      if (token.sessionRevoked) {
+        return {
+          expires: new Date(0).toISOString(),
+          user: { id: '', email: '' },
+          storeId: '',
+        }
+      }
+
       if (token) {
         session.user.id = token.sub!
         if (token.email) {

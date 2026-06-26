@@ -3,13 +3,14 @@ import { getServerSession } from 'next-auth'
 import bcrypt from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
+import { passwordSchema } from '@/lib/password-policy'
 import { z } from 'zod'
 export { dynamic } from '@/lib/route-dynamic'
 
 
 const schema = z.object({
   currentPassword: z.string().min(1),
-  newPassword:     z.string().min(6),
+  newPassword:     passwordSchema,
 })
 
 export async function POST(req: NextRequest) {
@@ -45,7 +46,11 @@ export async function POST(req: NextRequest) {
   if (!ok) return NextResponse.json({ error: 'Senha atual incorreta' }, { status: 400 })
 
   const hash = await bcrypt.hash(newPassword, 10)
-  await sql`UPDATE admin_users SET password_hash = ${hash} WHERE id = ${session.user.id}`
+  await sql`
+    UPDATE admin_users
+    SET password_hash = ${hash}, password_changed_at = NOW()
+    WHERE id = ${session.user.id}
+  `
 
   return NextResponse.json({ ok: true })
 }

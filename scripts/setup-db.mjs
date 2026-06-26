@@ -127,6 +127,24 @@ async function setup() {
   await sql`CREATE INDEX IF NOT EXISTS password_reset_tokens_token_idx ON password_reset_tokens(token)`
   await sql`CREATE INDEX IF NOT EXISTS password_reset_tokens_user_idx ON password_reset_tokens(user_id)`
 
+  await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ`
+  await sql`UPDATE admin_users SET password_changed_at = created_at WHERE password_changed_at IS NULL`
+  await sql`ALTER TABLE admin_users ALTER COLUMN password_changed_at SET DEFAULT NOW()`
+
+  await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ`
+  await sql`UPDATE admin_users SET email_verified_at = created_at WHERE email_verified_at IS NULL`
+
+  await sql`CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id       UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    token         TEXT NOT NULL UNIQUE,
+    expires_at    TIMESTAMPTZ NOT NULL,
+    used_at       TIMESTAMPTZ NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`
+  await sql`CREATE INDEX IF NOT EXISTS email_verification_tokens_token_idx ON email_verification_tokens(token)`
+  await sql`CREATE INDEX IF NOT EXISTS email_verification_tokens_user_idx ON email_verification_tokens(user_id)`
+
   // Migration 005: Asaas checkout integration
   await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_account_id       VARCHAR(64)`
   await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS asaas_wallet_id        VARCHAR(64)`

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { sql } from '@/lib/db'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { normalizeEmail } from '@/lib/email-normalize'
 import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
 import { checkRateLimit, clientIp } from '@/lib/rate-limit'
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ ok: true })
     }
-    const email = parsed.data.email.toLowerCase().trim()
+    const email = normalizeEmail(parsed.data.email)
 
     const rows = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`
     const user = rows[0] as { id: string } | undefined
@@ -39,7 +40,10 @@ export async function POST(req: NextRequest) {
 
       const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
       const resetUrl = `${base.replace(/\/$/, '')}/redefinir-senha?token=${encodeURIComponent(token)}`
-      await sendPasswordResetEmail(email, resetUrl)
+      const sent = await sendPasswordResetEmail(email, resetUrl)
+      if (!sent.success) {
+        logServerError('[forgot-password] falha ao enviar e-mail', sent.error)
+      }
     }
 
     return NextResponse.json({ ok: true })
