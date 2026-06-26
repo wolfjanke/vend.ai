@@ -13,6 +13,7 @@ import { registerSchema } from '@/lib/validations'
 import type { AgeGroup, GenderFocus } from '@/types'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 import BrandLogo from '@/components/BrandLogo'
+import { storePublicPath } from '@/lib/brand'
 
 type Step = 1 | 2
 
