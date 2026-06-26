@@ -58,12 +58,11 @@ export default function LandingPage() {
 
           <h1 className="font-syne font-extrabold text-[1.5rem] min-[360px]:text-[1.65rem] min-[400px]:text-[1.85rem] sm:text-4xl md:text-5xl lg:text-[3.25rem] leading-[1.15] sm:leading-[1.1] mb-5 break-words text-balance max-w-full">
             Sua vitrine de moda no ar —<br />
-            com IA que responde o{' '}
-            <span className="text-grad">Direct</span> por você
+            com <span className="text-grad">atendente IA</span>
           </h1>
 
           <p className="text-muted text-base sm:text-lg leading-relaxed mb-8 max-w-md break-words">
-            Catálogo no ar em minutos. A Vi responde com seu estoque e manda o pedido formatado no WhatsApp — sem marketplace, sem complicação.
+            Catálogo no ar em minutos. A Vi (nossa assistente virtual com IA) atende seus clientes na vitrine, responde com seu estoque e manda o pedido formatado no WhatsApp — sem marketplace, sem complicação.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
@@ -553,25 +552,27 @@ export default function LandingPage() {
 
       {/* ── FAQ ───────────────────────────────────────────────── */}
       <section id="faq" className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24`}>
-        <ScrollReveal>
-          <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">FAQ</p>
-          <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-10 leading-tight">
-            Perguntas frequentes
-          </h2>
-        </ScrollReveal>
+        <div className="max-w-2xl mx-auto min-w-0">
+          <ScrollReveal>
+            <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">FAQ</p>
+            <h2 className="font-syne font-extrabold text-3xl sm:text-4xl mb-10 leading-tight">
+              Perguntas frequentes
+            </h2>
+          </ScrollReveal>
 
-        <div className="max-w-2xl space-y-2 min-w-0 mx-auto sm:mx-0">
-          {LANDING_FAQ_ITEMS.map((item, i) => (
-            <ScrollReveal key={i} delay={i * 50}>
-              <details className="bg-[#161616] border border-[#252525] rounded-[2px] overflow-hidden group">
-                <summary className="px-4 sm:px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between gap-3 hover:text-primary transition-colors min-w-0">
-                  <span className="min-w-0 flex-1 pe-2 break-words">{item.q}</span>
-                  <span className="text-muted group-open:rotate-180 transition-transform shrink-0 text-xs">▼</span>
-                </summary>
-                <p className="px-5 pb-4 text-sm text-muted leading-relaxed">{item.a}</p>
-              </details>
-            </ScrollReveal>
-          ))}
+          <div className="space-y-2">
+            {LANDING_FAQ_ITEMS.map((item, i) => (
+              <ScrollReveal key={i} delay={i * 50}>
+                <details className="bg-[#161616] border border-[#252525] rounded-[2px] overflow-hidden group">
+                  <summary className="px-4 sm:px-5 py-4 cursor-pointer list-none font-syne font-bold text-sm flex items-center justify-between gap-3 hover:text-primary transition-colors min-w-0">
+                    <span className="min-w-0 flex-1 pe-2 break-words">{item.q}</span>
+                    <span className="text-muted group-open:rotate-180 transition-transform shrink-0 text-xs">▼</span>
+                  </summary>
+                  <p className="px-5 pb-4 text-sm text-muted leading-relaxed">{item.a}</p>
+                </details>
+              </ScrollReveal>
+            ))}
+          </div>
         </div>
       </section>
 
