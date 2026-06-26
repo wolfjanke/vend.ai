@@ -14,6 +14,7 @@ function RedefinirForm() {
   const [pass2, setPass2] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -34,12 +35,22 @@ function RedefinirForm() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Erro ao redefinir')
-      router.push('/admin')
+      setSuccess(true)
+      setTimeout(() => router.push('/admin?senha=alterada'), 2500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (success) {
+    return (
+      <div className="text-center">
+        <p className="text-sm text-accent font-medium mb-2">Senha alterada com sucesso!</p>
+        <p className="text-sm text-muted">Redirecionando para o login…</p>
+      </div>
+    )
   }
 
   return (

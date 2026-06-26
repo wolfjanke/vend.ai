@@ -505,7 +505,7 @@ export default function LandingPage() {
 
       {/* ── Formas de pagamento ─────────────────────────────────── */}
       <section className={`${sectionX} py-16 sm:py-20 border-t border-border scroll-mt-24 bg-[#0F0F0F]`}>
-        <ScrollReveal className="min-w-0 max-w-2xl">
+        <ScrollReveal className="min-w-0 max-w-2xl mx-auto">
           <p className="text-xs font-bold tracking-[2px] uppercase text-primary mb-3">Pagamento</p>
           <h2 className="font-syne font-extrabold text-2xl sm:text-3xl md:text-4xl mb-3 leading-tight break-words">
             Você escolhe como receber
@@ -586,9 +586,14 @@ export default function LandingPage() {
             <Zap size={12} className="fill-accent" />
             Grátis para começar
           </div>
-          <h2 className="font-syne font-extrabold text-2xl min-[400px]:text-3xl sm:text-4xl md:text-5xl mb-5 leading-tight break-words text-balance">
-            Sua vitrine de moda com IA no WhatsApp.<br />
-            <span className="text-grad">Grátis para começar.</span>
+          <h2 className="font-syne font-extrabold text-2xl min-[400px]:text-3xl sm:text-4xl md:text-5xl mb-5 leading-tight break-words">
+            Sua vitrine de<br />
+            moda com IA<br />
+            no WhatsApp.<br />
+            <span className="text-grad">
+              Grátis para<br />
+              começar.
+            </span>
           </h2>
           <p className="text-muted text-base sm:text-lg mb-10 max-w-md mx-auto leading-relaxed">
             Sem cartão de crédito, sem fidelidade, sem complicação. Comece agora e veja como é fácil vender mais.

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { passwordSchema } from '@/lib/password-policy'
+import { notifyPasswordChanged } from '@/lib/notify-password-changed'
 import { z } from 'zod'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -51,6 +52,10 @@ export async function POST(req: NextRequest) {
     SET password_hash = ${hash}, password_changed_at = NOW()
     WHERE id = ${session.user.id}
   `
+
+  if (session.user.email) {
+    notifyPasswordChanged(session.user.email)
+  }
 
   return NextResponse.json({ ok: true })
 }

@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { sql } from './db'
 import { authenticateAdminUser, isAdminEmailVerified } from './authenticate-admin'
 import { checkLoginRateLimit } from './auth-rate-limit'
+import { logLoginRateLimitBlocked } from './auth-login-log'
 import { isSuperadminEmail } from './superadmin-allowlist'
 
 /** NextAuth aceita NEXTAUTH_SECRET ou AUTH_SECRET (alguns hosts documentam só um dos nomes). */
@@ -43,6 +44,7 @@ export const authOptions: NextAuthOptions = {
 
         const ip = ipFromAuthorizeRequest(req as AuthorizeRequest | undefined)
         if (!(await checkLoginRateLimit(ip, credentials.email))) {
+          logLoginRateLimitBlocked(ip, credentials.email)
           throw new Error('RATE_LIMITED')
         }
 

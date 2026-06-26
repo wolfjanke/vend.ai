@@ -171,6 +171,9 @@ export default function PrivacidadePage() {
         <ul className="list-disc list-inside space-y-1 pl-1">
           <li>Transmissão de dados via HTTPS/TLS</li>
           <li>Criptografia de senhas com algoritmo bcrypt</li>
+          <li>Verificação de e-mail no cadastro antes do acesso ao painel</li>
+          <li>Rate limit em login, cadastro e recuperação de senha</li>
+          <li>Invalidação de sessão após alteração de senha</li>
           <li>Acesso restrito por função (role-based access)</li>
           <li>Monitoramento de acessos e logs de auditoria</li>
           <li>Backups regulares com criptografia em repouso</li>
@@ -190,7 +193,7 @@ export default function PrivacidadePage() {
           <li><strong className="text-foreground">Asaas</strong> — pagamentos e subcontas (quando o lojista ativa checkout)</li>
           <li><strong className="text-foreground">Google (Gemini)</strong> — assistente Vi e análise de produto</li>
           <li><strong className="text-foreground">Cloudinary</strong> — armazenamento de imagens de produtos</li>
-          <li><strong className="text-foreground">Resend</strong> — e-mails transacionais (ex.: recuperação de senha)</li>
+          <li><strong className="text-foreground">Resend</strong> — e-mails transacionais (confirmação de conta, recuperação de senha, alertas de segurança)</li>
         </ul>
         <p>
           Alguns desses fornecedores podem processar dados em servidores fora do Brasil. Garantimos que essas transferências ocorrem apenas com salvaguardas compatíveis com a LGPD (cláusulas contratuais, padrões equivalentes ou consentimento quando aplicável).

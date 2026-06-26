@@ -1,10 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { loginWithCredentials } from '@/lib/client-login'
 import { Eye, EyeOff } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
+
+function LoginSuccessBanner() {
+  const searchParams = useSearchParams()
+  const senha = searchParams.get('senha')
+  if (senha !== 'alterada') return null
+  return (
+    <div className="mb-4 px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl text-accent text-sm">
+      Senha alterada. Faça login com sua nova senha.
+    </div>
+  )
+}
 
 export default function AdminLoginPage() {
   const [email,   setEmail]   = useState('')
@@ -44,6 +56,10 @@ export default function AdminLoginPage() {
         </div>
         <h2 className="font-syne font-bold text-xl mb-1">Bem-vinda de volta!</h2>
         <p className="text-sm text-muted mb-6">Acesse o painel da sua loja</p>
+
+        <Suspense fallback={null}>
+          <LoginSuccessBanner />
+        </Suspense>
 
         {error && (
           <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm break-words">

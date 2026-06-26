@@ -57,20 +57,24 @@ ASAAS_WEBHOOK_TOKEN=
 SUBACCOUNT_ENCRYPTION_KEY=
 RESEND_API_KEY=
 EMAIL_FROM=
+SUPERADMIN_EMAILS=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
+
+**Auth:** `NEXTAUTH_SECRET` assina sessões JWT. **Resend** envia verificação de e-mail, recuperação de senha e alertas de troca de senha. **Upstash** é recomendado em produção para rate limit de login (sem ele, o limite fica em memória por instância na Vercel).
 
 Opcional: `GEMINI_MODEL` sobrescreve apenas o chat da Vi (padrão `gemini-2.5-flash`). Análise de foto usa `gemini-2.5-flash`; busca de estoque usa `gemini-2.5-flash-lite`.
 
 ### Migrations (Neon)
 
-Execute em ordem no SQL Editor do Neon ou via CLI:
+Schema inicial e migrations incrementais:
 
 ```bash
-# Arquivos em migrations/
-# 001 … schema inicial
-# 006_vi_usage.sql — contadores diários Vi
-# 007_store_vi_usage.sql — uso mensal na tabela stores + plano enterprise
+node scripts/setup-db.mjs
 ```
+
+Inclui tabelas de auth (`password_reset_tokens`, `email_verification_tokens`, colunas `password_changed_at` e `email_verified_at`). Ver também arquivos em `migrations/` e checklist em `docs/auth-checklist.md`.
 
 ### Rodar
 

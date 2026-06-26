@@ -9,6 +9,7 @@ import {
 } from '@/lib/auth-session-cookie'
 import { normalizeEmail } from '@/lib/email-normalize'
 import { clientIp } from '@/lib/rate-limit'
+import { logLoginRateLimitBlocked } from '@/lib/auth-login-log'
 import { logServerError } from '@/lib/logger'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     const { password } = parsed.data
 
     if (!(await checkLoginRateLimit(ip, email))) {
+      logLoginRateLimitBlocked(ip, email)
       return NextResponse.json(
         { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
         { status: 429 },

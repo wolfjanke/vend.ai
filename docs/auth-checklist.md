@@ -1,0 +1,57 @@
+# Checklist de autenticação (deploy e operação)
+
+Use após mudanças em auth ou em cada release que toque login/cadastro.
+
+## Variáveis de ambiente (produção)
+
+- [ ] `NEXTAUTH_SECRET` (ou `AUTH_SECRET`)
+- [ ] `NEXTAUTH_URL` = URL pública (https)
+- [ ] `NEXT_PUBLIC_APP_URL` = mesma base pública
+- [ ] `RESEND_API_KEY` + `EMAIL_FROM` (domínio verificado no Resend)
+- [ ] `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (rate limit distribuído)
+- [ ] `SUPERADMIN_EMAILS` (lista de e-mails do painel superadmin)
+
+## Banco de dados
+
+```bash
+node scripts/setup-db.mjs
+```
+
+Confirma colunas/tabelas: `password_changed_at`, `email_verified_at`, `email_verification_tokens`.
+
+Opcional (e-mails legados com maiúsculas):
+
+```bash
+node scripts/migrate-normalize-emails.mjs
+```
+
+## Testes manuais
+
+### Cadastro + verificação de e-mail
+
+1. [ ] Criar conta em `/cadastro` → redireciona para `/verificar-email/aguardando`
+2. [ ] E-mail de confirmação chega (caixa de entrada ou spam)
+3. [ ] Link abre `/verificar-email?token=…` → sucesso → painel acessível
+4. [ ] E-mail de boas-vindas após confirmação
+
+### Login
+
+5. [ ] Login com credenciais corretas → `/admin/dashboard`
+6. [ ] Conta não verificada → bloqueio com link de reenvio
+7. [ ] 10+ tentativas erradas → rate limit (mensagem de aguarde)
+
+### Recuperação de senha
+
+8. [ ] `/esqueci-senha` → e-mail com link
+9. [ ] `/redefinir-senha?token=…` → nova senha → mensagem e login
+10. [ ] E-mail “Senha alterada” recebido
+11. [ ] Sessão antiga invalidada após troca (outra aba deslogada no próximo carregamento)
+
+### Troca de senha (logado)
+
+12. [ ] Configurações → alterar senha → e-mail de notificação
+
+## Logs
+
+- Falhas de envio Resend aparecem como `[forgot-password]`, `[email-verification]`, `[notify-password-changed]`
+- Bloqueios de login: `[auth/login] rate limit` com e-mail mascarado

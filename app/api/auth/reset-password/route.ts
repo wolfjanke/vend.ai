@@ -5,6 +5,7 @@ import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
 import { checkResetPasswordRateLimit } from '@/lib/auth-rate-limit'
 import { passwordSchema } from '@/lib/password-policy'
+import { notifyPasswordChanged } from '@/lib/notify-password-changed'
 import { clientIp } from '@/lib/rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -36,12 +37,19 @@ export async function POST(req: NextRequest) {
     const { token, password } = parsed.data
 
     const rows = await sql`
-      SELECT t.id, t.user_id, t.expires_at, t.used_at
+      SELECT t.id, t.user_id, t.expires_at, t.used_at, u.email
       FROM password_reset_tokens t
+      JOIN admin_users u ON u.id = t.user_id
       WHERE t.token = ${token}
       LIMIT 1
     `
-    const row = rows[0] as { id: string; user_id: string; expires_at: string; used_at: string | null } | undefined
+    const row = rows[0] as {
+      id: string
+      user_id: string
+      expires_at: string
+      used_at: string | null
+      email: string
+    } | undefined
     if (!row || row.used_at) {
       return NextResponse.json({ error: 'Link inválido ou já utilizado' }, { status: 400 })
     }
@@ -56,6 +64,8 @@ export async function POST(req: NextRequest) {
       WHERE id = ${row.user_id}
     `
     await sql`UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = ${row.user_id} AND used_at IS NULL`
+
+    notifyPasswordChanged(row.email)
 
     return NextResponse.json({ ok: true })
   } catch (e) {

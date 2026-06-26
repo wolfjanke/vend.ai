@@ -53,11 +53,15 @@ export async function middleware(req: NextRequest) {
   const isAdminRoot = pathname === '/admin'
   const isProtectedAdminRoute = pathname.startsWith('/admin/') && pathname !== '/admin'
 
-  if (isAdminRoot && token) {
+  const tokenExpired = token?.exp != null && (token.exp as number) * 1000 < Date.now()
+  const tokenInvalid = !token?.storeId || token?.sessionRevoked === true || tokenExpired
+  const effectiveToken = tokenInvalid ? null : token
+
+  if (isAdminRoot && effectiveToken) {
     return NextResponse.redirect(new URL('/admin/dashboard', req.url))
   }
 
-  if (isProtectedAdminRoute && !token) {
+  if (isProtectedAdminRoute && !effectiveToken) {
     return NextResponse.redirect(new URL('/admin', req.url))
   }
 
