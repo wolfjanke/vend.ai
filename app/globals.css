@@ -527,7 +527,19 @@ html.js .reveal-none.is-visible {
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+}
+
+@media (max-width: 767px) {
+  .store-theme-root .category-nav-scroll--overflow {
+    /* Dica visual de que há mais categorias à direita */
+    mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 2.5rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 2.5rem), transparent 100%);
+  }
+
+  .admin-nav-scroll--overflow {
+    mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 2.5rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 2.5rem), transparent 100%);
+  }
 }
 
 .store-theme-root .category-nav-circles-scroll {
@@ -559,14 +571,26 @@ html.js .reveal-none.is-visible {
   display: flex;
   gap: 1.25rem;
   width: max-content;
-  min-width: 100%;
   padding-bottom: 0.25rem;
   padding-inline-end: max(0.75rem, env(safe-area-inset-right, 0px));
   align-items: flex-start;
 }
 
+@media (min-width: 768px) {
+  .store-theme-root .category-nav-circles-track {
+    min-width: 100%;
+  }
+}
+
 .store-theme-root .category-nav-pills-track {
   padding-inline-end: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 768px) {
+  .store-theme-root .category-nav-pills-track,
+  .store-theme-root .category-nav-circles-track {
+    row-gap: 0.5rem;
+  }
 }
 
 .store-theme-root .category-nav-circle-item {
