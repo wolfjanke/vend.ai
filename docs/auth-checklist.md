@@ -4,6 +4,7 @@ Use após mudanças em auth ou em cada release que toque login/cadastro.
 
 ## Variáveis de ambiente (produção)
 
+- [ ] `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (login com Google)
 - [ ] `NEXTAUTH_SECRET` (ou `AUTH_SECRET`)
 - [ ] `NEXTAUTH_URL` = URL pública (https)
 - [ ] `NEXT_PUBLIC_APP_URL` = mesma base pública
@@ -17,7 +18,15 @@ Use após mudanças em auth ou em cada release que toque login/cadastro.
 node scripts/setup-db.mjs
 ```
 
-Confirma colunas/tabelas: `password_changed_at`, `email_verified_at`, `email_verification_tokens`.
+Confirma colunas/tabelas: `password_changed_at`, `email_verified_at`, `email_verification_tokens`, `google_id`.
+
+### Login com Google
+
+13. [ ] Botão Google em `/admin` → conta existente entra no painel
+14. [ ] Botão Google em `/cadastro` → nova conta → `/cadastro/loja` → painel
+15. [ ] E-mail já cadastrado com senha → Google vincula e entra
+16. [ ] Conta só Google → Configurações permite **Definir senha**
+17. [ ] Conta só Google → exclusão de conta sem pedir senha (checkbox)
 
 Opcional (e-mails legados com maiúsculas):
 

@@ -51,3 +51,23 @@ export function sessionCookieOptions(): {
     maxAge: sessionMaxAge(),
   }
 }
+
+const SESSION_COOKIE_NAMES = [
+  'next-auth.session-token',
+  '__Secure-next-auth.session-token',
+] as const
+
+/** Remove cookies de sessão NextAuth (login por senha ou Google). */
+export function clearSessionCookies(res: {
+  cookies: { set: (name: string, value: string, options: Record<string, unknown>) => void }
+}): void {
+  for (const name of SESSION_COOKIE_NAMES) {
+    res.cookies.set(name, '', {
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: name.startsWith('__Secure'),
+    })
+  }
+}

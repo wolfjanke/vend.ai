@@ -134,6 +134,10 @@ async function setup() {
   await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ`
   await sql`UPDATE admin_users SET email_verified_at = created_at WHERE email_verified_at IS NULL`
 
+  await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS google_id TEXT`
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS admin_users_google_id_idx ON admin_users (google_id) WHERE google_id IS NOT NULL`
+  await sql`ALTER TABLE admin_users ALTER COLUMN password_hash DROP NOT NULL`
+
   await sql`CREATE TABLE IF NOT EXISTS email_verification_tokens (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id       UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,

@@ -8,9 +8,8 @@ import { notifyPasswordChanged } from '@/lib/notify-password-changed'
 import { z } from 'zod'
 export { dynamic } from '@/lib/route-dynamic'
 
-
 const schema = z.object({
-  currentPassword: z.string().min(1),
+  currentPassword: z.string().optional(),
   newPassword:     passwordSchema,
 })
 
@@ -31,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? 'Dados inválidos' },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
@@ -40,11 +39,17 @@ export async function POST(req: NextRequest) {
   const rows = await sql`
     SELECT password_hash FROM admin_users WHERE id = ${session.user.id} LIMIT 1
   `
-  const user = rows[0] as { password_hash: string } | undefined
+  const user = rows[0] as { password_hash: string | null } | undefined
   if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
 
-  const ok = await bcrypt.compare(currentPassword, user.password_hash)
-  if (!ok) return NextResponse.json({ error: 'Senha atual incorreta' }, { status: 400 })
+  const existingHash = user.password_hash
+  if (existingHash) {
+    if (!currentPassword?.trim()) {
+      return NextResponse.json({ error: 'Informe a senha atual.' }, { status: 400 })
+    }
+    const ok = await bcrypt.compare(currentPassword, existingHash)
+    if (!ok) return NextResponse.json({ error: 'Senha atual incorreta' }, { status: 400 })
+  }
 
   const hash = await bcrypt.hash(newPassword, 10)
   await sql`
@@ -57,5 +62,5 @@ export async function POST(req: NextRequest) {
     notifyPasswordChanged(session.user.email)
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, hadPassword: Boolean(existingHash) })
 }

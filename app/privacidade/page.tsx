@@ -191,6 +191,7 @@ export default function PrivacidadePage() {
           <li><strong className="text-foreground">Neon</strong> — banco de dados (hospedagem Postgres)</li>
           <li><strong className="text-foreground">Vercel</strong> — hospedagem da aplicação</li>
           <li><strong className="text-foreground">Asaas</strong> — pagamentos e subcontas (quando o lojista ativa checkout)</li>
+          <li><strong className="text-foreground">Google (login)</strong> — autenticação opcional com conta Google</li>
           <li><strong className="text-foreground">Google (Gemini)</strong> — assistente Vi e análise de produto</li>
           <li><strong className="text-foreground">Cloudinary</strong> — armazenamento de imagens de produtos</li>
           <li><strong className="text-foreground">Resend</strong> — e-mails transacionais (confirmação de conta, recuperação de senha, alertas de segurança)</li>

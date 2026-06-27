@@ -7,9 +7,9 @@ import { getSessionSafe } from '@/lib/auth'
 import { logServerError } from '@/lib/logger'
 export { dynamic } from '@/lib/route-dynamic'
 
-
 const schema = z.object({
-  password: passwordSchema,
+  password: passwordSchema.optional(),
+  confirmDelete: z.literal(true).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const parsed = schema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Senha inválida' }, { status: 400 })
+      return NextResponse.json({ error: 'Confirmação inválida' }, { status: 400 })
     }
 
     const userRows = await sql`
@@ -37,9 +37,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
     }
 
-    const valid = await bcrypt.compare(parsed.data.password, user.password_hash as string)
-    if (!valid) {
-      return NextResponse.json({ error: 'Senha incorreta' }, { status: 403 })
+    const passwordHash = user.password_hash as string | null
+    if (passwordHash) {
+      if (!parsed.data.password) {
+        return NextResponse.json({ error: 'Confirme sua senha.' }, { status: 400 })
+      }
+      const valid = await bcrypt.compare(parsed.data.password, passwordHash)
+      if (!valid) {
+        return NextResponse.json({ error: 'Senha incorreta' }, { status: 403 })
+      }
+    } else if (parsed.data.confirmDelete !== true) {
+      return NextResponse.json({ error: 'Confirme a exclusão da conta.' }, { status: 400 })
     }
 
     await sql`DELETE FROM stores WHERE id = ${session.storeId}`

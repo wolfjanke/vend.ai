@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, Shield } from 'lucide-react'
 import MaskedInput from '@/components/ui/MaskedInput'
 import SectionHeader from '@/components/admin/SectionHeader'
@@ -17,9 +17,24 @@ export default function AdminPrivacySection() {
   const [exportErr, setExportErr] = useState('')
 
   const [deletePwd, setDeletePwd] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [hasPassword, setHasPassword] = useState(true)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteErr, setDeleteErr] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
+
+  useEffect(() => {
+    if (!deleteOpen) return
+    let cancelled = false
+    void fetch('/api/auth/account')
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (cancelled || !data) return
+        setHasPassword(Boolean(data.hasPassword))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [deleteOpen])
 
   async function handleAnonymize() {
     setAnonErr('')
@@ -78,8 +93,13 @@ export default function AdminPrivacySection() {
 
   async function handleDeleteAccount() {
     setDeleteErr('')
-    if (deletePwd.length < 6) {
-      setDeleteErr('Confirme sua senha (mín. 6 caracteres).')
+    if (hasPassword) {
+      if (deletePwd.length < 6) {
+        setDeleteErr('Confirme sua senha (mín. 6 caracteres).')
+        return
+      }
+    } else if (!deleteConfirm) {
+      setDeleteErr('Marque a confirmação para excluir a conta.')
       return
     }
 
@@ -88,7 +108,11 @@ export default function AdminPrivacySection() {
       const res = await fetch('/api/admin/privacidade/excluir-conta', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ password: deletePwd }),
+        body:    JSON.stringify(
+          hasPassword
+            ? { password: deletePwd }
+            : { confirmDelete: true as const },
+        ),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -173,13 +197,27 @@ export default function AdminPrivacySection() {
           </button>
         ) : (
           <div className="space-y-2">
-            <input
-              type="password"
-              className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
-              placeholder="Confirme sua senha"
-              value={deletePwd}
-              onChange={e => setDeletePwd(e.target.value)}
-            />
+            {hasPassword ? (
+              <input
+                type="password"
+                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
+                placeholder="Confirme sua senha"
+                value={deletePwd}
+                onChange={e => setDeletePwd(e.target.value)}
+              />
+            ) : (
+              <label className="flex items-start gap-3 min-h-[44px] cursor-pointer text-muted">
+                <input
+                  type="checkbox"
+                  checked={deleteConfirm}
+                  onChange={e => setDeleteConfirm(e.target.checked)}
+                  className="mt-1 shrink-0 w-5 h-5 rounded border-border accent-primary"
+                />
+                <span className="text-xs leading-relaxed break-words">
+                  Entendo que esta ação é permanente e desejo excluir minha conta.
+                </span>
+              </label>
+            )}
             {deleteErr && <p className="text-xs text-warm break-words">{deleteErr}</p>}
             <div className="flex flex-col sm:flex-row gap-2">
               <button
@@ -187,6 +225,7 @@ export default function AdminPrivacySection() {
                 onClick={() => {
                   setDeleteOpen(false)
                   setDeletePwd('')
+                  setDeleteConfirm(false)
                   setDeleteErr('')
                 }}
                 className="flex-1 min-h-[44px] border border-border rounded-xl text-sm text-muted"

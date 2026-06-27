@@ -1,11 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { clearSessionCookies } from '@/lib/auth-session-cookie'
 export { dynamic } from '@/lib/route-dynamic'
 
-
-// Redireciona para o signout do NextAuth
-export async function POST() {
-  return NextResponse.redirect(
-    new URL('/api/auth/signout', process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
-    { status: 302 }
-  )
+export async function POST(req: NextRequest) {
+  const res = NextResponse.redirect(new URL('/admin', req.url), { status: 302 })
+  clearSessionCookies(res)
+  return res
 }

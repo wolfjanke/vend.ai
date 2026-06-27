@@ -6,6 +6,25 @@ import { useSearchParams } from 'next/navigation'
 import { loginWithCredentials } from '@/lib/client-login'
 import { Eye, EyeOff } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
+import AuthSessionProvider from '@/components/AuthSessionProvider'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
+
+function GoogleErrorBanner() {
+  const searchParams = useSearchParams()
+  const error = searchParams.get('error')
+  if (!error) return null
+  const messages: Record<string, string> = {
+    google: 'Não foi possível entrar com Google. Tente novamente ou use e-mail e senha.',
+    AccessDenied: 'Login com Google não permitido. Cadastros podem estar fechados ou o e-mail não foi autorizado.',
+    OAuthAccountNotLinked: 'Este e-mail já está cadastrado com senha. Entre com e-mail e senha ou use o mesmo Google vinculado.',
+  }
+  const message = messages[error] ?? 'Não foi possível entrar. Tente novamente.'
+  return (
+    <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm break-words">
+      {message}
+    </div>
+  )
+}
 
 function LoginSuccessBanner() {
   const searchParams = useSearchParams()
@@ -18,7 +37,7 @@ function LoginSuccessBanner() {
   )
 }
 
-export default function AdminLoginPage() {
+function AdminLoginPage() {
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -59,6 +78,7 @@ export default function AdminLoginPage() {
 
         <Suspense fallback={null}>
           <LoginSuccessBanner />
+          <GoogleErrorBanner />
         </Suspense>
 
         {error && (
@@ -110,10 +130,18 @@ export default function AdminLoginPage() {
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait"
+          className="w-full min-h-[44px] py-3.5 rounded-[14px] bg-grad text-bg font-syne font-bold text-base hover:-translate-y-0.5 hover:shadow-[0_6px_25px_var(--primary-glow)] transition-all disabled:opacity-60 disabled:cursor-wait"
         >
           {loading ? 'Entrando…' : 'Entrar →'}
         </button>
+
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted shrink-0">ou</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
+        <GoogleSignInButton disabled={loading} />
 
         <p className="text-center text-sm text-muted mt-4">
           Não tem conta?{' '}
@@ -124,5 +152,13 @@ export default function AdminLoginPage() {
         </p>
       </div>
     </main>
+  )
+}
+
+export default function AdminLoginPageWithAuth() {
+  return (
+    <AuthSessionProvider>
+      <AdminLoginPage />
+    </AuthSessionProvider>
   )
 }

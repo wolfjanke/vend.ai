@@ -13,6 +13,7 @@ import { registerSchema } from '@/lib/validations'
 import type { AgeGroup, GenderFocus } from '@/types'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 import BrandLogo from '@/components/BrandLogo'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
 import { storePublicPath } from '@/lib/brand'
 
 type Step = 1 | 2
@@ -229,6 +230,15 @@ function CadastroPage() {
           <div>
             <h2 className="font-syne font-extrabold text-xl sm:text-2xl mb-1">Crie sua conta</h2>
             <p className="text-sm text-muted mb-6">Rápido, gratuito e sem cartão de crédito</p>
+
+            <GoogleSignInButton label="Cadastrar com Google" className="mb-4" />
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted shrink-0">ou com e-mail</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
             <div className="flex flex-col gap-3 mb-5">
               <div>
                 <input

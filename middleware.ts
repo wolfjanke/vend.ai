@@ -54,8 +54,15 @@ export async function middleware(req: NextRequest) {
   const isProtectedAdminRoute = pathname.startsWith('/admin/') && pathname !== '/admin'
 
   const tokenExpired = token?.exp != null && (token.exp as number) * 1000 < Date.now()
-  const tokenInvalid = !token?.storeId || token?.sessionRevoked === true || tokenExpired
+  const sessionRevoked = token?.sessionRevoked === true
+  const hasUserSession = Boolean(token?.sub) && !tokenExpired && !sessionRevoked
+  const needsOnboarding = hasUserSession && !token?.storeId
+  const tokenInvalid = !token?.storeId || sessionRevoked || tokenExpired
   const effectiveToken = tokenInvalid ? null : token
+
+  if (needsOnboarding && (pathname === '/admin' || pathname.startsWith('/admin/'))) {
+    return NextResponse.redirect(new URL('/cadastro/loja', req.url))
+  }
 
   if (isAdminRoot && effectiveToken) {
     return NextResponse.redirect(new URL('/admin/dashboard', req.url))

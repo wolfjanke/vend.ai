@@ -60,6 +60,9 @@ export const registerSchema = z.object({
   theme_onboarding_done: z.boolean().optional(),
 })
 
+/** Finalização de cadastro após login Google (sem e-mail/senha). */
+export const completeSignupSchema = registerSchema.omit({ email: true, password: true })
+
 export const storeSettingsPatchSchema = z.object({
   name:           noEmoji(1, 200),
   tagline:        noEmojiNullable(60),

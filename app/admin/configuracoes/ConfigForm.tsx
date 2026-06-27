@@ -131,6 +131,7 @@ export default function ConfigForm({
   const [error,   setError]   = useState('')
 
   const [pwdOpen, setPwdOpen] = useState(false)
+  const [hasPassword, setHasPassword] = useState(true)
   const [curPwd, setCurPwd] = useState('')
   const [newPwd, setNewPwd] = useState('')
   const [pwdErr, setPwdErr] = useState('')
@@ -163,11 +164,22 @@ export default function ConfigForm({
 
   useEffect(() => {
     if (!pwdOpen) return
+    let cancelled = false
+    void fetch('/api/auth/account')
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (cancelled || !data) return
+        setHasPassword(Boolean(data.hasPassword))
+      })
+      .catch(() => {})
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setPwdOpen(false)
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      cancelled = true
+      window.removeEventListener('keydown', onKey)
+    }
   }, [pwdOpen])
 
   const plan = (store.plan ?? 'free') as PlanSlug
@@ -449,6 +461,7 @@ export default function ConfigForm({
       if (!res.ok) throw new Error(data.error ?? 'Erro')
       setPwdOpen(false)
       setCurPwd(''); setNewPwd('')
+      setHasPassword(true)
     } catch (e) {
       setPwdErr(e instanceof Error ? e.message : 'Erro')
     } finally {
@@ -1330,7 +1343,7 @@ export default function ConfigForm({
             onClick={() => setPwdOpen(true)}
             className="w-full min-h-[44px] py-3 rounded-[12px] border border-border text-sm text-muted hover:text-foreground hover:border-muted transition-all"
           >
-            Alterar senha
+            {hasPassword ? 'Alterar senha' : 'Definir senha'}
           </button>
         </ConfigCard>
 
@@ -1388,15 +1401,19 @@ export default function ConfigForm({
             className="bg-surface border border-border rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-32px)] overflow-y-auto shadow-xl"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="font-syne font-bold text-lg mb-4">Alterar senha</h3>
+            <h3 className="font-syne font-bold text-lg mb-4">
+              {hasPassword ? 'Alterar senha' : 'Definir senha'}
+            </h3>
             <div className="flex flex-col gap-3">
-              <input
-                type="password"
-                className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
-                placeholder="Senha atual"
-                value={curPwd}
-                onChange={e => setCurPwd(e.target.value)}
-              />
+              {hasPassword && (
+                <input
+                  type="password"
+                  className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"
+                  placeholder="Senha atual"
+                  value={curPwd}
+                  onChange={e => setCurPwd(e.target.value)}
+                />
+              )}
               <input
                 type="password"
                 className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-xl text-sm"

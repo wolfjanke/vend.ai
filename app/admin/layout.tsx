@@ -80,6 +80,7 @@ async function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </a>
           )}
           <form action="/api/auth/signout-redirect" method="POST">
+            <input type="hidden" name="callbackUrl" value="/admin" />
             <button type="submit" className="px-3 py-1.5 text-xs text-muted border border-border rounded-lg hover:border-warm hover:text-warm transition-all">
               Sair
             </button>
