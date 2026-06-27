@@ -222,6 +222,7 @@ export interface Store extends StoreAddress {
   theme_primary_color?:     string | null
   theme_secondary_color?:   string | null
   theme_accent_color?:      string | null
+  theme_page_bg_color?:     string | null
   theme_background?:        string
   theme_shimmer?:           boolean
   theme_logo_url?:          string | null

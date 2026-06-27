@@ -1,5 +1,6 @@
-import type { ThemeDefinition, ShadowStyle, ThemeBackground } from '@/lib/themes'
+import type { ThemeDefinition, ShadowStyle } from '@/lib/themes'
 import { hexWithAlpha } from '@/lib/theme-contrast'
+import { isLight } from '@/lib/theme-derive'
 
 const ALL_THEME_FONTS = [
   'Syne',
@@ -57,22 +58,23 @@ export function getAllThemesFontsUrl(): string {
 
 export function resolveThemeShadow(
   shadowStyle: ShadowStyle,
-  background: ThemeBackground,
+  pageBg: string,
   accent: string,
 ): string {
+  const isDark = !isLight(pageBg)
   switch (shadowStyle) {
     case 'none':
       return 'none'
     case 'light':
-      return background === 'dark'
+      return isDark
         ? '0 2px 8px rgba(0,0,0,0.35)'
         : '0 2px 8px rgba(0,0,0,0.08)'
     case 'medium':
-      return background === 'dark'
+      return isDark
         ? '0 4px 16px rgba(0,0,0,0.45)'
         : '0 4px 16px rgba(0,0,0,0.10)'
     case 'heavy':
-      return background === 'dark'
+      return isDark
         ? '0 2px 12px rgba(0,0,0,0.5)'
         : '0 2px 12px rgba(0,0,0,0.12)'
     case 'glow':

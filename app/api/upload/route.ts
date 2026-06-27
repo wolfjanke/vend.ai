@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import { isCloudinaryConfigured } from '@/lib/cloudinary'
 import { checkUploadPostRateLimit } from '@/lib/store-rate-limit'
@@ -17,8 +16,8 @@ function cloudinarySignature(params: Record<string, string>, apiSecret: string):
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.storeId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   if (!(await checkUploadPostRateLimit(session.storeId))) {
     return NextResponse.json(

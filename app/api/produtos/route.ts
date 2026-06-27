@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { sql } from '@/lib/db'
 import { productBodySchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
@@ -10,8 +9,8 @@ export { dynamic } from '@/lib/route-dynamic'
 
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   try {
     let body: unknown

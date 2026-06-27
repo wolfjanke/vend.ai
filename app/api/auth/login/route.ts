@@ -11,7 +11,11 @@ import { normalizeEmail } from '@/lib/email-normalize'
 import { resolveRateLimitIp } from '@/lib/rate-limit'
 import { logLoginRateLimitBlocked } from '@/lib/auth-login-log'
 import { logServerError } from '@/lib/logger'
+import { createAndSendEmailVerification } from '@/lib/email-verification'
+import { recordAdminLogin } from '@/lib/login-alert'
 export { dynamic } from '@/lib/route-dynamic'
+
+const LOGIN_FAILED_MSG = 'E-mail ou senha inválidos.'
 
 const schema = z.object({
   email: z.string().email(),
@@ -31,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = schema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'E-mail ou senha inválidos.' }, { status: 401 })
+      return NextResponse.json({ error: LOGIN_FAILED_MSG }, { status: 401 })
     }
 
     const email = normalizeEmail(parsed.data.email)
@@ -47,20 +51,18 @@ export async function POST(req: NextRequest) {
 
     const user = await authenticateAdminUser(email, password)
     if (!user) {
-      return NextResponse.json({ error: 'E-mail ou senha inválidos.' }, { status: 401 })
+      return NextResponse.json({ error: LOGIN_FAILED_MSG }, { status: 401 })
     }
 
     if (!(await isAdminEmailVerified(user.id))) {
-      return NextResponse.json(
-        {
-          error: 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.',
-          code: 'EMAIL_NOT_VERIFIED',
-        },
-        { status: 403 },
+      void createAndSendEmailVerification(user.id, email).catch(err =>
+        logServerError('[login] reenvio verificação', err),
       )
+      return NextResponse.json({ error: LOGIN_FAILED_MSG }, { status: 401 })
     }
 
     const token = await createSessionToken(user)
+    void recordAdminLogin(user.id, email, ip)
     const res = NextResponse.json({ ok: true })
     res.cookies.set(sessionCookieName(), token, sessionCookieOptions())
     return res

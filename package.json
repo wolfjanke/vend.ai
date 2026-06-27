@@ -10,7 +10,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "migrate": "node scripts/apply-migrations.mjs"
+    "migrate": "node scripts/apply-migrations.mjs",
+    "auth:revoke-all-sessions": "node scripts/bump-all-session-versions.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

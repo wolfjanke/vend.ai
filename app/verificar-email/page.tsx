@@ -2,18 +2,30 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import BrandLogo from '@/components/BrandLogo'
+import {
+  clearAuthTokenFromBrowserUrl,
+  readAuthTokenFromBrowserUrl,
+} from '@/lib/auth-token-url'
 
 function VerificarToken() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token') ?? ''
+  const [tokenReady, setTokenReady] = useState(false)
+  const [token, setToken] = useState('')
 
   const [status, setStatus] = useState<'loading' | 'error'>('loading')
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const value = readAuthTokenFromBrowserUrl()
+    setToken(value)
+    setTokenReady(true)
+    if (value) clearAuthTokenFromBrowserUrl()
+  }, [])
+
+  useEffect(() => {
+    if (!tokenReady) return
     if (!token) {
       setStatus('error')
       setError('Link inválido.')
@@ -43,9 +55,9 @@ function VerificarToken() {
 
     void verify()
     return () => { cancelled = true }
-  }, [token, router])
+  }, [token, tokenReady, router])
 
-  if (status === 'loading') {
+  if (!tokenReady || status === 'loading') {
     return (
       <p className="text-sm text-muted text-center">
         Confirmando seu e-mail…

@@ -46,6 +46,8 @@ No dashboard do Neon, abra o SQL Editor e cole o conteúdo de cada arquivo **na 
 | **017** `order_customer_email.sql` | E-mail do comprador em pedidos de checkout (`orders.customer_email`) |
 | **024** `billing_cycle.sql` | Ciclo de cobrança da assinatura (`stores.billing_cycle`: monthly, quarterly, annual) |
 | **027** `retention.sql` | Fluxo de retenção no cancelamento: clique WhatsApp, bônus +30 dias via superadmin |
+| **029** `session_version.sql` | Coluna `admin_users.session_version` — invalidação de JWT no logout e troca de senha |
+| **030** `last_login_ip.sql` | Coluna `admin_users.last_login_ip` — alerta por e-mail em login de IP diferente |
 
 ## Aplicar todas de uma vez
 

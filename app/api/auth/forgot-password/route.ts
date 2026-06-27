@@ -10,6 +10,7 @@ import {
   checkForgotPasswordIpRateLimit,
 } from '@/lib/auth-rate-limit'
 import { resolveRateLimitIp } from '@/lib/rate-limit'
+import { buildPasswordResetPageUrl } from '@/lib/reset-password-url'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       `
 
       const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-      const resetUrl = `${base.replace(/\/$/, '')}/redefinir-senha?token=${encodeURIComponent(token)}`
+      const resetUrl = buildPasswordResetPageUrl(base, token)
       const sent = await sendPasswordResetEmail(email, resetUrl)
       if (!sent.success) {
         logServerError('[forgot-password] falha ao enviar e-mail', sent.error)

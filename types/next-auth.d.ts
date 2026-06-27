@@ -20,5 +20,6 @@ declare module 'next-auth/jwt' {
     impersonating?: boolean
     realStoreId?: string
     sessionRevoked?: boolean
+    sessionVer?: number
   }
 }

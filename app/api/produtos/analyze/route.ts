@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { sql } from '@/lib/db'
 import { analyzeProductPhoto, buildProductAnalysisPrompt, GEMINI_MODELS } from '@/lib/gemini'
 import { parseProductAnalysisRaw, type ProductAnalysisItem } from '@/lib/product-analysis'
@@ -96,8 +95,8 @@ function validateBlockGroups(
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { session, unauthorized } = await requireSession()
+    if (!session) return unauthorized!
 
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: 'GEMINI_API_KEY não configurada no servidor' }, { status: 500 })

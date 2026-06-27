@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
@@ -7,6 +6,10 @@ import { checkResetPasswordRateLimit } from '@/lib/auth-rate-limit'
 import { passwordSchema } from '@/lib/password-policy'
 import { notifyPasswordChanged } from '@/lib/notify-password-changed'
 import { resolveRateLimitIp } from '@/lib/rate-limit'
+import { clearSessionCookies } from '@/lib/auth-session-cookie'
+import { bumpSessionVersion } from '@/lib/session-version'
+import { validateNewPassword } from '@/lib/validate-new-password'
+import { hashPassword } from '@/lib/password-hash'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -36,6 +39,11 @@ export async function POST(req: NextRequest) {
 
     const { token, password } = parsed.data
 
+    const pwdCheck = await validateNewPassword(password)
+    if (!pwdCheck.ok) {
+      return NextResponse.json({ error: pwdCheck.error }, { status: 400 })
+    }
+
     const rows = await sql`
       SELECT t.id, t.user_id, t.expires_at, t.used_at, u.email
       FROM password_reset_tokens t
@@ -57,17 +65,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Link expirado. Solicite um novo.' }, { status: 400 })
     }
 
-    const hash = await bcrypt.hash(password, 10)
+    const hash = await hashPassword(password)
     await sql`
       UPDATE admin_users
       SET password_hash = ${hash}, password_changed_at = NOW()
       WHERE id = ${row.user_id}
     `
     await sql`UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = ${row.user_id} AND used_at IS NULL`
+    await bumpSessionVersion(row.user_id)
 
     notifyPasswordChanged(row.email)
 
-    return NextResponse.json({ ok: true })
+    const res = NextResponse.json({ ok: true })
+    clearSessionCookies(res)
+    return res
   } catch (e) {
     logServerError('[reset-password]', e)
     return NextResponse.json({ error: 'Erro ao redefinir senha' }, { status: 500 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import { decrementStockForOrder, OrderValidationError } from '@/lib/order-pricing'
 import type { CartItem } from '@/types'
@@ -17,8 +17,8 @@ async function requirePdvPlan(storeId: string): Promise<{ ok: true } | { ok: fal
 
 
 export async function GET(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   const gate = await requirePdvPlan(session.storeId)
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   const gate = await requirePdvPlan(session.storeId)
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })

@@ -1,14 +1,12 @@
 import { encode } from 'next-auth/jwt'
 import type { AuthenticatedAdmin } from '@/lib/authenticate-admin'
+import { SESSION_MAX_AGE_SECONDS } from '@/lib/session-config'
+import { getUserSessionVersion } from '@/lib/session-version'
 
 function authSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET
   if (!secret) throw new Error('NEXTAUTH_SECRET não configurado')
   return secret
-}
-
-function sessionMaxAge(): number {
-  return 7 * 24 * 60 * 60
 }
 
 function useSecureCookies(): boolean {
@@ -24,15 +22,17 @@ export function sessionCookieName(): string {
 
 /** Gera o valor do cookie de sessão JWT (mesmos claims do callback jwt no login). */
 export async function createSessionToken(user: AuthenticatedAdmin): Promise<string> {
+  const sessionVer = await getUserSessionVersion(user.id)
   return encode({
     token: {
       sub: user.id,
       email: user.email,
       storeId: user.storeId,
       impersonating: false,
+      sessionVer,
     },
     secret: authSecret(),
-    maxAge: sessionMaxAge(),
+    maxAge: SESSION_MAX_AGE_SECONDS,
   })
 }
 
@@ -48,7 +48,7 @@ export function sessionCookieOptions(): {
     sameSite: 'lax',
     path: '/',
     secure: useSecureCookies(),
-    maxAge: sessionMaxAge(),
+    maxAge: SESSION_MAX_AGE_SECONDS,
   }
 }
 
@@ -71,3 +71,5 @@ export function clearSessionCookies(res: {
     })
   }
 }
+
+export { SESSION_MAX_AGE_SECONDS } from '@/lib/session-config'

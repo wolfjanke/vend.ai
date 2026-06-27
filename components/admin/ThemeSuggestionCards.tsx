@@ -1,6 +1,7 @@
 'use client'
 
 import type { ThemeAnalysisSuggestion } from '@/lib/theme-ai'
+import ThemePaletteSwatches from '@/components/admin/ThemePaletteSwatches'
 import { THEMES } from '@/lib/themes'
 
 type Props = {
@@ -22,16 +23,12 @@ export default function ThemeSuggestionCards({ suggestions, onApply }: Props) {
             onClick={() => onApply(s)}
             className="text-left p-3 rounded-xl border border-border bg-surface2 hover:border-primary transition-colors min-w-0 min-h-[44px]"
           >
-            <div className="flex gap-1 mb-2">
-              {[s.primary, s.secondary, s.accent].map(c => (
-                <span
-                  key={c}
-                  className="w-5 h-5 rounded-full border border-border shrink-0"
-                  style={{ background: c }}
-                />
-              ))}
-            </div>
-            <p className="font-syne font-semibold text-sm truncate">{s.label || theme?.label}</p>
+            <ThemePaletteSwatches
+              palette={{ primary: s.primary, accent: s.accent, pageBg: s.pageBg }}
+              size="md"
+              label={`Sugestão IA: primária ${s.primary}, destaque ${s.accent}, fundo ${s.pageBg}`}
+            />
+            <p className="font-syne font-semibold text-sm truncate mt-2">{s.label || theme?.label}</p>
             <p className="text-[11px] text-muted line-clamp-2 break-words mt-0.5">{s.reason}</p>
           </button>
         )

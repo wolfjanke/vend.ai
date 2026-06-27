@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { clearSessionCookies } from '@/lib/auth-session-cookie'
+import { revokeSessionFromRequest } from '@/lib/session-logout'
 export { dynamic } from '@/lib/route-dynamic'
 
 const DEFAULT_CALLBACK = '/admin'
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   const destination = resolveCallback(callbackUrl, req)
+  await revokeSessionFromRequest(req)
   const res = NextResponse.redirect(new URL(destination, req.url), { status: 302 })
   clearSessionCookies(res)
   return res

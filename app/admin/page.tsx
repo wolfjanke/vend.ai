@@ -9,19 +9,16 @@ import BrandLogo from '@/components/BrandLogo'
 import AuthSessionProvider from '@/components/AuthSessionProvider'
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
 
+const GOOGLE_LOGIN_ERROR_MSG =
+  'Não foi possível entrar com Google. Tente novamente ou use e-mail e senha.'
+
 function GoogleErrorBanner() {
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
   if (!error) return null
-  const messages: Record<string, string> = {
-    google: 'Não foi possível entrar com Google. Tente novamente ou use e-mail e senha.',
-    AccessDenied: 'Login com Google não permitido. Cadastros podem estar fechados ou o e-mail não foi autorizado.',
-    OAuthAccountNotLinked: 'Este e-mail já está cadastrado com senha. Entre com e-mail e senha ou use o mesmo Google vinculado.',
-  }
-  const message = messages[error] ?? 'Não foi possível entrar. Tente novamente.'
   return (
     <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm break-words">
-      {message}
+      {GOOGLE_LOGIN_ERROR_MSG}
     </div>
   )
 }
@@ -43,21 +40,16 @@ function AdminLoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
-  const [pendingVerifyEmail, setPendingVerifyEmail] = useState('')
 
   async function handleLogin() {
     if (!email || !pass) { setError('Preencha e-mail e senha.'); return }
     setLoading(true)
     setError('')
-    setPendingVerifyEmail('')
 
     const res = await loginWithCredentials(email, pass)
 
     if (!res.ok) {
       setError(res.error)
-      if (res.emailNotVerified) {
-        setPendingVerifyEmail(email.trim())
-      }
       setLoading(false)
       return
     }
@@ -84,16 +76,6 @@ function AdminLoginPage() {
         {error && (
           <div className="mb-4 px-4 py-3 bg-warm/10 border border-warm/30 rounded-xl text-warm text-sm break-words">
             {error}
-            {pendingVerifyEmail && (
-              <p className="mt-2 text-foreground/90">
-                <Link
-                  href={`/verificar-email/aguardando?email=${encodeURIComponent(pendingVerifyEmail)}`}
-                  className="text-primary font-medium hover:underline"
-                >
-                  Reenviar e-mail de confirmação →
-                </Link>
-              </p>
-            )}
           </div>
         )}
 
@@ -149,6 +131,11 @@ function AdminLoginPage() {
         </p>
         <p className="text-center text-sm text-muted mt-2">
           <a href="/esqueci-senha" className="text-primary/80 hover:underline">Esqueci minha senha</a>
+        </p>
+        <p className="text-center text-sm text-muted mt-2">
+          <Link href="/verificar-email/aguardando" className="text-primary/80 hover:underline break-words">
+            Não recebeu o e-mail de confirmação?
+          </Link>
         </p>
       </div>
     </main>

@@ -30,6 +30,7 @@ export type AparenciaInitial = {
   theme_primary_color:   string | null
   theme_secondary_color: string | null
   theme_accent_color:    string | null
+  theme_page_bg_color:   string | null
   theme_background:      'light' | 'dark'
   theme_shimmer:         boolean
 }

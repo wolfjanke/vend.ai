@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import bcrypt from 'bcryptjs'
-import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { passwordSchema } from '@/lib/password-policy'
 import { notifyPasswordChanged } from '@/lib/notify-password-changed'
 import { checkChangePasswordRateLimit } from '@/lib/auth-rate-limit'
+import { clearSessionCookies } from '@/lib/auth-session-cookie'
+import { requireVerifiedUser } from '@/lib/require-session'
+import { bumpSessionVersion } from '@/lib/session-version'
+import { validateNewPassword } from '@/lib/validate-new-password'
+import { hashPassword, verifyPassword } from '@/lib/password-hash'
 import { z } from 'zod'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -15,10 +17,8 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireVerifiedUser()
+  if (!session) return unauthorized!
 
   if (!(await checkChangePasswordRateLimit(session.user.id))) {
     return NextResponse.json(
@@ -44,6 +44,11 @@ export async function POST(req: NextRequest) {
 
   const { currentPassword, newPassword } = parsed.data
 
+  const pwdCheck = await validateNewPassword(newPassword)
+  if (!pwdCheck.ok) {
+    return NextResponse.json({ error: pwdCheck.error }, { status: 400 })
+  }
+
   const rows = await sql`
     SELECT password_hash FROM admin_users WHERE id = ${session.user.id} LIMIT 1
   `
@@ -55,20 +60,23 @@ export async function POST(req: NextRequest) {
     if (!currentPassword?.trim()) {
       return NextResponse.json({ error: 'Informe a senha atual.' }, { status: 400 })
     }
-    const ok = await bcrypt.compare(currentPassword, existingHash)
+    const ok = await verifyPassword(currentPassword, existingHash)
     if (!ok) return NextResponse.json({ error: 'Senha atual incorreta' }, { status: 400 })
   }
 
-  const hash = await bcrypt.hash(newPassword, 10)
+  const hash = await hashPassword(newPassword)
   await sql`
     UPDATE admin_users
     SET password_hash = ${hash}, password_changed_at = NOW()
     WHERE id = ${session.user.id}
   `
+  await bumpSessionVersion(session.user.id)
 
   if (session.user.email) {
     notifyPasswordChanged(session.user.email)
   }
 
-  return NextResponse.json({ ok: true, hadPassword: Boolean(existingHash) })
+  const res = NextResponse.json({ ok: true, hadPassword: Boolean(existingHash), reauthRequired: true })
+  clearSessionCookies(res)
+  return res
 }

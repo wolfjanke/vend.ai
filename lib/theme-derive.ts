@@ -187,23 +187,23 @@ export function isLight(hex: string): boolean {
 export function deriveThemeColors(
   primary: string,
   accent: string,
-  background: ThemeBackground,
-  pageBgFallback?: string,
+  pageBgInput: string,
   themeText?: { text?: string; textMuted?: string },
 ): DerivedThemeColors {
   const p = expandHex(primary)
   const a = expandHex(accent)
-  const isDark = background === 'dark'
+  const pageBg = expandHex(pageBgInput)
+  const isDark = !isLight(pageBg)
+  const background: ThemeBackground = isLight(pageBg) ? 'light' : 'dark'
 
-  const pageBg = pageBgFallback ?? (isDark ? '#08080F' : '#FAFAF8')
-  const cardBg = isDark ? lighten(pageBg, 8) : darken('#FFFFFF', 3)
-  const cardBgHover = isDark ? lighten(pageBg, 12) : darken('#FFFFFF', 6)
-  const surface2 = isDark ? lighten(pageBg, 14) : darken('#FFFFFF', 8)
-  const surface3 = isDark ? lighten(pageBg, 18) : darken('#FFFFFF', 12)
+  const cardBg = isDark ? lighten(pageBg, 8) : lighten(pageBg, 4)
+  const cardBgHover = isDark ? lighten(pageBg, 12) : lighten(pageBg, 7)
+  const surface2 = isDark ? lighten(pageBg, 14) : lighten(pageBg, 10)
+  const surface3 = isDark ? lighten(pageBg, 18) : lighten(pageBg, 14)
   const border = isDark ? alpha(p, 0.15) : alpha(p, 0.2)
-  const faint = isDark ? '#33334A' : '#C8C0B8'
+  const faint = isDark ? lighten(pageBg, 22) : darken(pageBg, 12)
 
-  const textSecondary = isDark ? '#AAAACC' : '#4A4A6A'
+  const textSecondary = isDark ? lighten(pageBg, 45) : darken(pageBg, 35)
 
   const lightTextCandidates: string[] = []
   const themeTextColor = themeText?.text?.trim()
@@ -213,7 +213,7 @@ export function deriveThemeColors(
   lightTextCandidates.push('#1A1A2E', '#2C1810', '#0D0D14')
 
   const textPrimary = isDark
-    ? '#F0F0FF'
+    ? pickReadableColor(['#F0F0FF', '#FFFFFF', lighten(pageBg, 55)], pageBg, 4.5)
     : pickReadableColor(lightTextCandidates, cardBg, 4.5)
 
   const themeMutedColor = themeText?.textMuted?.trim()
@@ -226,7 +226,7 @@ export function deriveThemeColors(
   const textMuted = isDark
     ? (themeMutedColor && meetsContrast(themeMutedColor, pageBg, 3)
         ? themeMutedColor
-        : '#666688')
+        : pickReadableColor(['#AAAACC', '#888899', textSecondary], pageBg, 3))
     : pickReadableColor(lightMutedCandidates, pageBg, 4.5)
 
   const pricePrimary = isDark
@@ -257,12 +257,12 @@ export function deriveThemeColors(
     cardBorder: border,
     cardBorderHover: alpha(p, 0.5),
 
-    headerBg: isDark ? alpha('#000000', 0.9) : alpha('#FFFFFF', 0.95),
-    headerText: isDark ? '#F0F0FF' : textPrimary,
+    headerBg: isDark ? alpha(pageBg, 0.92) : alpha(lighten(pageBg, 2), 0.95),
+    headerText: isDark ? textPrimary : textPrimary,
 
     chipBg: isDark ? alpha('#FFFFFF', 0.08) : alpha('#000000', 0.05),
     chipBgActive: isDark ? alpha(p, 0.15) : alpha(p, 0.12),
-    chipText: isDark ? '#AAAACC' : textSecondary,
+    chipText: isDark ? textSecondary : textSecondary,
     chipTextActive: isDark ? p : pickReadableColor([p, darken(p, 15), textPrimary], pageBg, 3),
 
     buttonBg: p,
@@ -270,7 +270,7 @@ export function deriveThemeColors(
     buttonHover: darken(p, 10),
 
     pricePrimary,
-    priceOld: isDark ? '#555577' : pickReadableColor(['#999999', '#888888', textMuted], cardBg, 3),
+    priceOld: isDark ? textMuted : pickReadableColor(['#999999', '#888888', textMuted], cardBg, 3),
 
     viAvatar: `linear-gradient(135deg, ${p}, ${a})`,
     viBubbleBg: isDark ? alpha(p, 0.12) : alpha(p, 0.08),

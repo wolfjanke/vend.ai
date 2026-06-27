@@ -4,7 +4,7 @@ export async function loginWithCredentials(
   password: string,
 ): Promise<
   | { ok: true }
-  | { ok: false; error: string; rateLimited?: boolean; emailNotVerified?: boolean }
+  | { ok: false; error: string; rateLimited?: boolean }
 > {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
@@ -12,21 +12,13 @@ export async function loginWithCredentials(
     body: JSON.stringify({ email, password }),
   })
 
-  const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+  const data = (await res.json().catch(() => ({}))) as { error?: string }
 
   if (res.status === 429) {
     return {
       ok: false,
       rateLimited: true,
       error: data.error ?? 'Muitas tentativas. Aguarde alguns minutos.',
-    }
-  }
-
-  if (res.status === 403 && data.code === 'EMAIL_NOT_VERIFIED') {
-    return {
-      ok: false,
-      emailNotVerified: true,
-      error: data.error ?? 'Confirme seu e-mail antes de entrar.',
     }
   }
 

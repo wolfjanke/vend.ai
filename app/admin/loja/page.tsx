@@ -95,6 +95,7 @@ export default async function MinhaLojaPage() {
             theme_primary_color:   store!.theme_primary_color ?? null,
             theme_secondary_color: store!.theme_secondary_color ?? null,
             theme_accent_color:    store!.theme_accent_color ?? null,
+            theme_page_bg_color:   store!.theme_page_bg_color ?? null,
             theme_background:      (store!.theme_background as 'light' | 'dark') ?? 'dark',
             theme_shimmer:         Boolean(store!.theme_shimmer),
           }}

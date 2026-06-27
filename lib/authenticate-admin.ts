@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+import { verifyPassword } from '@/lib/password-hash'
 import { sql } from '@/lib/db'
 import { normalizeEmail } from '@/lib/email-normalize'
 
@@ -42,7 +42,7 @@ export async function authenticateAdminUser(
     const hash = user.password_hash as string | null
     if (!hash) return null
 
-    const valid = await bcrypt.compare(password, hash)
+    const valid = await verifyPassword(password, hash)
     if (!valid) return null
 
     const storeId = user.store_id as string

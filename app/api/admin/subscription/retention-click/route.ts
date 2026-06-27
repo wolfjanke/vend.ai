@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { isPlatformDemoStore } from '@/lib/demo-store'
@@ -11,10 +11,8 @@ import type { PlanSlug, SubscriptionStatus } from '@/types'
 export { dynamic } from '@/lib/route-dynamic'
 
 export async function POST() {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   try {
     const rows = await sql`

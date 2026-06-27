@@ -3,21 +3,22 @@ import type { PlanSlug } from '@/lib/plans'
 import {
   getTheme,
   themeToCardConfig,
-  type ThemeBackground,
   type ThemeDefinition,
   type ThemeName,
   type StoreThemeConfig,
 } from '@/lib/themes'
 import { getGoogleFontsUrl, resolveThemeShadow } from '@/lib/theme-fonts'
-import { deriveThemeColors } from '@/lib/theme-derive'
+import { deriveThemeColors, expandHex, isLight } from '@/lib/theme-derive'
 import { hexWithAlpha } from '@/lib/theme-contrast'
 import { getThemeTypography, themeTypographyCssVars } from '@/lib/theme-typography'
+import { inferThemeBackground, resolveThemePageBg } from '@/lib/theme-page-bg'
 
 export type StoreThemeRow = {
   theme_name?:              string | null
   theme_primary_color?:     string | null
   theme_secondary_color?:   string | null
   theme_accent_color?:      string | null
+  theme_page_bg_color?:     string | null
   theme_background?:        string | null
   theme_shimmer?:           boolean | null
   theme_logo_url?:          string | null
@@ -36,23 +37,21 @@ export function generateThemeCss(
     primary?: string | null
     accent?:   string | null
   },
-  background: ThemeBackground,
+  pageBg: string,
   shimmer: boolean,
   overrides?: ThemeCssOverrides,
 ): string {
   const primary = customColors.primary?.trim() || theme.defaultColors.primary
   const accent = customColors.accent?.trim() || theme.defaultColors.accent
-  const pageBg =
-    background === 'dark'
-      ? theme.defaultColors.background
-      : theme.defaultColors.backgroundLight
+  const resolvedPageBg = expandHex(pageBg)
+  const pageIsLight = isLight(resolvedPageBg)
 
-  const c = deriveThemeColors(primary, accent, background, pageBg, {
-    text:      background === 'light' ? theme.defaultColors.text : undefined,
-    textMuted: background === 'light' ? theme.defaultColors.textMuted : undefined,
+  const c = deriveThemeColors(primary, accent, resolvedPageBg, {
+    text:      pageIsLight ? theme.defaultColors.text : undefined,
+    textMuted: pageIsLight ? theme.defaultColors.textMuted : undefined,
   })
   const typography = themeTypographyCssVars(getThemeTypography(theme.name))
-  const themeShadow = resolveThemeShadow(theme.shadowStyle, background, accent)
+  const themeShadow = resolveThemeShadow(theme.shadowStyle, resolvedPageBg, accent)
   const priceColor = theme.priceColor ?? c.pricePrimary
   const overlayGradient =
     theme.card.overlayGradient ??
@@ -152,7 +151,8 @@ export function generateThemeCss(
 export function resolveStoreTheme(row: StoreThemeRow): {
   theme:       ThemeDefinition
   themeName:   ThemeName
-  background:  ThemeBackground
+  background:  import('@/lib/themes').ThemeBackground
+  pageBg:      string
   shimmer:     boolean
   css:         string
   fontUrl:     string
@@ -162,7 +162,11 @@ export function resolveStoreTheme(row: StoreThemeRow): {
 } {
   const themeName = (row.theme_name ?? 'default') as ThemeName
   const theme = getTheme(themeName)
-  const background = (row.theme_background ?? theme.defaultBackground) as ThemeBackground
+  const pageBg = resolveThemePageBg(theme, {
+    themePageBgColor: row.theme_page_bg_color,
+    themeBackground:  row.theme_background,
+  })
+  const background = inferThemeBackground(pageBg)
   const shimmer = Boolean(row.theme_shimmer)
   const plan = (row.plan ?? 'free') as PlanSlug
   const catalogColsMobile = resolveCatalogColsMobile(
@@ -177,7 +181,7 @@ export function resolveStoreTheme(row: StoreThemeRow): {
       primary: row.theme_primary_color,
       accent:  row.theme_accent_color,
     },
-    background,
+    pageBg,
     shimmer,
     { catalogColsMobile },
   )
@@ -186,6 +190,7 @@ export function resolveStoreTheme(row: StoreThemeRow): {
     theme,
     themeName,
     background,
+    pageBg,
     shimmer,
     css,
     fontUrl:     getGoogleFontsUrl(theme),

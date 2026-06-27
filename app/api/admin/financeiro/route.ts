@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import { getTakeRates, getTakeRateSync } from '@/lib/take-rates'
 import type { PlanSlug } from '@/types'
@@ -8,8 +8,8 @@ export { dynamic } from '@/lib/route-dynamic'
 
 
 export async function GET(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   const now     = new Date()
   const year    = now.getFullYear()

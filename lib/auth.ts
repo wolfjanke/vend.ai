@@ -7,6 +7,11 @@ import { checkLoginRateLimit } from './auth-rate-limit'
 import { logLoginRateLimitBlocked } from './auth-login-log'
 import { isSuperadminEmail } from './superadmin-allowlist'
 import { resolveGoogleSignIn } from './google-auth'
+import { isAuthTokenRevoked } from './session-revocation'
+import { getUserSessionVersion } from './session-version'
+import { SESSION_MAX_AGE_SECONDS } from './session-config'
+import { createAndSendEmailVerification } from './email-verification'
+import { logServerError } from './logger'
 
 /** NextAuth aceita NEXTAUTH_SECRET ou AUTH_SECRET (alguns hosts documentam só um dos nomes). */
 function authSecret(): string | undefined {
@@ -57,11 +62,13 @@ const providers: NextAuthOptions['providers'] = [
         const user = await authenticateAdminUser(credentials.email, credentials.password)
         if (!user) return null
         if (!(await isAdminEmailVerified(user.id))) {
-          throw new Error('EMAIL_NOT_VERIFIED')
+          void createAndSendEmailVerification(user.id, user.email).catch(err =>
+            logServerError('[auth] reenvio verificação (credentials)', err),
+          )
+          return null
         }
         return user
       } catch (e) {
-        if (e instanceof Error && e.message === 'EMAIL_NOT_VERIFIED') throw e
         console.error('[auth] authorize:', e)
         return null
       }
@@ -112,6 +119,7 @@ export const authOptions: NextAuthOptions = {
           token.impersonating = false
           token.realStoreId = undefined
           token.sessionRevoked = false
+          token.sessionVer = await getUserSessionVersion(admin.id)
         } catch (e) {
           console.error('[auth] jwt google:', e)
         }
@@ -122,24 +130,11 @@ export const authOptions: NextAuthOptions = {
         token.impersonating = false
         token.realStoreId = undefined
         token.sessionRevoked = false
+        token.sessionVer = await getUserSessionVersion(u.id)
       }
 
       if (token.sub && !user && !account && !token.sessionRevoked) {
-        try {
-          const rows = await sql`
-            SELECT password_changed_at FROM admin_users WHERE id = ${token.sub} LIMIT 1
-          `
-          const changedAt = rows[0]?.password_changed_at as string | Date | undefined
-          if (changedAt && token.iat) {
-            const changedMs = new Date(changedAt).getTime()
-            const issuedMs = (token.iat as number) * 1000
-            if (changedMs > issuedMs) {
-              token.sessionRevoked = true
-            }
-          }
-        } catch (e) {
-          console.error('[auth] jwt password_changed_at:', e)
-        }
+        if (await isAuthTokenRevoked(token)) token.sessionRevoked = true
       }
 
       if (trigger === 'update' && session) {
@@ -208,7 +203,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   },
   secret: authSecret(),
 }

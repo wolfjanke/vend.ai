@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { createPdvPaymentLink } from '@/lib/asaas/payments'
 import { calculateInstallmentQuote } from '@/lib/payments/installment-fees'
 import { logServerError } from '@/lib/logger'
@@ -12,8 +12,8 @@ export { dynamic } from '@/lib/route-dynamic'
 
 
 export async function POST(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   if (!(await checkPdvLinkPostRateLimit(session.storeId))) {
     return NextResponse.json(

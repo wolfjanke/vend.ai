@@ -15,10 +15,27 @@ export async function requireSession() {
   if (!verified) {
     return {
       session: null,
-      unauthorized: NextResponse.json(
-        { error: 'Confirme seu e-mail antes de continuar.', code: 'EMAIL_NOT_VERIFIED' },
-        { status: 403 },
-      ),
+      unauthorized: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    }
+  }
+
+  return { session, unauthorized: null }
+}
+
+/** Sessão autenticada com e-mail verificado (store opcional — ex.: trocar senha). */
+export async function requireVerifiedUser() {
+  const session = await getServerSession(authOptions)
+  const expired = session && new Date(session.expires) <= new Date()
+
+  if (!session?.user?.id || expired) {
+    return { session: null, unauthorized: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+
+  const verified = await isAdminEmailVerified(session.user.id)
+  if (!verified) {
+    return {
+      session: null,
+      unauthorized: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     }
   }
 

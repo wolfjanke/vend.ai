@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { passwordSchema } from '@/lib/password-policy'
 import { sql } from '@/lib/db'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -13,10 +13,8 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId || !session.user?.id) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   if (session.impersonating) {
     return NextResponse.json({ error: 'Encerre a impersonação antes de excluir a conta.' }, { status: 403 })

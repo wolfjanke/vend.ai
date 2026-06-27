@@ -19,6 +19,7 @@ import CheckoutModeSection from '@/components/admin/CheckoutModeSection'
 import ConfigSectionNav, { type ConfigSectionId } from '@/components/admin/ConfigSectionNav'
 import ConfigSaveBar from '@/components/admin/ConfigSaveBar'
 import { adminCard } from '@/lib/admin-ui'
+import { passwordSchema } from '@/lib/password-policy'
 import { normalizeCheckoutMode } from '@/lib/checkout-availability'
 import { activePaymentLinks, MAX_PAYMENT_LINKS } from '@/lib/payment-links'
 import type { CheckoutMode } from '@/types'
@@ -449,7 +450,11 @@ export default function ConfigForm({
 
   async function handleChangePassword() {
     setPwdErr('')
-    if (newPwd.length < 6) { setPwdErr('Nova senha: mínimo 6 caracteres.'); return }
+    const pwdParsed = passwordSchema.safeParse(newPwd)
+    if (!pwdParsed.success) {
+      setPwdErr(pwdParsed.error.issues[0]?.message ?? 'Senha inválida.')
+      return
+    }
     setPwdLoading(true)
     try {
       const res = await fetch('/api/auth/change-password', {
@@ -462,6 +467,7 @@ export default function ConfigForm({
       setPwdOpen(false)
       setCurPwd(''); setNewPwd('')
       setHasPassword(true)
+      window.location.assign('/admin?senha=alterada')
     } catch (e) {
       setPwdErr(e instanceof Error ? e.message : 'Erro')
     } finally {

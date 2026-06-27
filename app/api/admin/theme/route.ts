@@ -14,6 +14,7 @@ import {
 } from '@/lib/themes'
 import { deriveThemeColors } from '@/lib/theme-derive'
 import { getThemeContrastWarnings, isValidHex, validateThemeColors } from '@/lib/theme-contrast'
+import { inferThemeBackground, resolveThemePageBg } from '@/lib/theme-page-bg'
 
 export { dynamic } from '@/lib/route-dynamic'
 const themeNameSchema = z.enum([
@@ -26,6 +27,7 @@ const themePutSchema = z.object({
   theme_primary_color:   z.string().nullable().optional(),
   theme_secondary_color: z.string().nullable().optional(),
   theme_accent_color:    z.string().nullable().optional(),
+  theme_page_bg_color:   z.string().nullable().optional(),
   theme_background:      z.enum(['light', 'dark']).optional(),
   theme_shimmer:         z.boolean().optional(),
   theme_logo_url:        z.string().nullable().optional(),
@@ -63,42 +65,52 @@ export async function PUT(req: NextRequest) {
     }
 
     const theme = getTheme(data.theme_name)
-    const background = (data.theme_background ?? theme.defaultBackground) as ThemeBackground
+    const hasCustomPageBg = Boolean(data.theme_page_bg_color?.trim())
 
-    if (background === 'light' && !theme.allowLightBackground) {
-      return NextResponse.json({ error: 'Este tema não suporta fundo claro.' }, { status: 400 })
-    }
-    if (background === 'dark' && !theme.allowDarkBackground) {
-      return NextResponse.json({ error: 'Este tema não suporta fundo escuro.' }, { status: 400 })
-    }
+    const pageBg = resolveThemePageBg(theme, {
+      themePageBgColor: data.theme_page_bg_color,
+      themeBackground:  data.theme_background,
+    })
+    const background: ThemeBackground = inferThemeBackground(pageBg)
 
-    const bgHex =
-      background === 'dark'
-        ? theme.defaultColors.background
-        : theme.defaultColors.backgroundLight
+    if (!hasCustomPageBg) {
+      const legacyBg = (data.theme_background ?? theme.defaultBackground) as ThemeBackground
+      if (legacyBg === 'light' && !theme.allowLightBackground) {
+        return NextResponse.json({ error: 'Este tema não suporta fundo claro.' }, { status: 400 })
+      }
+      if (legacyBg === 'dark' && !theme.allowDarkBackground) {
+        return NextResponse.json({ error: 'Este tema não suporta fundo escuro.' }, { status: 400 })
+      }
+    }
 
     const colors = {
       primary: data.theme_primary_color ?? undefined,
       accent:  data.theme_accent_color ?? undefined,
+      pageBg:  pageBg,
     }
 
-    for (const [key, value] of Object.entries(colors)) {
+    for (const [key, value] of Object.entries({ primary: colors.primary, accent: colors.accent, pageBg: colors.pageBg })) {
       if (value != null && value !== '' && !isValidHex(value)) {
         return NextResponse.json({ error: `Cor ${key} inválida` }, { status: 400 })
       }
     }
 
-    const formatCheck = validateThemeColors(colors, background, bgHex)
+    const formatCheck = validateThemeColors(colors)
     if (!formatCheck.ok) {
       return NextResponse.json({ error: formatCheck.message }, { status: 400 })
     }
 
-    const contrastWarnings = getThemeContrastWarnings(colors, background, bgHex)
+    const contrastWarnings = getThemeContrastWarnings(
+      { primary: colors.primary, accent: colors.accent },
+      pageBg,
+    )
 
     const derivedSecondary =
       colors.primary && colors.accent
-        ? deriveThemeColors(colors.primary, colors.accent, background, bgHex).secondary
+        ? deriveThemeColors(colors.primary, colors.accent, pageBg).secondary
         : null
+
+    const pageBgToSave = hasCustomPageBg ? pageBg : null
 
     let shimmer = data.theme_shimmer
     if (shimmer === undefined) {
@@ -126,6 +138,7 @@ export async function PUT(req: NextRequest) {
           theme_primary_color = ${data.theme_primary_color ?? null},
           theme_secondary_color = ${derivedSecondary},
           theme_accent_color = ${data.theme_accent_color ?? null},
+          theme_page_bg_color = ${pageBgToSave},
           theme_background = ${background},
           theme_shimmer = ${Boolean(shimmer)},
           theme_logo_url = ${logoUrl},
@@ -139,6 +152,7 @@ export async function PUT(req: NextRequest) {
           theme_primary_color = ${data.theme_primary_color ?? null},
           theme_secondary_color = ${derivedSecondary},
           theme_accent_color = ${data.theme_accent_color ?? null},
+          theme_page_bg_color = ${pageBgToSave},
           theme_background = ${background},
           theme_shimmer = ${Boolean(shimmer)},
           theme_onboarding_done = COALESCE(${data.theme_onboarding_done ?? null}, theme_onboarding_done)
@@ -165,7 +179,8 @@ export async function GET() {
       SELECT
         slug, plan,
         theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-        theme_background, theme_shimmer, theme_logo_url, theme_onboarding_done, logo_url
+        theme_page_bg_color, theme_background, theme_shimmer, theme_logo_url,
+        theme_onboarding_done, logo_url
       FROM stores
       WHERE id = ${session.storeId}
       LIMIT 1

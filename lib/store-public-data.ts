@@ -35,7 +35,7 @@ export const getStorePublicRow = cache(async (slug: string): Promise<StorePublic
       id, slug, name, logo_url, tagline, whatsapp, settings_json, created_at,
       cep, logradouro, numero, complemento, bairro, cidade, uf,
       theme_name, theme_primary_color, theme_secondary_color, theme_accent_color,
-      theme_background, theme_shimmer, theme_logo_url,
+      theme_page_bg_color, theme_background, theme_shimmer, theme_logo_url,
       plan, assistant_name, assistant_welcome_message, assistant_tone, assistant_gender
     FROM stores
     WHERE slug = ${slug}

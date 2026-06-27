@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { sql } from '@/lib/db'
 import type { OrderStatus } from '@/types'
 export { dynamic } from '@/lib/route-dynamic'
@@ -13,8 +12,8 @@ async function getParams(params: { id: string } | Promise<{ id: string }>) {
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } | Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   const { id } = await getParams(params)
   const { status }: { status: OrderStatus } = await req.json()
@@ -31,8 +30,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } | Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   const { id } = await getParams(params)
   const body = await req.json()

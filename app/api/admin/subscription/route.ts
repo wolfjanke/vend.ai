@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { sql } from '@/lib/db'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError, paymentsNotConfiguredMessage } from '@/lib/payments/wolf-hub'
@@ -31,10 +31,8 @@ const postSchema = z.object({
 })
 
 export async function GET() {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   try {
     const sub = await getSubscriptionStatus(session.storeId)
@@ -121,10 +119,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   if (!(await checkSubscriptionPostRateLimit(session.storeId))) {
     return NextResponse.json(
@@ -217,10 +213,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE() {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   try {
     await assertBillingTestAllowed(session.storeId)

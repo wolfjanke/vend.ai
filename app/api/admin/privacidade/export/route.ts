@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import { COMPANY } from '@/lib/company'
 export { dynamic } from '@/lib/route-dynamic'
 
 
 export async function GET() {
-  const session = await getSessionSafe()
-  if (!session?.storeId || !session.user?.id) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   try {
     const storeRows = await sql`

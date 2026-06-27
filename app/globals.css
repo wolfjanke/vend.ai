@@ -855,13 +855,20 @@ html.js .reveal-none.is-visible {
   animation: pulse-highlight 1s ease infinite alternate;
 }
 
+.store-theme-preview.highlight-page-bg {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+  animation: pulse-highlight 1s ease infinite alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .store-theme-preview.highlight-primary .preview-btn-primary,
   .store-theme-preview.highlight-primary .filter-chip.active,
   .store-theme-preview.highlight-primary .preview-vi-avatar,
   .store-theme-preview.highlight-primary .preview-vi-name,
   .store-theme-preview.highlight-accent .preview-price,
-  .store-theme-preview.highlight-accent .preview-badge {
+  .store-theme-preview.highlight-accent .preview-badge,
+  .store-theme-preview.highlight-page-bg {
     animation: none;
     outline-width: 2px;
   }

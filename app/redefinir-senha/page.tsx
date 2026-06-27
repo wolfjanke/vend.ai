@@ -1,14 +1,18 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { PASSWORD_MIN_LENGTH } from '@/lib/password-policy'
+import { useRouter } from 'next/navigation'
+import { passwordSchema } from '@/lib/password-policy'
+import {
+  clearResetTokenFromBrowserUrl,
+  readResetTokenFromBrowserUrl,
+} from '@/lib/reset-password-url'
 
 function RedefinirForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token') ?? ''
+  const [token, setToken] = useState('')
+  const [tokenReady, setTokenReady] = useState(false)
 
   const [pass, setPass] = useState('')
   const [pass2, setPass2] = useState('')
@@ -16,11 +20,19 @@ function RedefinirForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
+  useEffect(() => {
+    const value = readResetTokenFromBrowserUrl()
+    setToken(value)
+    setTokenReady(true)
+    if (value) clearResetTokenFromBrowserUrl()
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (pass !== pass2) { setError('As senhas não coincidem.'); return }
-    if (pass.length < PASSWORD_MIN_LENGTH) {
-      setError(`Mínimo ${PASSWORD_MIN_LENGTH} caracteres.`)
+    const pwdCheck = passwordSchema.safeParse(pass)
+    if (!pwdCheck.success) {
+      setError(pwdCheck.error.issues[0]?.message ?? 'Senha inválida.')
       return
     }
     if (!token) { setError('Link inválido.'); return }
@@ -44,6 +56,10 @@ function RedefinirForm() {
     }
   }
 
+  if (!tokenReady) {
+    return <p className="text-center text-muted text-sm">Carregando…</p>
+  }
+
   if (success) {
     return (
       <div className="text-center">
@@ -58,7 +74,7 @@ function RedefinirForm() {
       <input
         type="password"
         required
-        minLength={PASSWORD_MIN_LENGTH}
+        minLength={8}
         className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[14px] text-sm outline-none focus:border-primary"
         placeholder="Nova senha"
         value={pass}
@@ -67,7 +83,7 @@ function RedefinirForm() {
       <input
         type="password"
         required
-        minLength={PASSWORD_MIN_LENGTH}
+        minLength={8}
         className="w-full min-h-[44px] px-4 py-3 bg-surface2 border border-border rounded-[14px] text-sm outline-none focus:border-primary"
         placeholder="Confirmar nova senha"
         value={pass2}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { digitsOnly } from '@/lib/masks'
 import { logServerError } from '@/lib/logger'
 import { anonymizeCustomerOrders } from '@/lib/lgpd'
@@ -13,10 +13,8 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   if (!(await checkLgpdAdminAnonymizeRateLimit(session.storeId))) {
     return NextResponse.json(

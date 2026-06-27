@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import { quoteUpdateSchema } from '@/lib/validations'
 import { validationErrorResponse } from '@/lib/api-errors'
@@ -27,10 +27,8 @@ async function loadOrder(id: string, storeId: string): Promise<Order | null> {
 
 /** Atualiza itens e observações de um orçamento (WhatsApp, ainda não pago). */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   let body: unknown
   try {
@@ -76,10 +74,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 /** Confirma pagamento do orçamento e baixa estoque. */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   let action = 'confirm_payment'
   try {
@@ -133,10 +129,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
 /** Cancela pedido confirmado e devolve estoque quando o pagamento já tinha sido confirmado. */
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   try {
     const order = await loadOrder(params.id, session.storeId)

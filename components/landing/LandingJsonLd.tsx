@@ -2,9 +2,11 @@ import { SITE_DESCRIPTION, SITE_ENTITY, siteUrl } from '@/lib/site-seo'
 import { COMPANY } from '@/lib/company'
 import { BRAND, BRAND_LOGO } from '@/lib/brand'
 import { LANDING_FAQ_ITEMS } from '@/lib/landing-faq'
+import { getRequestNonce } from '@/lib/request-nonce'
 
 /** Schema.org para buscadores e crawlers de IA. */
 export default function LandingJsonLd() {
+  const nonce = getRequestNonce()
   const faqPage = {
     '@type':      'FAQPage',
     '@id':        `${siteUrl()}/#faq`,
@@ -76,6 +78,7 @@ export default function LandingJsonLd() {
   return (
     <script
       type="application/ld+json"
+      nonce={nonce}
       dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
     />
   )

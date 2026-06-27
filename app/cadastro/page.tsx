@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { PASSWORD_MIN_LENGTH } from '@/lib/password-policy'
+import { PASSWORD_MIN_LENGTH, passwordSchema, passwordComplexityScore } from '@/lib/password-policy'
 import { normalizeEmail } from '@/lib/email-normalize'
 import { z } from 'zod'
 import { stripEmojis } from '@/lib/strip-emoji'
@@ -32,12 +32,13 @@ type CadastroDraft = {
 }
 
 function passwordStrength(pass: string): { score: number; label: string } {
-  let score = 0
-  if (pass.length >= PASSWORD_MIN_LENGTH) score++
+  if (pass.length < PASSWORD_MIN_LENGTH || passwordComplexityScore(pass) < 2) {
+    return { score: 1, label: 'Fraca' }
+  }
+  let score = 2
   if (pass.length >= 10) score++
-  if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score++
-  if (/\d/.test(pass)) score++
-  if (/[^A-Za-z0-9]/.test(pass)) score++
+  if (passwordComplexityScore(pass) >= 3) score++
+  if (passwordComplexityScore(pass) >= 4) score++
   if (score <= 1) return { score: 1, label: 'Fraca' }
   if (score <= 3) return { score: 2, label: 'Média' }
   return { score: 3, label: 'Forte' }
@@ -46,7 +47,7 @@ function passwordStrength(pass: string): { score: number; label: string } {
 const step1Schema = z.object({
   name:  z.string().min(1, 'Informe seu nome'),
   email: z.string().email('E-mail inválido'),
-  pass:  z.string().min(PASSWORD_MIN_LENGTH, `Senha mínimo ${PASSWORD_MIN_LENGTH} caracteres`),
+  pass:  passwordSchema,
 })
 
 function CadastroPage() {

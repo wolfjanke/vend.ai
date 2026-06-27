@@ -1,5 +1,8 @@
 import { genAI, GEMINI_MODELS } from '@/lib/gemini'
-import type { ThemeName } from '@/lib/themes'
+import { expandHex } from '@/lib/theme-derive'
+import { isValidHex } from '@/lib/theme-contrast'
+import { defaultPageBgForTheme, inferThemeBackground } from '@/lib/theme-page-bg'
+import { getTheme, type ThemeBackground, type ThemeName } from '@/lib/themes'
 import { THEME_NAMES } from '@/lib/themes'
 
 export type LogoBackgroundAnalysis = {
@@ -16,7 +19,9 @@ export type ThemeAnalysisSuggestion = {
   primary:     string
   secondary:   string
   accent:      string
-  background:  'light' | 'dark'
+  pageBg:      string
+  /** Inferido de pageBg — mantido para compatibilidade. */
+  background:  ThemeBackground
 }
 
 export type ThemeAnalysisResult = {
@@ -57,13 +62,17 @@ Analise o logo da loja e o contexto abaixo. Retorne APENAS JSON válido:
       "primary": "#RRGGBB",
       "secondary": "#RRGGBB",
       "accent": "#RRGGBB",
-      "background": "light ou dark"
+      "pageBg": "#RRGGBB",
+      "background": "light ou dark (opcional — fallback se pageBg inválido)"
     }
   ]
 }
 
 Regras gerais:
 - Exatamente 3 sugestões em "suggestions", themeName diferentes quando possível
+- pageBg: hex do fundo da vitrine (cor sólida). Deve harmonizar com a logo e com o themeName escolhido
+- Prefira pageBg escuro para logos claras/coloridas em temas premium; pageBg claro para logos escuras ou estilo editorial
+- background (light/dark) só como dica legada — pageBg tem prioridade
 - logo_background.color: cor dominante de fundo detectada na logo
 - secondary pode repetir tom da primária com variação de luminosidade
 - segmento: ${input.segment}
@@ -129,6 +138,47 @@ function normalizeLogoBackground(raw: unknown): LogoBackgroundAnalysis {
   }
 }
 
+function normalizeHex(value: unknown, fallback: string): string {
+  if (typeof value === 'string' && isValidHex(value)) {
+    return expandHex(value.trim())
+  }
+  return expandHex(fallback)
+}
+
+function normalizeThemeName(value: unknown): ThemeName | null {
+  if (typeof value !== 'string') return null
+  const name = value.trim() as ThemeName
+  return THEME_NAMES.includes(name) ? name : null
+}
+
+/** Normaliza uma sugestão da IA — valida hex e resolve pageBg com fallback. */
+export function normalizeThemeSuggestion(raw: unknown): ThemeAnalysisSuggestion | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const themeName = normalizeThemeName(o.themeName)
+  if (!themeName) return null
+
+  const theme = getTheme(themeName)
+  const legacyBg: ThemeBackground =
+    o.background === 'light' ? 'light' : o.background === 'dark' ? 'dark' : theme.defaultBackground
+
+  const pageBg =
+    typeof o.pageBg === 'string' && isValidHex(o.pageBg)
+      ? expandHex(o.pageBg.trim())
+      : defaultPageBgForTheme(theme, legacyBg)
+
+  return {
+    themeName,
+    label: typeof o.label === 'string' ? o.label.trim().slice(0, 80) : theme.label,
+    reason: typeof o.reason === 'string' ? o.reason.trim().slice(0, 120) : '',
+    primary: normalizeHex(o.primary, theme.defaultColors.primary),
+    secondary: normalizeHex(o.secondary, theme.defaultColors.secondary),
+    accent: normalizeHex(o.accent, theme.defaultColors.accent),
+    pageBg,
+    background: inferThemeBackground(pageBg),
+  }
+}
+
 export function parseThemeAnalysis(raw: string): ThemeAnalysisResult {
   let parsed: ThemeAnalysisResult
   try {
@@ -138,8 +188,14 @@ export function parseThemeAnalysis(raw: string): ThemeAnalysisResult {
     if (!match) throw new Error('IA não retornou JSON válido')
     parsed = JSON.parse(match[0]) as ThemeAnalysisResult
   }
+
+  const suggestions = (parsed.suggestions ?? [])
+    .map(normalizeThemeSuggestion)
+    .filter((s): s is ThemeAnalysisSuggestion => s !== null)
+
   return {
-    ...parsed,
+    summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
     logo_background: normalizeLogoBackground(parsed.logo_background),
+    suggestions,
   }
 }

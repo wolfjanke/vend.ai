@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { createSubaccount } from '@/lib/asaas/subaccounts'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/asaas/client'
@@ -67,10 +67,8 @@ const subaccountSchema = z
   })
 
 export async function POST(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   if (!(await checkSubaccountPostRateLimit(session.storeId))) {
     return NextResponse.json(

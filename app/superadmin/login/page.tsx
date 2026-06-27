@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { signOut } from 'next-auth/react'
 import { loginWithCredentials } from '@/lib/client-login'
 import BrandLogo from '@/components/BrandLogo'
 import { superadminBtnPrimary } from '@/lib/superadmin-ui'
@@ -30,7 +29,7 @@ export default function SuperadminLoginPage() {
 
     const me = await fetch('/api/superadmin/me')
     if (!me.ok) {
-      await signOut({ redirect: false })
+      await fetch('/api/auth/revoke-session', { method: 'POST' })
       setError('Este e-mail não tem acesso ao painel.')
       setLoading(false)
       return

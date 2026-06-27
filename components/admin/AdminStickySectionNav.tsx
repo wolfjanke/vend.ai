@@ -70,7 +70,7 @@ export default function AdminStickySectionNav({ ariaLabel, activeKey, children }
   return (
     <nav
       aria-label={ariaLabel}
-      className="sticky top-16 z-40 -mx-4 px-4 sm:-mx-6 sm:px-6 xl:-mx-8 xl:px-8 py-2.5 mb-4 bg-bg/95 backdrop-blur-md border-b border-border min-w-0"
+      className="sticky top-16 z-40 -mx-4 px-4 sm:-mx-6 sm:px-6 xl:-mx-8 xl:px-8 py-2.5 mb-4 bg-bg border-b border-border min-w-0"
     >
       <div
         ref={scrollRef}
@@ -87,6 +87,6 @@ export default function AdminStickySectionNav({ ariaLabel, activeKey, children }
 export const adminSectionNavButtonClass = (isActive: boolean, extra = '') =>
   `shrink-0 snap-start min-h-[44px] px-4 rounded-full border text-sm font-semibold transition-colors ${extra} ${
     isActive
-      ? 'border-primary bg-primary/10 text-primary'
+      ? 'border-primary bg-surface3 text-primary shadow-sm'
       : 'border-border bg-surface2 text-muted hover:border-primary/40 hover:text-foreground'
   }`.trim()

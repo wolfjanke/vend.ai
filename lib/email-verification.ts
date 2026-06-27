@@ -3,6 +3,7 @@ import { sql } from '@/lib/db'
 import { sendEmailVerificationEmail } from '@/lib/email/send-email-verification'
 import { logServerError } from '@/lib/logger'
 import { normalizeEmail } from '@/lib/email-normalize'
+import { buildEmailVerifyPageUrl } from '@/lib/auth-token-url'
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000
 
@@ -24,7 +25,7 @@ export async function createAndSendEmailVerification(
     VALUES (${userId}, ${token}, ${expires.toISOString()})
   `
 
-  const verifyUrl = `${appBaseUrl()}/verificar-email?token=${encodeURIComponent(token)}`
+  const verifyUrl = buildEmailVerifyPageUrl(appBaseUrl(), token)
   const sent = await sendEmailVerificationEmail(email, verifyUrl)
   if (!sent.success) {
     logServerError('[email-verification] falha ao enviar', sent.error)

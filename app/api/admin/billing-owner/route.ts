@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSessionSafe } from '@/lib/auth'
+import { requireSession } from '@/lib/require-session'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/payments/wolf-hub'
 import { getBillingOwnerPublic, saveBillingOwner } from '@/lib/billing-owner'
 export { dynamic } from '@/lib/route-dynamic'
 
 export async function GET() {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   try {
     const data = await getBillingOwnerPublic(session.storeId)
@@ -21,10 +19,8 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getSessionSafe()
-  if (!session?.storeId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+  const { session, unauthorized } = await requireSession()
+  if (!session) return unauthorized!
 
   let body: unknown
   try {

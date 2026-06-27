@@ -1,5 +1,4 @@
 import { deriveThemeColors } from '@/lib/theme-derive'
-import type { ThemeBackground } from '@/lib/themes'
 
 const HEX_RE = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/
 
@@ -58,6 +57,9 @@ function mixHex(hex: string, target: string, t: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`
 }
 
+/** Contraste mínimo para destaque em badges/preço sobre o card derivado. */
+export const CARD_ACCENT_CONTRAST_MIN = 3
+
 /** Escurece ou clareia a cor até atingir contraste mínimo vs fundo (WCAG AA 4.5:1). */
 export function adjustHexForContrast(
   fg: string,
@@ -83,17 +85,43 @@ function meetsWcagAA(fg: string, bg: string): boolean {
   return contrastRatio(fg, bg) >= 4.5
 }
 
+function meetsMinContrast(fg: string, bg: string, minRatio: number): boolean {
+  return contrastRatio(expandHex(fg), expandHex(bg)) >= minRatio
+}
+
+export function getAccentOnCardContrastIssue(
+  accent: string,
+  primary: string,
+  pageBg: string,
+  minRatio = CARD_ACCENT_CONTRAST_MIN,
+): string | null {
+  if (!isValidHex(accent) || !isValidHex(primary) || !isValidHex(pageBg)) return null
+  const { cardBg } = deriveThemeColors(primary.trim(), accent.trim(), pageBg.trim())
+  if (getHexContrastRatio(accent, cardBg) >= minRatio) return null
+  return 'Destaque pouco visível em badges e preços nos cards'
+}
+
+export function adjustAccentForCardContrast(
+  accent: string,
+  primary: string,
+  pageBg: string,
+  minRatio = CARD_ACCENT_CONTRAST_MIN,
+): string {
+  if (!isValidHex(accent) || !isValidHex(primary) || !isValidHex(pageBg)) return accent
+  const { cardBg } = deriveThemeColors(primary.trim(), accent.trim(), pageBg.trim())
+  return adjustHexForContrast(accent, cardBg, minRatio)
+}
+
 /** Avisos de contraste WCAG — informativos; não bloqueiam salvamento. */
 export function getThemeContrastWarnings(
   colors: { primary?: string; accent?: string },
-  background: ThemeBackground,
   pageBgHex: string,
 ): string[] {
   const primary = colors.primary?.trim()
   const accent = colors.accent?.trim()
-  if (!primary || !accent) return []
+  if (!primary || !accent || !isValidHex(pageBgHex)) return []
 
-  const derived = deriveThemeColors(primary, accent, background, pageBgHex)
+  const derived = deriveThemeColors(primary, accent, pageBgHex)
 
   const pairs: [string, string, string][] = [
     ['texto principal', derived.textPrimary, derived.cardBg],
@@ -109,14 +137,17 @@ export function getThemeContrastWarnings(
       warnings.push(`Contraste insuficiente em ${label} (mínimo WCAG AA 4.5:1)`)
     }
   }
+  if (!meetsMinContrast(derived.accent, derived.cardBg, CARD_ACCENT_CONTRAST_MIN)) {
+    warnings.push(
+      `Contraste insuficiente em destaque nos cards (mínimo ${CARD_ACCENT_CONTRAST_MIN}:1)`,
+    )
+  }
   return warnings
 }
 
 /** Valida apenas formato hex — erros de formato ainda bloqueiam o save. */
 export function validateThemeColors(
-  colors: { primary?: string; accent?: string },
-  _background: ThemeBackground,
-  _pageBgHex: string,
+  colors: { primary?: string; accent?: string; pageBg?: string },
 ): { ok: true } | { ok: false; message: string } {
   for (const [key, value] of Object.entries(colors)) {
     if (value == null || value === '') continue

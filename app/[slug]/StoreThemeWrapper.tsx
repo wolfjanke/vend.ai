@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import NonBlockingFontLink from '@/components/loja/NonBlockingFontLink'
 import { resolveStoreTheme } from '@/lib/theme-css'
 import { getStorePublicRow } from '@/lib/store-public-data'
+import { getRequestNonce } from '@/lib/request-nonce'
 
 interface Props {
   slug: string
@@ -14,11 +15,13 @@ export default async function StoreThemeWrapper({ slug, children }: Props) {
     if (!storeRow) notFound()
 
     const resolved = resolveStoreTheme(storeRow)
+    const nonce = getRequestNonce()
 
     return (
       <>
         <NonBlockingFontLink href={resolved.fontUrl} />
         <style
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `.store-theme-root { ${resolved.css} }`,
           }}

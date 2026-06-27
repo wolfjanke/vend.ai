@@ -54,6 +54,7 @@ export const registerSchema = z.object({
   theme_primary_color:   z.string().nullable().optional(),
   theme_secondary_color: z.string().nullable().optional(),
   theme_accent_color:    z.string().nullable().optional(),
+  theme_page_bg_color:   z.string().nullable().optional(),
   theme_background:      z.enum(['light', 'dark']).optional(),
   theme_shimmer:         z.boolean().optional(),
   theme_logo_url:        z.string().nullable().optional(),

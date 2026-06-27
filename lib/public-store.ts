@@ -15,6 +15,7 @@ export type PublicStore = {
   theme_primary_color?:     string | null
   theme_secondary_color?:   string | null
   theme_accent_color?:      string | null
+  theme_page_bg_color?:     string | null
   theme_background?:        ThemeBackground
   theme_shimmer?:           boolean
   theme_logo_url?:          string | null
@@ -48,6 +49,7 @@ export function toPublicStore(row: Record<string, unknown>): PublicStore {
     theme_primary_color:   (row.theme_primary_color as string | null) ?? null,
     theme_secondary_color: (row.theme_secondary_color as string | null) ?? null,
     theme_accent_color:    (row.theme_accent_color as string | null) ?? null,
+    theme_page_bg_color:   (row.theme_page_bg_color as string | null) ?? null,
     theme_background:      (row.theme_background as ThemeBackground) ?? 'dark',
     theme_shimmer:         Boolean(row.theme_shimmer),
     theme_logo_url:        (row.theme_logo_url as string | null) ?? null,

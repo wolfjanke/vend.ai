@@ -131,6 +131,10 @@ async function setup() {
   await sql`UPDATE admin_users SET password_changed_at = created_at WHERE password_changed_at IS NULL`
   await sql`ALTER TABLE admin_users ALTER COLUMN password_changed_at SET DEFAULT NOW()`
 
+  await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 1`
+
+  await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS last_login_ip TEXT DEFAULT NULL`
+
   await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ`
   await sql`UPDATE admin_users SET email_verified_at = created_at WHERE email_verified_at IS NULL`
 
@@ -241,7 +245,7 @@ async function setup() {
   console.log('🌱 Inserindo dados de exemplo...')
 
   // Admin user
-  const passwordHash = await bcrypt.hash('admin123', 10)
+  const passwordHash = await bcrypt.hash('admin123', 12)
 
   const existingUser = await sql`SELECT id FROM admin_users WHERE email = 'admin@urbanmix.com' LIMIT 1`
 

@@ -5,7 +5,7 @@ import { generateThemeCss } from '@/lib/theme-css'
 import { getGoogleFontsUrl } from '@/lib/theme-fonts'
 import type { CustomCategory } from '@/types'
 import { getPreviewProductLimit, previewChipFilters, toMockProductForPreview, type StorePreviewProduct } from '@/lib/preview-products'
-import { getTheme, themeToCardConfig, type ThemeBackground, type ThemeName, type StoreThemeConfig } from '@/lib/themes'
+import { getTheme, themeToCardConfig, type ThemeName, type StoreThemeConfig } from '@/lib/themes'
 import CategoryFilterBar from '@/components/loja/CategoryFilterBar'
 import LojaBrand from '@/components/loja/LojaBrand'
 import VitrineProductCard from '@/components/loja/VitrineProductCard'
@@ -26,7 +26,7 @@ type Props = {
   themeName:          ThemeName
   primary:            string
   accent:             string
-  background:         ThemeBackground
+  pageBg:             string
   shimmer:            boolean
   storeName:          string
   logoUrl:            string | null
@@ -35,7 +35,7 @@ type Props = {
   tagline?:           string | null
   categoryNavStyle?:  'pills' | 'circles'
   customCategories?:  CustomCategory[]
-  highlightedColor?:  'primary' | 'accent' | null
+  highlightedColor?:  'primary' | 'accent' | 'pageBg' | null
   plan?:              PlanSlug
   headerLayout?:      HeaderLayout
   logoShape?:         LogoShape
@@ -135,7 +135,7 @@ export default function StoreThemePreview({
   themeName,
   primary,
   accent,
-  background,
+  pageBg,
   shimmer,
   storeName,
   logoUrl,
@@ -181,11 +181,11 @@ export default function StoreThemePreview({
     el.style.cssText = generateThemeCss(
       theme,
       { primary, accent },
-      background,
+      pageBg,
       shimmer,
       { catalogColsMobile },
     )
-  }, [theme, themeName, primary, accent, background, shimmer, catalogColsMobile])
+  }, [theme, themeName, primary, accent, pageBg, shimmer, catalogColsMobile])
 
   useEffect(() => {
     const id = 'store-theme-preview-fonts'
@@ -206,7 +206,9 @@ export default function StoreThemePreview({
       ? 'highlight-primary'
       : highlightedColor === 'accent'
         ? 'highlight-accent'
-        : ''
+        : highlightedColor === 'pageBg'
+          ? 'highlight-page-bg'
+          : ''
 
   const previewHeader =
     headerLayout === 'centered' ? (

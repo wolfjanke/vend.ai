@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
 import { sql } from '@/lib/db'
 import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
@@ -9,8 +8,10 @@ import {
   checkRegisterIpRateLimit,
 } from '@/lib/auth-rate-limit'
 import { resolveRateLimitIp } from '@/lib/rate-limit'
-import { createAndSendEmailVerification } from '@/lib/email-verification'
+import { createAndSendEmailVerification, resendEmailVerification } from '@/lib/email-verification'
 import { getGlobalConfig } from '@/lib/global-config'
+import { validateNewPassword } from '@/lib/validate-new-password'
+import { hashPassword } from '@/lib/password-hash'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -67,6 +68,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Muitas tentativas. Tente novamente mais tarde.' }, { status: 429 })
     }
 
+    const pwdCheck = await validateNewPassword(password)
+    if (!pwdCheck.ok) {
+      return NextResponse.json({ error: pwdCheck.error }, { status: 400 })
+    }
+
     const initialSettings = {
       genderFocus: genderFocus ?? 'feminine',
       ageGroup:    ageGroup ?? 'adult',
@@ -79,10 +85,13 @@ export async function POST(req: NextRequest) {
 
     const existing = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'E-mail já cadastrado' }, { status: 409 })
+      void resendEmailVerification(email).catch(err =>
+        logServerError('[register] reenvio verificação (e-mail existente)', err),
+      )
+      return NextResponse.json({ needsVerification: true, email })
     }
 
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await hashPassword(password)
     const storeSlug    = slugify(storeName) || `loja-${Date.now()}`
 
     const slugCheck = await sql`SELECT id FROM stores WHERE slug = ${storeSlug} LIMIT 1`
