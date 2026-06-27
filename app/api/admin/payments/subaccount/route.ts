@@ -5,6 +5,7 @@ import { createSubaccount } from '@/lib/asaas/subaccounts'
 import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/asaas/client'
 import { digitsOnly, isValidCnpj } from '@/lib/masks'
+import { checkSubaccountPostRateLimit } from '@/lib/billing-rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
 
 const pjCompanyTypes = ['LIMITED', 'INDIVIDUAL', 'ASSOCIATION'] as const
@@ -69,6 +70,13 @@ export async function POST(req: NextRequest) {
   const session = await getSessionSafe()
   if (!session?.storeId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  if (!(await checkSubaccountPostRateLimit(session.storeId))) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde e tente novamente.' },
+      { status: 429 },
+    )
   }
 
   let body: unknown

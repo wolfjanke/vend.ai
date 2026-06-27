@@ -7,12 +7,20 @@ import { logServerError } from '@/lib/logger'
 import { AsaasApiError } from '@/lib/asaas/client'
 import type { Store, PlanSlug } from '@/types'
 import { canUsePdvForStore } from '@/lib/store-plan-access'
+import { checkPdvLinkPostRateLimit } from '@/lib/billing-rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
 
 
 export async function POST(req: NextRequest) {
   const session = await getSessionSafe()
   if (!session?.storeId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  if (!(await checkPdvLinkPostRateLimit(session.storeId))) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde e tente novamente.' },
+      { status: 429 },
+    )
+  }
 
   let body: Record<string, unknown>
   try {

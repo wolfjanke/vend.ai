@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireSession } from '@/lib/require-session'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkStoreRateLimit } from '@/lib/rate-limit-helpers'
+import { BANNER_TEXT_STORE_LIMIT, BANNER_TEXT_STORE_WINDOW_MS } from '@/lib/rate-limit-config'
 import { generateBannerTexts } from '@/lib/banner-ai'
 import { logServerError } from '@/lib/logger'
 import { sql } from '@/lib/db'
@@ -38,8 +39,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Geração por IA indisponível no momento.' }, { status: 503 })
     }
 
-    const rateKey = `banner:text:${session.storeId}`
-    if (!(await checkRateLimit(rateKey, 10, 3_600_000))) {
+    if (!(await checkStoreRateLimit(
+      'banner:text',
+      session.storeId,
+      BANNER_TEXT_STORE_LIMIT,
+      BANNER_TEXT_STORE_WINDOW_MS,
+    ))) {
       return NextResponse.json({ error: 'Limite de 10 gerações por hora atingido.' }, { status: 429 })
     }
 

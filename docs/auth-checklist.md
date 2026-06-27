@@ -9,7 +9,7 @@ Use após mudanças em auth ou em cada release que toque login/cadastro.
 - [ ] `NEXTAUTH_URL` = URL pública (https)
 - [ ] `NEXT_PUBLIC_APP_URL` = mesma base pública
 - [ ] `RESEND_API_KEY` + `EMAIL_FROM` (domínio verificado no Resend)
-- [ ] `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (rate limit distribuído)
+- [ ] `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (**obrigatório em produção** — sem isso o rate limit não é distribuído no serverless). Ver [rate-limiting.md](./rate-limiting.md).
 - [ ] `SUPERADMIN_EMAILS` (lista de e-mails do painel superadmin)
 
 ## Banco de dados
@@ -64,3 +64,10 @@ node scripts/migrate-normalize-emails.mjs
 
 - Falhas de envio Resend aparecem como `[forgot-password]`, `[email-verification]`, `[notify-password-changed]`
 - Bloqueios de login: `[auth/login] rate limit` com e-mail mascarado
+- Rate limit geral: `[rate-limit]` (Upstash ausente, fallback ou IP desconhecido) — ver [rate-limiting.md](./rate-limiting.md)
+
+## Rate limiting (pós-deploy)
+
+1. [ ] Upstash Metrics mostra tráfego após deploy em produção
+2. [ ] Tentar 11 logins errados → mensagem de aguarde (já no checklist acima)
+3. [ ] Logs Vercel sem `[rate-limit] UPSTASH… ausentes` em produção

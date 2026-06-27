@@ -8,7 +8,7 @@ import {
   sessionCookieOptions,
 } from '@/lib/auth-session-cookie'
 import { normalizeEmail } from '@/lib/email-normalize'
-import { clientIp } from '@/lib/rate-limit'
+import { resolveRateLimitIp } from '@/lib/rate-limit'
 import { logLoginRateLimitBlocked } from '@/lib/auth-login-log'
 import { logServerError } from '@/lib/logger'
 export { dynamic } from '@/lib/route-dynamic'
@@ -19,7 +19,7 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
+  const ip = resolveRateLimitIp(req)
 
   try {
     let body: unknown

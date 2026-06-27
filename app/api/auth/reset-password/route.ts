@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { checkResetPasswordRateLimit } from '@/lib/auth-rate-limit'
 import { passwordSchema } from '@/lib/password-policy'
 import { notifyPasswordChanged } from '@/lib/notify-password-changed'
-import { clientIp } from '@/lib/rate-limit'
+import { resolveRateLimitIp } from '@/lib/rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
 
 
@@ -16,7 +16,7 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
+  const ip = resolveRateLimitIp(req)
   if (!(await checkResetPasswordRateLimit(ip))) {
     return NextResponse.json(
       { error: 'Muitas tentativas. Tente novamente mais tarde.' },

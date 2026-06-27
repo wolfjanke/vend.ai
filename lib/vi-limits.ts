@@ -4,11 +4,10 @@ import { GEMINI_MODELS } from '@/lib/gemini'
 import { digitsOnly } from '@/lib/masks'
 import { getStorePlanContext } from '@/lib/store-plan-access'
 
-const IP_LIMIT = 30
-const IP_WINDOW_MS = 60_000
+import { VI_IP_LIMIT, VI_IP_WINDOW_MS } from '@/lib/rate-limit-config'
 
 export function viIpLimit() {
-  return { limit: IP_LIMIT, windowMs: IP_WINDOW_MS }
+  return { limit: VI_IP_LIMIT, windowMs: VI_IP_WINDOW_MS }
 }
 
 export const VI_WHATSAPP_REDIRECT_MESSAGE =

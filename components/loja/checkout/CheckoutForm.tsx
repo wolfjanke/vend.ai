@@ -161,6 +161,7 @@ export default function CheckoutForm({
             email:       email.trim(),
             mobilePhone: phone,
           },
+          privacyConsent: true as const,
         }),
       })
 

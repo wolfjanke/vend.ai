@@ -12,6 +12,7 @@ import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
 import { signCheckoutStatusToken, verifyCheckoutStatusToken } from '@/lib/checkout-status-token'
 import { getCheckoutRates } from '@/lib/checkout-rates'
 import { encryptCpf } from '@/lib/crypto/pii'
+import { checkCheckoutStatusRateLimit } from '@/lib/public-rate-limit'
 import { isCheckoutEnabledForStore } from '@/lib/checkout-enabled'
 import { resolveCheckoutChannelsFromStore } from '@/lib/checkout-availability'
 import { calculateCheckoutMarketingPricing } from '@/lib/checkout/marketing-pricing'
@@ -315,6 +316,13 @@ export async function handleCheckoutStatus(
 ) {
   if (!token || !verifyCheckoutStatusToken(token, paymentId)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  if (!(await checkCheckoutStatusRateLimit(paymentId))) {
+    return NextResponse.json(
+      { error: 'Aguarde antes de consultar novamente.' },
+      { status: 429 },
+    )
   }
 
   const storeRows = await sql`

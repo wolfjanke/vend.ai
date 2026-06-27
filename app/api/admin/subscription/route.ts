@@ -19,6 +19,7 @@ import { isPlatformDemoStore } from '@/lib/demo-store'
 import { getStorePlanContext } from '@/lib/store-plan-access'
 import { saveBillingOwner } from '@/lib/billing-owner'
 import { billingOwnerSchema } from '@/lib/validations'
+import { checkSubscriptionPostRateLimit } from '@/lib/billing-rate-limit'
 
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -123,6 +124,13 @@ export async function POST(req: NextRequest) {
   const session = await getSessionSafe()
   if (!session?.storeId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  if (!(await checkSubscriptionPostRateLimit(session.storeId))) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde e tente novamente.' },
+      { status: 429 },
+    )
   }
 
   const demoRows = await sql`SELECT is_demo, slug FROM stores WHERE id = ${session.storeId} LIMIT 1`

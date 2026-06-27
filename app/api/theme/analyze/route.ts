@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSession } from '@/lib/require-session'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkStoreRateLimit } from '@/lib/rate-limit-helpers'
+import { THEME_ANALYZE_STORE_LIMIT, THEME_ANALYZE_STORE_WINDOW_MS } from '@/lib/rate-limit-config'
 import { analyzeLogoForTheme, parseThemeAnalysis } from '@/lib/theme-ai'
 import { logServerError } from '@/lib/logger'
 import { sql } from '@/lib/db'
@@ -28,8 +29,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Análise de logo disponível em planos pagos.' }, { status: 403 })
     }
 
-    const rateKey = `theme:analyze:${session.storeId}`
-    if (!(await checkRateLimit(rateKey, 5, 3_600_000))) {
+    if (!(await checkStoreRateLimit(
+      'theme:analyze',
+      session.storeId,
+      THEME_ANALYZE_STORE_LIMIT,
+      THEME_ANALYZE_STORE_WINDOW_MS,
+    ))) {
       return NextResponse.json({ error: 'Limite de 5 análises por hora atingido.' }, { status: 429 })
     }
 

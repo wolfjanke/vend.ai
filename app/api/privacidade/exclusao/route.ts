@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { digitsOnly } from '@/lib/masks'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { checkRateLimit, resolveRateLimitIp } from '@/lib/rate-limit'
+import {
+  LGPD_PUBLIC_EXCLUSAO_IP_LIMIT,
+  LGPD_PUBLIC_EXCLUSAO_WINDOW_MS,
+} from '@/lib/rate-limit-config'
 import { logServerError } from '@/lib/logger'
 import { anonymizeCustomerOrders } from '@/lib/lgpd'
 import { lgpdExclusaoSchema } from '@/lib/validations'
@@ -13,8 +17,8 @@ const GENERIC_OK_MESSAGE =
   'Em caso de correspondência, os dados serão anonimizados conforme a política de privacidade.'
 
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
-  if (!(await checkRateLimit(`lgpd:exclusao:${ip}`, 3, 3_600_000))) {
+  const ip = resolveRateLimitIp(req)
+  if (!(await checkRateLimit(`lgpd:exclusao:${ip}`, LGPD_PUBLIC_EXCLUSAO_IP_LIMIT, LGPD_PUBLIC_EXCLUSAO_WINDOW_MS))) {
     return NextResponse.json({ error: 'Muitas solicitações. Tente mais tarde.' }, { status: 429 })
   }
 

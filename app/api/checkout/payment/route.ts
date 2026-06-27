@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { resolveRateLimitIp } from '@/lib/rate-limit'
+import {
+  checkCheckoutCreateIpRateLimit,
+  checkCheckoutCreateStoreRateLimit,
+} from '@/lib/public-rate-limit'
 import { handleCheckoutCreate } from '@/lib/checkout/handlers'
 export { dynamic } from '@/lib/route-dynamic'
 
-const RATE_LIMIT = 5
-const RATE_WINDOW = 60_000
-
 /** @deprecated Use POST /api/checkout/[slug]/create */
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
+  const ip = resolveRateLimitIp(req)
 
-  if (!(await checkRateLimit(`checkout:ip:${ip}`, RATE_LIMIT, RATE_WINDOW))) {
+  if (!(await checkCheckoutCreateIpRateLimit(ip))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde 1 minuto.' }, { status: 429 })
   }
 
@@ -24,6 +25,10 @@ export async function POST(req: NextRequest) {
   const parsed = body as { storeSlug?: string }
   if (!parsed?.storeSlug) {
     return NextResponse.json({ error: 'storeSlug obrigatório' }, { status: 400 })
+  }
+
+  if (!(await checkCheckoutCreateStoreRateLimit(parsed.storeSlug))) {
+    return NextResponse.json({ error: 'Muitas tentativas. Aguarde e tente novamente.' }, { status: 429 })
   }
 
   return handleCheckoutCreate(parsed.storeSlug, body)

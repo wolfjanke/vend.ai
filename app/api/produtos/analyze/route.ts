@@ -11,6 +11,7 @@ import { getStoreProfile, normalizeProductCategory } from '@/types'
 import { logServerError } from '@/lib/logger'
 import type { PlanSlug } from '@/lib/plans'
 import { checkPhotoAnalysisLimit, incrementPhotoAnalysis } from '@/lib/photo-analysis-limits'
+import { checkPhotoAnalyzeBurstRateLimit } from '@/lib/store-rate-limit'
 import {
   MAX_PRODUCT_BLOCKS,
   MAX_PHOTOS_TOTAL,
@@ -117,6 +118,13 @@ export async function POST(req: NextRequest) {
               : 'Análise indisponível.',
         },
         { status: 403 },
+      )
+    }
+
+    if (!(await checkPhotoAnalyzeBurstRateLimit(session.storeId))) {
+      return NextResponse.json(
+        { error: 'Limite de análises por hora atingido. Aguarde e tente novamente.' },
+        { status: 429 },
       )
     }
 

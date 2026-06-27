@@ -5,7 +5,7 @@ import type { ViMessage, StoreContext, StoreSettings } from '@/types'
 import { logServerError } from '@/lib/logger'
 import { sql } from '@/lib/db'
 import { getActiveProductsForVi } from '@/lib/store-public-data'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { checkRateLimit, resolveRateLimitIp } from '@/lib/rate-limit'
 import {
   checkViLimit,
   checkViDailyLimit,
@@ -25,7 +25,7 @@ export { dynamic } from '@/lib/route-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = clientIp(req)
+    const ip = resolveRateLimitIp(req)
     const { limit, windowMs } = viIpLimit()
     if (!(await checkRateLimit(`vi:ip:${ip}`, limit, windowMs))) {
       return NextResponse.json(

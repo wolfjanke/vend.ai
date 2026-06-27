@@ -8,6 +8,8 @@ import {
 } from '@/lib/auth-session-cookie'
 import { sendWelcomeEmail } from '@/lib/email/send-welcome'
 import { logServerError } from '@/lib/logger'
+import { checkVerifyEmailIpRateLimit } from '@/lib/auth-rate-limit'
+import { resolveRateLimitIp } from '@/lib/rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
 
 const schema = z.object({
@@ -15,6 +17,14 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const ip = resolveRateLimitIp(req)
+  if (!(await checkVerifyEmailIpRateLimit(ip))) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde e tente novamente.' },
+      { status: 429 },
+    )
+  }
+
   try {
     let body: unknown
     try {

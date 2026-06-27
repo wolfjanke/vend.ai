@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { passwordSchema } from '@/lib/password-policy'
 import { notifyPasswordChanged } from '@/lib/notify-password-changed'
+import { checkChangePasswordRateLimit } from '@/lib/auth-rate-limit'
 import { z } from 'zod'
 export { dynamic } from '@/lib/route-dynamic'
 
@@ -17,6 +18,13 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  if (!(await checkChangePasswordRateLimit(session.user.id))) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+      { status: 429 },
+    )
   }
 
   let body: unknown

@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { digitsOnly } from '@/lib/masks'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { checkRateLimit, resolveRateLimitIp } from '@/lib/rate-limit'
+import { CEP_IP_LIMIT, CEP_IP_WINDOW_MS } from '@/lib/rate-limit-config'
 import { logServerError } from '@/lib/logger'
 export { dynamic } from '@/lib/route-dynamic'
 
-const CEP_IP_LIMIT = 30
-const CEP_IP_WINDOW = 60_000
-
 export async function GET(req: NextRequest, { params }: { params: { cep: string } }) {
-  const ip = clientIp(req)
-  if (!(await checkRateLimit(`cep:ip:${ip}`, CEP_IP_LIMIT, CEP_IP_WINDOW))) {
+  const ip = resolveRateLimitIp(req)
+  if (!(await checkRateLimit(`cep:ip:${ip}`, CEP_IP_LIMIT, CEP_IP_WINDOW_MS))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
   }
 

@@ -309,6 +309,9 @@ export const checkoutPaymentSchema = z.object({
     quantity:    z.number().int().positive(),
     value:       z.number().nonnegative(),
   })).min(1).optional(),
+  privacyConsent: z.literal(true, {
+    message: 'É necessário aceitar a política de privacidade',
+  }),
 })
 
 export const orderCreateSchema = z.object({

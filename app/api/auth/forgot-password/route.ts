@@ -5,15 +5,19 @@ import { sendPasswordResetEmail } from '@/lib/email'
 import { normalizeEmail } from '@/lib/email-normalize'
 import { logServerError } from '@/lib/logger'
 import { z } from 'zod'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import {
+  checkForgotPasswordEmailRateLimit,
+  checkForgotPasswordIpRateLimit,
+} from '@/lib/auth-rate-limit'
+import { resolveRateLimitIp } from '@/lib/rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
 
 
 const schema = z.object({ email: z.string().email() })
 
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
-  if (!(await checkRateLimit(`auth:forgot:${ip}`, 3, 3_600_000))) {
+  const ip = resolveRateLimitIp(req)
+  if (!(await checkForgotPasswordIpRateLimit(ip))) {
     return NextResponse.json({ ok: true })
   }
 
@@ -24,6 +28,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
     const email = normalizeEmail(parsed.data.email)
+
+    if (!(await checkForgotPasswordEmailRateLimit(email))) {
+      return NextResponse.json({ ok: true })
+    }
 
     const rows = await sql`SELECT id FROM admin_users WHERE email = ${email} LIMIT 1`
     const user = rows[0] as { id: string } | undefined

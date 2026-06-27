@@ -9,19 +9,20 @@ import { logServerError } from '@/lib/logger'
 import { encryptCpf } from '@/lib/crypto/pii'
 import { resolveOrderLines, amountsMatch, OrderValidationError } from '@/lib/order-pricing'
 import { orderReject422, validationErrorResponse } from '@/lib/api-errors'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { checkRateLimit, resolveRateLimitIp } from '@/lib/rate-limit'
+import {
+  PEDIDOS_IP_LIMIT,
+  PEDIDOS_IP_WINDOW_MS,
+  PEDIDOS_STORE_LIMIT,
+  PEDIDOS_STORE_WINDOW_MS,
+} from '@/lib/rate-limit-config'
+
 export { dynamic } from '@/lib/route-dynamic'
 
-
-const PEDIDOS_IP_LIMIT = 10
-const PEDIDOS_IP_WINDOW = 60_000
-const PEDIDOS_STORE_LIMIT = 30
-const PEDIDOS_STORE_WINDOW = 60_000
-
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
+  const ip = resolveRateLimitIp(req)
 
-  if (!(await checkRateLimit(`pedidos:ip:${ip}`, PEDIDOS_IP_LIMIT, PEDIDOS_IP_WINDOW))) {
+  if (!(await checkRateLimit(`pedidos:ip:${ip}`, PEDIDOS_IP_LIMIT, PEDIDOS_IP_WINDOW_MS))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
   }
 
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     const storeId = storeRows[0].id as string
 
-    if (!(await checkRateLimit(`pedidos:store:${storeId}`, PEDIDOS_STORE_LIMIT, PEDIDOS_STORE_WINDOW))) {
+    if (!(await checkRateLimit(`pedidos:store:${storeId}`, PEDIDOS_STORE_LIMIT, PEDIDOS_STORE_WINDOW_MS))) {
       return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
     }
 

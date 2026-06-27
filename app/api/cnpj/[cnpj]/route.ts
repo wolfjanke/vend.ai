@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { digitsOnly } from '@/lib/masks'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { checkRateLimit, resolveRateLimitIp } from '@/lib/rate-limit'
+import { CNPJ_IP_LIMIT, CNPJ_IP_WINDOW_MS } from '@/lib/rate-limit-config'
 import { logServerError } from '@/lib/logger'
 export { dynamic } from '@/lib/route-dynamic'
-
-const CNPJ_IP_LIMIT = 30
-const CNPJ_IP_WINDOW = 60_000
 
 type BrasilApiCnpj = {
   razao_social?: string
@@ -19,8 +17,8 @@ type BrasilApiCnpj = {
 }
 
 export async function GET(req: NextRequest, { params }: { params: { cnpj: string } }) {
-  const ip = clientIp(req)
-  if (!(await checkRateLimit(`cnpj:ip:${ip}`, CNPJ_IP_LIMIT, CNPJ_IP_WINDOW))) {
+  const ip = resolveRateLimitIp(req)
+  if (!(await checkRateLimit(`cnpj:ip:${ip}`, CNPJ_IP_LIMIT, CNPJ_IP_WINDOW_MS))) {
     return NextResponse.json({ error: 'Muitas tentativas. Aguarde um momento.' }, { status: 429 })
   }
 

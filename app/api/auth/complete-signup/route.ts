@@ -4,13 +4,14 @@ import { sql } from '@/lib/db'
 import { slugify } from '@/lib/masks'
 import { completeSignupSchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { resolveRateLimitIp } from '@/lib/rate-limit'
+import { checkCompleteSignupIpRateLimit } from '@/lib/auth-rate-limit'
 import { getGlobalConfig } from '@/lib/global-config'
 export { dynamic } from '@/lib/route-dynamic'
 
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
-  if (!(await checkRateLimit(`auth:complete-signup:${ip}`, 5, 3_600_000))) {
+  const ip = resolveRateLimitIp(req)
+  if (!(await checkCompleteSignupIpRateLimit(ip))) {
     return NextResponse.json({ error: 'Muitas tentativas. Tente novamente mais tarde.' }, { status: 429 })
   }
 

@@ -4,15 +4,19 @@ import { sql } from '@/lib/db'
 import { slugify } from '@/lib/masks'
 import { registerSchema } from '@/lib/validations'
 import { logServerError } from '@/lib/logger'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import {
+  checkRegisterEmailRateLimit,
+  checkRegisterIpRateLimit,
+} from '@/lib/auth-rate-limit'
+import { resolveRateLimitIp } from '@/lib/rate-limit'
 import { createAndSendEmailVerification } from '@/lib/email-verification'
 import { getGlobalConfig } from '@/lib/global-config'
 export { dynamic } from '@/lib/route-dynamic'
 
 
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req)
-  if (!(await checkRateLimit(`auth:register:${ip}`, 5, 3_600_000))) {
+  const ip = resolveRateLimitIp(req)
+  if (!(await checkRegisterIpRateLimit(ip))) {
     return NextResponse.json({ error: 'Muitas tentativas. Tente novamente mais tarde.' }, { status: 429 })
   }
 
@@ -58,6 +62,11 @@ export async function POST(req: NextRequest) {
       theme_logo_url,
       theme_onboarding_done,
     } = parsed.data
+
+    if (!(await checkRegisterEmailRateLimit(email))) {
+      return NextResponse.json({ error: 'Muitas tentativas. Tente novamente mais tarde.' }, { status: 429 })
+    }
+
     const initialSettings = {
       genderFocus: genderFocus ?? 'feminine',
       ageGroup:    ageGroup ?? 'adult',

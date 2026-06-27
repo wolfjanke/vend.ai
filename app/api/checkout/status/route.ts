@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { verifyCheckoutStatusToken } from '@/lib/checkout-status-token'
 import { handleCheckoutStatus } from '@/lib/checkout/handlers'
+import { checkCheckoutStatusRateLimit } from '@/lib/public-rate-limit'
 export { dynamic } from '@/lib/route-dynamic'
 
 /** @deprecated Use GET /api/checkout/[slug]/status/[paymentId] */
@@ -20,6 +21,13 @@ export async function GET(req: NextRequest) {
 
   if (!verifyCheckoutStatusToken(token, paymentId)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  if (!(await checkCheckoutStatusRateLimit(paymentId))) {
+    return NextResponse.json(
+      { error: 'Aguarde antes de consultar novamente.' },
+      { status: 429 },
+    )
   }
 
   const rows = await sql`
